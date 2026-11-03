@@ -18,3 +18,7 @@ is a release of the other. The text of each GitHub Release is taken from its sec
   same tag. PARITY.md lists what is ported and what is not yet.
 - Releases: `iy-rs` for Windows, Linux and macOS (Apple silicon and Intel) on GitHub Releases, built by the
   **Release** workflow for every tag `vX.Y.Z`.
+- **crates.io:** `cargo install isnady` gives `iy-rs`, as `pip install isnady` gives `iy`. The command-line crate is
+  now `isnady` and the core is `isnady-core`. The **crates.io** workflow publishes both after every Release.
+- **The README is isnady's own, word for word,** under a short head that says what `iy-rs` does today
+  (`tools/sync_readme.py`; `tools/bump_version.py` runs it).

@@ -55,3 +55,7 @@ Python `iy` does on the same data.
 - **One rule, two places.** A rule changed in one isnady is changed in the other in the same release. Where Python
   left a choice open, both now make it the same way (0.7.4: spellings of equal frequency are ordered by the word,
   in both).
+- **The same README.** isnady-rs's README is isnady's README, word for word, under a head of its own
+  (`tools/sync_readme.py`).
+- **The same places.** The Python isnady is on PyPI and npm. isnady-rs is on crates.io (`cargo install isnady`) and
+  in GitHub Releases. Both are published by their workflows for every tag.

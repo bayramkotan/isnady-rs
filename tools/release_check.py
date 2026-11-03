@@ -27,6 +27,10 @@ def main() -> int:
         ok = False
     else:
         print(f"Cargo.toml is {version}")
+    core = re.search(r'isnady-core = \{ path = "crates/isnady-core", version = "=([^"]+)"', cargo)
+    if not core or core.group(1) != version:
+        print(f"✗ the isnady-core dependency is not ={version} in Cargo.toml")
+        ok = False
     log = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     m = re.search(rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## \[|\Z)", log, re.M | re.S)
     if not m:

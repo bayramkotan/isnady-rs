@@ -87,3 +87,8 @@ jobs:
           (cd dist && sha256sum * > SHA256SUMS.txt)
           gh release create "${GITHUB_REF_NAME}" dist/* --title "isnady-rs ${GITHUB_REF_NAME#v}" --notes-file notes.md \
             || gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+
+  crates:
+    needs: release
+    uses: ./.github/workflows/publish.yml
+    secrets: inherit
