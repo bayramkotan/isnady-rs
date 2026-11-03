@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["crates/isnady-core", "crates/isnady-cli"]
+
+# One version for the whole workspace, always the same number as the Python isnady (Bayram, 2026-11-03:
+# "sürüm numaraları birebir aynı olsun"). tools/bump_version.py writes it.
+[workspace.package]
+version = "0.7.4"
+edition = "2021"
+license = "MIT"
+authors = ["Bayram Kotan"]
+repository = "https://github.com/bayramkotan/isnady-rs"
+homepage = "https://github.com/bayramkotan/isnady"
+rust-version = "1.75"
+
+[workspace.dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+unicode-normalization = "0.1"
+caseless = "0.2"
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,17 @@
+[package]
+name = "isnady-core"
+description = "isnady's core in Rust: the same database, the same rules as the Python isnady"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+unicode-normalization.workspace = true
+caseless.workspace = true

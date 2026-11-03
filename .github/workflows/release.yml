@@ -1,0 +1,89 @@
+name: Release
+
+# A tag vX.Y.Z (the same number as the Python isnady's): iy-rs built for Windows, Linux and macOS, and a GitHub
+# Release with them and the CHANGELOG section of that version.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: The tag, Cargo.toml and CHANGELOG.md agree
+        run: python tools/release_check.py "${GITHUB_REF_NAME}"
+
+  parity:
+    needs: check
+    uses: ./.github/workflows/parity.yml
+    with:
+      # the Python isnady's main, released with the same number just before (parity.py's first case checks that the
+      # two versions are the same number); a fix pushed after its tag is then compared too
+      isnady: main
+
+  build:
+    needs: parity
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04          # an older glibc: the binary runs on older and newer Linux alike
+            name: linux-x86_64
+          - os: windows-latest
+            name: windows-x86_64
+          - os: macos-15              # Apple silicon
+            name: macos-arm64
+          - os: macos-15-intel        # Intel
+            name: macos-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: cargo build --release --locked
+      - name: Test
+        run: cargo test --release --locked
+      - name: Package
+        shell: bash
+        run: |
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          dir="iy-rs-${version}-${{ matrix.name }}"
+          mkdir -p "dist/$dir"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp target/release/iy-rs.exe "dist/$dir/"
+            cp README.md PARITY.md LICENSE "dist/$dir/"
+            (cd dist && 7z a "$dir.zip" "$dir" > /dev/null)
+          else
+            cp target/release/iy-rs "dist/$dir/"
+            cp README.md PARITY.md LICENSE "dist/$dir/"
+            (cd dist && tar czf "$dir.tar.gz" "$dir")
+          fi
+          rm -rf "dist/$dir"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.name }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/release_check.py "${GITHUB_REF_NAME}" --notes notes.md
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          gh release create "${GITHUB_REF_NAME}" dist/* --title "isnady-rs ${GITHUB_REF_NAME#v}" --notes-file notes.md \
+            || gh release upload "${GITHUB_REF_NAME}" dist/* --clobber

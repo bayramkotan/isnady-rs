@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and test
+        run: |
+          cargo fmt --check
+          cargo build --release --locked
+          cargo test --release --locked
+
+  parity:
+    uses: ./.github/workflows/parity.yml
+    with:
+      isnady: main

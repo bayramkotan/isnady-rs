@@ -1,0 +1,35 @@
+name: Parity
+
+# The Rust iy-rs and the Python iy on the same data: a few books imported from isnady-data by the Python isnady of the
+# same version (its tag, or main), then tools/parity.py compares what both print, word for word.
+on:
+  workflow_call:
+    inputs:
+      isnady:
+        description: the Python isnady to compare with (a tag such as v0.7.4, or main)
+        required: true
+        type: string
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    env:
+      ISNADY_DATA_DIR: ${{ github.workspace }}/parity-data
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: The Python isnady of the same version
+        run: python -m pip install "git+https://github.com/bayramkotan/isnady@${{ inputs.isnady }}"
+      - name: A few books, imported by the Python isnady
+        run: |
+          iy catalog import al_arbain_al_nawawiyya --language ara --language eng --language tur
+          iy catalog import riyad_al_salihin_al_nawawi
+          iy catalog import al_shamail_al_muhammadiyya_al_tirmidhi
+          iy search النيات > /dev/null
+      - name: Build iy-rs
+        run: cargo build --release --locked
+      - name: Compare
+        run: python tools/parity.py --python iy --rust target/release/iy-rs

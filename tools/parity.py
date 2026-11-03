@@ -1,0 +1,86 @@
+"""Parity: the Rust iy-rs and the Python iy give the same answer — word for word.
+
+Runs every case below with both programs on the same data folder and compares what they print; only the time a
+search took ("in 61 ms") is left out of the comparison. Run it before every release (the release blocks do):
+
+    python tools/parity.py                              # the Python iy on PATH, target/release/iy-rs
+    python tools/parity.py --python "python -m isnady" --rust target/release/iy-rs.exe
+    python tools/parity.py --data-dir /tmp/isnady-test  # another data folder (ISNADY_DATA_DIR)
+
+Exit code 0 when every case is the same, 1 otherwise (the differences are printed, the first lines of each).
+"""
+
+import argparse
+import os
+import re
+import shlex
+import subprocess
+import sys
+
+CASES = [
+    ["version"],
+    ["datadir"],
+    ["sources"],
+    ["search", "النيات"],
+    ["search", "إنما الأعمال بالنيات", "--mode", "phrase"],
+    ["search", "الصلاة", "--limit", "5", "--offset", "3"],
+    ["search", "الصلاة", "--book", "bukhari", "--limit", "3"],
+    ["search", "صلاة", "زكاة", "--mode", "any", "--limit", "4"],
+    ["search", "قال", "النبي", "--whole-words", "--limit", "3"],
+    ["search", "niyet", "--language", "Turkish", "--limit", "3"],
+    ["search", "intentions", "--limit", "3", "--all-texts"],
+    ["search", "komşu", "--limit", "3"],
+    ["search", "مسل*", "--limit", "3"],
+    ["search", "ي?من", "--limit", "3"],
+    ["search", "الصلاه", "--limit", "2", "--width", "80"],
+    ["search", "النياتت", "--limit", "2"],                      # not found as typed: its near spellings
+    ["search", "«قَالَ: لا يُؤْمِنُ»", "--mode", "phrase", "--limit", "2"],
+    ["search", "zzzqqq"],
+]
+
+TIME = re.compile(r" in \d+ ms")
+
+
+def run(cmd: list[str], args: list[str], env: dict) -> tuple[int, str]:
+    p = subprocess.run(cmd + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    return p.returncode, TIME.sub(" in N ms", p.stdout)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--python", default="iy", help='the Python isnady\'s command (default "iy")')
+    ap.add_argument("--rust", default=os.path.join("target", "release", "iy-rs" + (".exe" if os.name == "nt" else "")))
+    ap.add_argument("--data-dir", help="the data folder for both (ISNADY_DATA_DIR)")
+    a = ap.parse_args()
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    if a.data_dir:
+        env["ISNADY_DATA_DIR"] = a.data_dir
+    py, rs = shlex.split(a.python, posix=os.name != "nt"), [a.rust]
+    same = 0
+    for case in CASES:
+        pc, pout = run(py, case, env)
+        rc, rout = run(rs, case, env)
+        if case == ["version"]:                      # "isnady 0.7.4" and "isnady 0.7.4 (Rust)": the same number
+            pv, rv = pout.split()[1:2], rout.split()[1:2]
+            ok = pv == rv
+        else:
+            ok = pout == rout and pc == rc
+        print(f"{'✓' if ok else '✗'} iy {' '.join(case)}")
+        if ok:
+            same += 1
+            continue
+        pl, rl = pout.splitlines(), rout.splitlines()
+        for i in range(max(len(pl), len(rl))):
+            x = pl[i] if i < len(pl) else "<none>"
+            y = rl[i] if i < len(rl) else "<none>"
+            if x != y:
+                print(f"    line {i + 1}\n      python: {x[:200]}\n      rust:   {y[:200]}")
+                break
+        if pc != rc:
+            print(f"    exit code: python {pc}, rust {rc}")
+    print(f"\n{same} of {len(CASES)} the same")
+    return 0 if same == len(CASES) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

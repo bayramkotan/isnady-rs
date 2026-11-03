@@ -1,0 +1,17 @@
+[package]
+name = "isnady-cli"
+description = "iy-rs: isnady's command line in Rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "iy-rs"
+path = "src/main.rs"
+
+[dependencies]
+isnady-core = { path = "../isnady-core" }
+clap.workspace = true
