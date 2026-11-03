@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>isnady</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-latin">isnady</div>
+      <div class="brand-arabic" lang="ar">إسناد</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div id="corpus"></div>
+      <div id="version"></div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <!-- Search -->
+    <section id="page-search" class="page">
+      <div class="bar">
+        <input id="q" type="search" autocomplete="off" spellcheck="false">
+        <button id="go" class="primary"></button>
+      </div>
+      <div class="bar filters">
+        <select id="mode"></select>
+        <label class="check"><input id="whole" type="checkbox"> <span id="whole-label"></span></label>
+        <select id="search-book"></select>
+        <span id="search-status" class="muted"></span>
+      </div>
+      <div id="spellings" class="muted"></div>
+      <div id="results"></div>
+      <div class="more-row"><button id="more" class="quiet" hidden></button></div>
+    </section>
+
+    <!-- Isnad Chains -->
+    <section id="page-chains" class="page" hidden>
+      <div class="bar">
+        <label class="field"><span id="book-label"></span> <select id="chain-book"></select></label>
+        <label class="field"><span id="number-label"></span> <input id="chain-number" type="text" size="9" autocomplete="off"></label>
+        <button id="show-chain" class="primary"></button>
+        <button id="random" class="quiet"></button>
+        <span class="grow"></span>
+        <button id="prev" class="quiet"></button>
+        <button id="next" class="quiet"></button>
+      </div>
+      <div id="chain-view"></div>
+    </section>
+
+    <!-- Books -->
+    <section id="page-books" class="page wide" hidden>
+      <div class="books">
+        <aside class="shelf">
+          <div class="roads" id="roads"></div>
+          <div id="shelf"></div>
+        </aside>
+        <div class="reader" id="reader"></div>
+      </div>
+    </section>
+
+    <!-- a section not ported yet -->
+    <section id="page-later" class="page" hidden>
+      <div class="later">
+        <h1 id="later-title"></h1>
+        <p id="later-text"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

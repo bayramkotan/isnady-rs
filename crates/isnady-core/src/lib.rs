@@ -7,14 +7,17 @@
 pub mod books;
 pub mod config;
 pub mod db;
+pub mod i18n;
 pub mod isnad;
 pub mod names;
 pub mod narrators;
 pub mod normalize;
 pub mod paths;
 pub mod py;
+pub mod readmarks;
 pub mod search;
 pub mod tables;
+pub mod works;
 
 /// The version, the same number as the Python isnady's.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

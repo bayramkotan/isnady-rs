@@ -29,7 +29,7 @@ def main() -> int:
     lock = ROOT / "Cargo.lock"
     if lock.exists():
         t = lock.read_text(encoding="utf-8")
-        for crate in ("isnady-core", "isnady"):
+        for crate in ("isnady-core", "isnady", "isnady-gui"):
             t = re.sub(rf'(name = "{crate}"\nversion = ")[^"]+(")', rf"\g<1>{new}\g<2>", t)
         lock.write_text(t, encoding="utf-8", newline="\n")
     # every mention of the version in PARITY.md and in the README's own head (never in isnady's README below it,

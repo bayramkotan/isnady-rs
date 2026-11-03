@@ -54,6 +54,22 @@ CASES = [
     ["chain", "sifat-shia", "20"],
     ["chain", "nawawi", "999"],                        # a number the book does not have
     ["chain", "nosuch", "1"],
+    # the books (RS3): the shelf, a book's chapters, a chapter; the hadith of a chapter to choose a chain from
+    ["book"],
+    ["book", "--tradition", "all"],
+    ["book", "--tradition", "shia"],
+    ["book", "riyad"],
+    ["book", "riyad", "3"],
+    ["book", "riyad", "12", "--limit", "3", "--width", "60"],
+    ["book", "shamail", "2", "--language", "English"],
+    ["book", "nawawi", "1"],
+    ["book", "sifat-shia", "1", "--limit", "5"],
+    ["book", "taqrib", "2", "--limit", "4"],
+    ["book", "riyad", "999"],
+    ["book", "nosuch"],
+    ["chain", "riyad", "--chapter", "1"],
+    ["chain", "shamail", "--chapter", "3"],
+    ["chain", "riyad", "--chapter", "nosuch"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

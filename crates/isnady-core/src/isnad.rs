@@ -942,6 +942,48 @@ pub fn random_number(conn: &Connection, book: &str) -> Option<String> {
     })
 }
 
+/// The number before (delta < 0) or after (delta > 0) a number in the book's order; for a number the book does not
+/// have, the nearest one on that side (`isnad.step_number`).
+pub fn step_number(conn: &Connection, book: &str, number: &str, delta: i32) -> Option<String> {
+    let rng = number_range(conn, book).ok().flatten()?;
+    let number = number.trim();
+    if number.is_empty() {
+        return Some(if delta > 0 { rng.first } else { rng.last });
+    }
+    let here: Option<(f64, i64)> = conn
+        .query_row(
+            "SELECT h.number_sort, h.id FROM hadiths h JOIN collections c ON c.id = h.collection_id \
+             WHERE c.key = ? AND h.number = ?",
+            params![book, number],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()
+        .ok()
+        .flatten();
+    let (sort, id) = match here {
+        Some(h) => h,
+        None => match sort_key(number) {
+            Some(k) => (k, if delta > 0 { -1 } else { 1i64 << 62 }),
+            None => return Some(rng.first),
+        },
+    };
+    let sql = if delta > 0 {
+        "SELECT h.number FROM hadiths h JOIN collections c ON c.id = h.collection_id \
+         WHERE c.key = ? AND (h.number_sort > ? OR (h.number_sort = ? AND h.id > ?)) \
+         ORDER BY h.number_sort, h.id LIMIT 1"
+    } else {
+        "SELECT h.number FROM hadiths h JOIN collections c ON c.id = h.collection_id \
+         WHERE c.key = ? AND (h.number_sort < ? OR (h.number_sort = ? AND h.id < ?)) \
+         ORDER BY h.number_sort DESC, h.id DESC LIMIT 1"
+    };
+    let row: Option<String> = conn
+        .query_row(sql, params![book, sort, sort, id], |r| r.get(0))
+        .optional()
+        .ok()
+        .flatten();
+    Some(row.unwrap_or_else(|| number.to_string()))
+}
+
 /// The hadith of a book by its number: (id, the book's name).
 pub fn find_hadith(
     conn: &Connection,

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/isnady-core", "crates/isnady-cli"]
+members = ["crates/isnady-core", "crates/isnady-cli", "crates/isnady-gui"]
 
 # One version for the whole workspace, always the same number as the Python isnady (Bayram, 2026-11-03:
 # "sürüm numaraları birebir aynı olsun"). tools/bump_version.py writes it.
@@ -16,7 +16,7 @@ rust-version = "1.75"
 [workspace.dependencies]
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 regex = "1"
 fancy-regex = "0.14"
 unicode-normalization = "0.1"

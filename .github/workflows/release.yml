@@ -1,7 +1,7 @@
 name: Release
 
-# A tag vX.Y.Z (the same number as the Python isnady's): iy-rs built for Windows, Linux and macOS, and a GitHub
-# Release with them and the CHANGELOG section of that version.
+# A tag vX.Y.Z (the same number as the Python isnady's): iy-rs and the window isnady-rs built for Windows, Linux and
+# macOS, and a GitHub Release with them and the CHANGELOG section of that version.
 on:
   push:
     tags: ["v*"]
@@ -45,6 +45,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: The window's libraries (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
       - name: Build
         run: cargo build --release --locked
       - name: Test
@@ -56,11 +59,11 @@ jobs:
           dir="iy-rs-${version}-${{ matrix.name }}"
           mkdir -p "dist/$dir"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp target/release/iy-rs.exe "dist/$dir/"
+            cp target/release/iy-rs.exe target/release/isnady-rs.exe "dist/$dir/"
             cp README.md PARITY.md LICENSE "dist/$dir/"
             (cd dist && 7z a "$dir.zip" "$dir" > /dev/null)
           else
-            cp target/release/iy-rs "dist/$dir/"
+            cp target/release/iy-rs target/release/isnady-rs "dist/$dir/"
             cp README.md PARITY.md LICENSE "dist/$dir/"
             (cd dist && tar czf "$dir.tar.gz" "$dir")
           fi

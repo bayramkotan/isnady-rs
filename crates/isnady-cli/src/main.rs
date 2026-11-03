@@ -3,7 +3,7 @@
 //! the Python `iy`; PARITY.md lists them.
 
 use clap::{Parser, Subcommand};
-use isnady_core::{db, isnad, narrators, paths, py, search, VERSION};
+use isnady_core::{db, isnad, narrators, paths, py, readmarks, search, works, VERSION};
 use std::collections::HashMap;
 use std::process::ExitCode;
 
@@ -36,6 +36,44 @@ enum Command {
     Search(SearchArgs),
     /// Show the chain of one hadith
     Chain(ChainArgs),
+    /// Read a book in its own order: the list, a book's chapters, or a chapter
+    Book(BookArgs),
+}
+
+#[derive(clap::Args)]
+struct BookArgs {
+    /// e.g. bukhari, abudawud, taqrib; none = the list
+    key: Option<String>,
+    /// Chapter number in reading order (see: iy-rs book KEY)
+    chapter: Option<i64>,
+    /// Show only this language (repeatable)
+    #[arg(long = "language")]
+    language: Vec<String>,
+    #[arg(long, default_value_t = 20)]
+    limit: i64,
+    #[arg(long, default_value_t = 160)]
+    width: usize,
+    /// The list: the Sunni books (default), the Shia ones, or all
+    #[arg(long, default_value = "sunni", value_parser = ["sunni", "shia", "all"])]
+    tradition: String,
+    /// Go on where you left this book (its chapter and hadith)
+    #[arg(long)]
+    resume: bool,
+    /// Put a marker of this name at the chapter shown
+    #[arg(long, value_name = "NAME")]
+    mark: Option<String>,
+    /// Your markers and where you left each book
+    #[arg(long)]
+    marks: bool,
+    /// Open a marker (by its name or the start of it)
+    #[arg(long, value_name = "NAME")]
+    go: Option<String>,
+    /// Remove a marker (all: every marker)
+    #[arg(long, value_name = "NAME")]
+    unmark: Option<String>,
+    /// Forget where you left a book (all: every book); markers are kept
+    #[arg(long, value_name = "KEY")]
+    forget: Option<String>,
 }
 
 #[derive(clap::Args)]
@@ -47,7 +85,7 @@ struct ChainArgs {
     /// Also print the chain as written
     #[arg(long)]
     raw: bool,
-    /// (not ported yet: the hadith of one chapter — use iy chain BOOK --chapter CH)
+    /// The hadith of one chapter (its number as the book gives it, e.g. 3 or 1:2, or the start of its title)
     #[arg(long, value_name = "CH")]
     chapter: Option<String>,
     /// The chain in words in these languages, e.g. tr,en (default: the languages the texts are shown in)
@@ -101,7 +139,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -120,6 +158,7 @@ fn main() -> ExitCode {
         Some(Command::Sources) => sources(),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
+        Some(Command::Book(a)) => book_cmd(a),
     }
 }
 
@@ -289,16 +328,19 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
 const TAHWIL_NOTE: &str = " (roads joined by tahwil, a second road after a link — \"وعن\" / \"وحدثنا\" — or two narrators at one link)";
 
 fn chain_cmd(a: ChainArgs) -> ExitCode {
-    if a.chapter.is_some() {
-        return not_yet(
-            "The hadith of one chapter (--chapter)",
-            "iy chain BOOK --chapter CH",
-        );
-    }
     let conn = match open() {
         Ok(c) => c,
         Err(code) => return code,
     };
+    if let Some(ch) = a.chapter.clone().filter(|c| !c.is_empty()) {
+        return match chain_chapter(&conn, &a.book, &ch) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
+    }
     match chain_shown(&conn, &a) {
         Ok(code) => code,
         Err(e) => {
@@ -499,6 +541,321 @@ fn chain_shown(conn: &db::Connection, a: &ChainArgs) -> rusqlite_conn::Result<Ex
                 println!("  [{code}] {words}");
             }
         }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// iy chain BOOK --chapter CH: the hadith of one chapter with the start of their text and how far each chain was read.
+fn chain_chapter(
+    conn: &db::Connection,
+    book: &str,
+    label: &str,
+) -> rusqlite_conn::Result<ExitCode> {
+    let Some(node) = works::chapter_named(conn, book, label, "en")? else {
+        eprintln!("No chapter '{label}' in '{book}'. See: iy book {book}");
+        return Ok(ExitCode::from(1));
+    };
+    let wanted: Vec<String> = isnady_core::config::get_str("view.content_languages", "")
+        .split(',')
+        .filter(|p| !p.is_empty() && *p != "Arabic")
+        .map(String::from)
+        .collect();
+    let rows = works::chapter_hadith(conn, node.id, wanted.first().map(String::as_str), 70)?;
+    let head = format!(
+        "{}. {}",
+        node.label.clone().unwrap_or_else(|| "None".into()),
+        node.title
+    );
+    if rows.is_empty() {
+        println!(
+            "{head}: no hadith directly under it — choose one of its chapters (iy book {book})"
+        );
+        return Ok(ExitCode::SUCCESS);
+    }
+    println!("{book} — {head}: {} hadith", rows.len());
+    for r in &rows {
+        let read = if r.links > 0 {
+            format!("{:2} narrators", r.links)
+        } else {
+            "  not read  ".to_string()
+        };
+        println!("  {:>8}  {read}  {}", r.number, r.words);
+    }
+    println!("\n(iy chain {book} NUMBER shows one of them)");
+    Ok(ExitCode::SUCCESS)
+}
+
+fn book_cmd(mut a: BookArgs) -> ExitCode {
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    if !works::ready(&conn) {
+        eprintln!(
+            "The books imported last are not laid out in chapters yet. The Python isnady does it once: run iy book \
+             (or open the Books page), then iy-rs reads them."
+        );
+        return ExitCode::from(1);
+    }
+    match book_shown(&conn, &mut a) {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn book_shown(conn: &db::Connection, a: &mut BookArgs) -> rusqlite_conn::Result<ExitCode> {
+    let titles: std::collections::HashMap<String, String> = works::list_works(conn, "en")?
+        .into_iter()
+        .map(|w| (w.key, w.title))
+        .collect();
+    let mut resume_mark: Option<readmarks::Place> = None;
+    // the reader's markers: list them, put one, remove one
+    if a.marks {
+        let mine = readmarks::marks();
+        println!(
+            "{}",
+            if mine.is_empty() {
+                "No markers yet (iy book KEY CHAPTER --mark NAME)."
+            } else {
+                "Your markers:"
+            }
+        );
+        for m in &mine {
+            println!(
+                "  {:30} {}",
+                m.name,
+                readmarks::describe(
+                    m,
+                    titles.get(&m.book).map(String::as_str).unwrap_or(""),
+                    "en"
+                )
+            );
+        }
+        let left: Vec<readmarks::Place> = readmarks::recent(20)
+            .into_iter()
+            .filter(|p| titles.contains_key(&p.book))
+            .collect();
+        if !left.is_empty() {
+            println!("\nWhere you left each book (iy book KEY --resume):");
+            for p in &left {
+                println!(
+                    "  {:12} {}",
+                    p.book,
+                    readmarks::describe(p, &titles[&p.book], "en")
+                );
+            }
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
+    if let Some(f) = a.forget.clone() {
+        let n = readmarks::forget(if f == "all" { None } else { Some(&f) });
+        if n > 0 {
+            println!("Forgot where you left {n} book(s).");
+        } else {
+            println!("No place kept for '{f}'.");
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
+    if a.unmark.as_deref() == Some("all") {
+        let mine = readmarks::marks();
+        for m in &mine {
+            readmarks::remove(m.id.as_deref().unwrap_or(""));
+        }
+        println!("Removed {} marker(s).", mine.len());
+        return Ok(ExitCode::SUCCESS);
+    }
+    if let Some(u) = a.unmark.clone() {
+        let Some(m) = readmarks::find(&u) else {
+            eprintln!("No marker '{u}'. See: iy book --marks");
+            return Ok(ExitCode::from(1));
+        };
+        readmarks::remove(m.id.as_deref().unwrap_or(""));
+        println!("Removed the marker: {}", m.name);
+        return Ok(ExitCode::SUCCESS);
+    }
+    if let Some(g) = a.go.clone() {
+        let Some(m) = readmarks::find(&g) else {
+            eprintln!("No marker '{g}'. See: iy book --marks");
+            return Ok(ExitCode::from(1));
+        };
+        a.key = Some(m.book.clone());
+        resume_mark = Some(m);
+    }
+    let Some(key) = a.key.clone().filter(|k| !k.is_empty()) else {
+        let road = if a.tradition == "all" {
+            None
+        } else {
+            Some(a.tradition.as_str())
+        };
+        for w in works::list_works(conn, "en")? {
+            if let Some(r) = road {
+                if w.tradition != r && w.kind != "sira" && w.kind != "tabaqat" {
+                    continue;
+                }
+            }
+            println!(
+                "  {:12} {:36} {:8} {:>6} items, {} chapters",
+                works::short_name(&w.key),
+                w.title,
+                w.kind,
+                py::thousands(w.leaves),
+                w.chapters
+            );
+        }
+        return Ok(ExitCode::SUCCESS);
+    };
+    let Some(work) = works::find_work(conn, &works::resolve(&key), "en")? else {
+        eprintln!("No book '{key}'. See: iy book");
+        return Ok(ExitCode::from(1));
+    };
+    let order = works::reading_order(conn, work.id)?;
+    let mut focus: Option<i64> = None;
+    let mut chapter = a.chapter;
+    if a.resume || resume_mark.is_some() {
+        let kept = resume_mark.clone().or_else(|| readmarks::last(&work.key));
+        let Some(kept) = kept else {
+            println!(
+                "Nothing kept for {} yet: read a chapter (iy book {} N) and it is remembered.",
+                work.title, work.key
+            );
+            return Ok(ExitCode::SUCCESS);
+        };
+        let (at, f) = readmarks::resolve(conn, &kept);
+        focus = f;
+        if let Some(at) = at {
+            if let Some(i) = order.iter().position(|c| *c == at) {
+                chapter = Some(i as i64 + 1);
+                println!(
+                    "Continuing at: {}",
+                    readmarks::describe(&kept, &work.title, "en")
+                );
+            }
+        }
+    }
+    let Some(chapter) = chapter else {
+        for (i, cid) in order.iter().enumerate() {
+            let trail: Vec<String> = works::path(conn, *cid, "en")
+                .into_iter()
+                .map(|p| p.title)
+                .collect();
+            println!(
+                "  {:4}  {}  ({})",
+                i + 1,
+                trail.join(" › "),
+                works::leaves(conn, *cid, 0, 0)?.1
+            );
+        }
+        return Ok(ExitCode::SUCCESS);
+    };
+    if !(1..=order.len() as i64).contains(&chapter) {
+        eprintln!("Chapter {chapter} does not exist: 1 to {}", order.len());
+        return Ok(ExitCode::from(1));
+    }
+    let cid = order[(chapter - 1) as usize];
+    let (items, total) = if let Some(f) = focus {
+        let (every, _n) = works::leaves(conn, cid, 0, 1_000_000)?;
+        let start = every
+            .iter()
+            .position(|it| it.hadith_id == Some(f))
+            .unwrap_or(0);
+        let total = every.len() as i64;
+        let items: Vec<works::Leaf> = every
+            .into_iter()
+            .skip(start)
+            .take(a.limit.max(0) as usize)
+            .collect();
+        (items, total)
+    } else {
+        works::leaves(conn, cid, 0, a.limit)?
+    };
+    let first_hadith = focus.or_else(|| items.iter().find_map(|it| it.hadith_id));
+    let place = readmarks::place_of(conn, &work.key, Some(cid), first_hadith);
+    readmarks::remember(
+        &place.book,
+        &place.chapter,
+        &place.number,
+        &place.title,
+        place.place,
+    );
+    if let Some(name) = a.mark.clone() {
+        let m = readmarks::add(
+            &name,
+            &place.book,
+            &place.chapter,
+            &place.number,
+            &place.title,
+            place.place,
+        );
+        println!(
+            "Marker put: {} — {}",
+            m.name,
+            readmarks::describe(&m, &work.title, "en")
+        );
+    }
+    let mut trail = vec![work.title.clone()];
+    trail.extend(works::path(conn, cid, "en").into_iter().map(|p| p.title));
+    println!("{}   ({total} items)", trail.join(" › "));
+    let mut q = search::SearchQuery::new("");
+    q.languages = a.language.clone();
+    let cut = |body: &str| -> String {
+        if py::len(body) > a.width {
+            py::take(body, a.width) + " ..."
+        } else {
+            body.to_string()
+        }
+    };
+    for it in &items {
+        if it.kind == "hadith" {
+            let Some(hid) = it.hadith_id else { continue };
+            let r = search::load_result(conn, hid, &[], &q)?;
+            println!("\n#{}", r.number);
+            for t in &r.texts {
+                let body = py::words(&t.text).join(" ");
+                println!("  [{}] {}", t.language, cut(&body));
+            }
+        } else if work.kind == "sira" || work.kind == "tabaqat" {
+            let label = it
+                .label
+                .clone()
+                .filter(|l| !l.is_empty())
+                .map(|l| format!("#{l}"))
+                .unwrap_or_default();
+            let title = it.title.clone().unwrap_or_default();
+            let head = [label, title]
+                .into_iter()
+                .filter(|x| !x.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            if head.is_empty() {
+                println!("\n──");
+            } else {
+                println!("\n── {head}");
+            }
+            for para in it.text.clone().unwrap_or_default().split("\n\n") {
+                println!("{}", py::fill(&py::words(para).join(" "), a.width, "  "));
+            }
+        } else {
+            let source = it
+                .text
+                .clone()
+                .filter(|t| !t.is_empty())
+                .or_else(|| it.title.clone())
+                .unwrap_or_default();
+            let body = py::words(&source).join(" ");
+            let head = it
+                .label
+                .clone()
+                .filter(|l| !l.is_empty())
+                .map(|l| format!("#{l}"))
+                .unwrap_or_else(|| "→".into());
+            println!("\n{head} {}", cut(&body));
+        }
+    }
+    if total > items.len() as i64 && focus.is_none() {
+        println!("\n… {} more (--limit)", total - items.len() as i64);
     }
     Ok(ExitCode::SUCCESS)
 }

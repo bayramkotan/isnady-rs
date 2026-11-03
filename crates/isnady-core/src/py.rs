@@ -73,6 +73,80 @@ pub fn opt(v: Option<i64>) -> String {
     v.map(|x| x.to_string()).unwrap_or_else(|| "None".into())
 }
 
+/// `textwrap.fill(text, width, initial_indent=indent, subsequent_indent=indent)` with Python's defaults
+/// (break_long_words, break_on_hyphens, drop_whitespace).
+pub fn fill(text: &str, width: usize, indent: &str) -> String {
+    use std::sync::OnceLock;
+    static SEP: OnceLock<fancy_regex::Regex> = OnceLock::new();
+    // Python's TextWrapper.wordsep_re, word for word
+    let sep = SEP.get_or_init(|| {
+        let wp = r#"[\w!"'&.,?]"#;
+        let lt = r"[^\d\W]";
+        let ws = r"[\t\n\x0b\x0c\r ]";
+        let nws = r"[^\t\n\x0b\x0c\r ]";
+        let p = format!(
+            r"({ws}+|(?<={wp})-{{2,}}(?=\w)|{nws}+?(?:-(?:(?<={lt}{{2}}-)|(?<={lt}-{lt}-))(?={lt}-?{lt})|(?={ws}|\z)|(?<={wp})(?=-{{2,}}\w)))"
+        );
+        fancy_regex::Regex::new(&p).expect("wordsep")
+    });
+    let munged: String = text
+        .chars()
+        .map(|c| if "\t\n\x0b\x0c\r".contains(c) { ' ' } else { c })
+        .collect();
+    let mut chunks: Vec<String> = sep
+        .find_iter(&munged)
+        .filter_map(|m| m.ok())
+        .map(|m| m.as_str().to_string())
+        .filter(|c| !c.is_empty())
+        .collect();
+    chunks.reverse();
+    let width_of = |s: &str| s.chars().count();
+    let mut lines: Vec<String> = Vec::new();
+    while !chunks.is_empty() {
+        let mut cur: Vec<String> = Vec::new();
+        let mut cur_len = 0usize;
+        let w = width.saturating_sub(width_of(indent));
+        if chunks.last().is_some_and(|c| c.trim().is_empty()) && !lines.is_empty() {
+            chunks.pop();
+        }
+        while let Some(c) = chunks.last() {
+            let l = width_of(c);
+            if cur_len + l <= w {
+                cur_len += l;
+                cur.push(chunks.pop().expect("chunk"));
+            } else {
+                break;
+            }
+        }
+        if chunks.last().is_some_and(|c| width_of(c) > w) {
+            let space_left = if w < 1 { 1 } else { w - cur_len };
+            let chunk: Vec<char> = chunks.last().expect("chunk").chars().collect();
+            let mut end = space_left;
+            if chunk.len() > space_left {
+                if let Some(h) = chunk[..space_left].iter().rposition(|c| *c == '-') {
+                    if h > 0 && chunk[..h].iter().any(|c| *c != '-') {
+                        end = h + 1;
+                    }
+                }
+            }
+            let end = end.min(chunk.len());
+            cur.push(chunk[..end].iter().collect());
+            let rest: String = chunk[end..].iter().collect();
+            *chunks.last_mut().expect("chunk") = rest;
+            if chunks.last().is_some_and(|c| c.is_empty()) {
+                chunks.pop();
+            }
+        }
+        if cur.last().is_some_and(|c| c.trim().is_empty()) {
+            cur.pop();
+        }
+        if !cur.is_empty() {
+            lines.push(format!("{indent}{}", cur.concat()));
+        }
+    }
+    lines.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,5 +159,6 @@ mod tests {
         assert_eq!(upper_first("şam"), "Şam");
         assert!(!isalpha('\u{0307}'));
         assert!(isalpha('ş'));
+        assert_eq!(fill("aaa bbb ccc", 9, "  "), "  aaa bbb\n  ccc");
     }
 }

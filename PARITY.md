@@ -20,10 +20,11 @@ Python `iy` does on the same data.
 | `iy search --chapter BOOK:CHAPTER` | ⏳ | |
 | `iy search --mode meaning`, `--in narrators/scholars`, `--recent`, `--clear-recent` | ⏳ | |
 | `iy chain BOOK`, `iy chain BOOK NUMBER` | ✅ | `--raw`, `--lang`. Every link with its term, the narrator Ibn Hajar's Taqrib or al-Najashi identifies (tabaqa, year of death, the first verdict), tahwil meetings, groups and unnamed narrators of road B, whom the chain reaches, and the chain in words in Turkish and English. About 30 ms where `iy` takes seconds. |
-| `iy chain BOOK --chapter CH` | ⏳ | |
+| `iy chain BOOK --chapter CH` | ✅ | the hadith of a chapter with how far each chain was read |
 | reading the chains, identifying the narrators (`iy isnads`) | ⏳ | the chain reader (isnady-isnad-15) and the narrator matcher (isnady-narrators-17) stay with the Python isnady for now: `iy-rs chain` shows what it stored, and asks for one `iy chain` after books are imported |
 | `iy narrator`, `iy scholar`, `iy life`, `iy tree`, `iy group` | ⏳ | |
-| `iy book`, `iy quran`, `iy sira`, `iy sahifa` | ⏳ | |
+| `iy book`, `iy book KEY`, `iy book KEY CHAPTER` | ✅ | the shelf (`--tradition`), a book's chapters in reading order, a chapter (`--language`, `--limit`, `--width`; the sira and the tabaqat wrapped as Python's textwrap does), the reader's places and markers (`--resume`, `--mark`, `--marks`, `--go`, `--unmark`, `--forget`, in the same state.json). The trees of newly imported books are built by the Python isnady (one `iy book`). |
+| `iy quran`, `iy sira`, `iy sahifa` | ⏳ | |
 | `iy stats …` | ⏳ | |
 | `iy catalog …`, `iy repo …`, `iy import …`, `iy database …`, `iy remove` | ⏳ | the database is imported by the Python isnady |
 | `iy export`, `iy import-data`, `iy bookmark`, `iy config`, `iy profile`, `iy learn`, `iy term`, `iy ai`, `iy cache`, `iy log`, `iy reset`, `iy update`, `iy doctor` | ⏳ | |
@@ -32,7 +33,11 @@ Python `iy` does on the same data.
 
 | | isnady-rs |
 |---|---|
-| Desktop window (Search, Books, Narrators, Isnad Chains, …) | ⏳ planned with Tauri: the core in Rust, the pages drawn by the system's web view, so Arabic, right-to-left text and the Amiri font render exactly |
+| The window itself: `isnady-rs` (Tauri 2) | ✅ the sidebar of the Python window in its order, its themes (system, light, dark, paper, slate, emerald, midnight, contrast, garden, sky, starry), the interface in English, Turkish and Arabic (right to left) from the same catalogs, Amiri for the Arabic. The pages are drawn by the system's web view, so Arabic renders exactly. |
+| Search | ✅ all, any, phrase, whole words, one book, paging; the matches marked in every text, the texts in the order of the languages chosen, "View chain" |
+| Isnad Chains | ✅ a book and a number, previous, next, random; every chain link by link as the Python page draws it: the term, the name as written and in the rijal work, its reading, the critic's verdict with Ibn Hajar's rank (or al-Najashi's category), tabaqa, year of death, tahwil meetings, al-Kulayni's groups, whom it reaches, raised and cut chains, and the chain in words in Turkish and English. The contents picker of a book: ⏳ |
+| Books | ✅ the shelf (Sunni, Shia, all; by kind), a book's contents, a chapter to read (hadith with their texts and View chain, rijal entries, the sira's sections), previous and next chapter, where you left each book. Markers, search in a chapter, PDF: ⏳ |
+| Narrators, Hadith Scholars, Companions, Sira, Written sources, Genealogy, Statistics, Bookmarks, Learn; Settings; Data sources | ⏳ one page at a time; until then the Python window shows them, on the same data |
 
 ## The core
 
@@ -48,6 +53,8 @@ Python `iy` does on the same data.
 | `isnady.core.names` (names in Latin letters), `names_lexicon` | ✅ `names.rs` | the word list itself is read from the Python isnady (`data/tables.json`) |
 | `isnady.core.narrators.describe`, `known_aliases`, `links_ready`; `rijal.display_name`; `name_parts` (the name he is known by) | ✅ `narrators.rs` | the matcher: ⏳ |
 | `isnady.core.traditions`, `companions` (what a chain needs of them) | ✅ `isnad.rs` | |
+| `isnady.core.works`, `titles`, `chapters` (the reader's tree, book and chapter titles in the interface language, the tables of contents of Musnad Ahmad and al-Darimi) | ✅ `works.rs` | building the trees: ⏳ |
+| `isnady.core.readmarks` | ✅ `readmarks.rs` | |
 | everything else | ⏳ | |
 
 ## How parity is kept

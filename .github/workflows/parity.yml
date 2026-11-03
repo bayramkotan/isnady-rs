@@ -34,9 +34,10 @@ jobs:
           iy catalog import rijal_al_najashi_ahmad_ibn_ali_al_najashi
           iy search النيات > /dev/null
           iy chain nawawi 1 > /dev/null
+          iy book > /dev/null
       - name: The tables are the Python isnady's
         run: python tools/gen_tables.py --check
       - name: Build iy-rs
-        run: cargo build --release --locked
+        run: cargo build --release --locked -p isnady
       - name: Compare
         run: python tools/parity.py --python iy --rust target/release/iy-rs

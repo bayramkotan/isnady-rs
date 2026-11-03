@@ -56,6 +56,10 @@ pub struct Rijal {
     pub note_start: String,
     pub note_words: String,
     pub shia_ranks: HashMap<String, String>,
+    /// Ibn Hajar's twelve ranks, in English (the interface translates them)
+    pub ranks: HashMap<String, String>,
+    /// the twelve tabaqat of the Taqrib, in English
+    pub tabaqat: HashMap<String, String>,
 }
 
 #[derive(Deserialize)]

@@ -1,0 +1,27 @@
+[package]
+name = "isnady-gui"
+description = "isnady's window in Rust (Tauri 2): the same data, the same rules as the Python isnady"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+# Tauri 2 needs a newer Rust than the core
+rust-version = "1.77.2"
+readme = "../../README.md"
+keywords = ["hadith", "isnad", "arabic", "tauri", "gui"]
+categories = ["gui", "text-processing"]
+
+[[bin]]
+name = "isnady-rs"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+isnady-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = [] }

@@ -15,8 +15,10 @@ isnady's own, word for word, below the line. The Rust command is `iy-rs` where t
 
 **Version 0.7.4 — what `iy-rs` does today:** `iy-rs search` (all of it: all, any, phrase, whole words, books,
 languages, paging, wildcards, near spellings, the recent searches), `iy-rs chain` (every link, its narrator and his
-grade, whom the chain reaches, the chain in Turkish and English), `iy-rs sources`, `iy-rs datadir` and `iy-rs -V`.
-A search takes about 60 ms, a chain about 30 ms. Each of these prints what `iy` prints, word for word; `tools/parity.py` checks it on
+grade, whom the chain reaches, the chain in Turkish and English), `iy-rs book` (the shelf, a book's chapters, a
+chapter, your places and markers in each book), `iy-rs sources`, `iy-rs datadir` and `iy-rs -V`.
+A search takes about 60 ms, a chain about 30 ms. **The window, `isnady-rs`,** has begun: Search, Books and Isnad Chains, in
+English, Turkish or Arabic, in every theme of the Python window; the other pages come one at a time. Each of these prints what `iy` prints, word for word; `tools/parity.py` checks it on
 every push and before every release. Everything else below is still done by the Python isnady, on the same data. The
 ported parts are listed in [PARITY.md](PARITY.md), and more are ported with every release.
 
@@ -26,7 +28,7 @@ ported parts are listed in [PARITY.md](PARITY.md), and more are ported with ever
 |---|---|
 | [crates.io](https://crates.io/crates/isnady) | `cargo install isnady`, which gives `iy-rs` |
 | [Releases](https://github.com/bayramkotan/isnady-rs/releases/latest) | `iy-rs` for Windows, Linux and macOS (Apple silicon and Intel), ready to run: unpack it and run `iy-rs` |
-| The source | `cargo build --release`, which puts the program in `target/release/iy-rs` |
+| The source | `cargo build --release`, which puts `iy-rs` and the window `isnady-rs` in `target/release/`; or `cargo install --path crates/isnady-gui` for the window alone (Linux needs `webkit2gtk-4.1`) |
 
 The books are imported by the Python isnady (`pip install isnady`, then `iy catalog import --all`). `iy-rs` finds the
 same data folder by itself.

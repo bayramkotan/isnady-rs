@@ -4428,11 +4428,39 @@
  "rijal": {
   "note_start": "^[بو]?(?:بتقديم|بتأخير|تقديم|تأخير|بالضم|بالفتح|بالكسر|بالسكون|الضم|الفتح|الكسر|همزة|بهمزة|الهمزة|ياء|فتح|ضم|كسر|سكون|تشديد|تخفيف|التشديد|التخفيف|تثقيل|التثقيل|الموحدة|موحدة|المعجمة|معجمة|معجمتين|المهملة|مهملة|مهملتين|مهملات|التحتانية|تحتانية|الفوقانية|فوقانية|المثناة|مثناة|المثلثة|مثلثة|نون|النون|راء|الراء|زاي|الزاي|فاء|الفاء|قاف|القاف|جيم|الجيم|حاء|خاء|دال|ذال|سين|شين|صاد|ضاد|طاء|ظاء|عين|غين|كاف|لام|ميم|هاء|واو|ياء|مصغر|مصغرا|مكبر|بالتصغير|بالتكبير|بوزن|بلفظ|وزن)$",
   "note_words": "^(?:و|ثم|بعدها|قبلها|آخره|وآخره|أوله|ثانيه|ثالثه|الأولى|الثانية|خفيفة|ثقيلة|مفتوحة|مضمومة|مكسورة|ساكنة|بعد|على|المشهور|الصحيح|وقيل|ويقال|أو|مثلها|كذلك|مخففة|مشددة|المضمومة|المفتوحة|المكسورة|الساكنة|الخفيفة|الثقيلة|المشددة|المخففة|المثقلة|الأخيرة|الأخرى|مضمومة|مفتوحة|مكسورة|مثقلة)$",
+  "ranks": {
+   "1": "Companion",
+   "10": "abandoned (matruk, wahi, saqit)",
+   "11": "accused of lying",
+   "12": "liar, fabricator",
+   "2": "praise confirmed (thiqa thiqa, thiqa hafiz, awthaq al-nas)",
+   "3": "trustworthy (thiqa, mutqin, thabt, 'adl)",
+   "4": "truthful (saduq, la ba's bih)",
+   "5": "truthful with lapses (saduq yahim, lahu awham, yukhti', taghayyara)",
+   "6": "acceptable when followed, otherwise weak (maqbul)",
+   "7": "unestablished (mastur, majhul al-hal)",
+   "8": "weak (da'if)",
+   "9": "unknown (majhul)"
+  },
   "shia_ranks": {
    "1": "trustworthy (thiqa)",
    "2": "praised (mamduh)",
    "3": "trustworthy, not Imami (muwaththaq)",
    "4": "weak (da'if)"
+  },
+  "tabaqat": {
+   "1": "Companions",
+   "10": "senior narrators from the Followers' followers (e.g. Ahmad b. Hanbal)",
+   "11": "middle narrators from them (e.g. al-Dhuhli, al-Bukhari)",
+   "12": "junior narrators from them (e.g. al-Tirmidhi)",
+   "2": "senior Successors (e.g. Ibn al-Musayyab)",
+   "3": "middle Successors (e.g. al-Hasan, Ibn Sirin)",
+   "4": "Successors who narrate mostly from senior Successors (e.g. al-Zuhri, Qatada)",
+   "5": "junior Successors (e.g. al-A'mash)",
+   "6": "contemporaries of the junior Successors with no proven meeting with a Companion (e.g. Ibn Jurayj)",
+   "7": "senior Followers of the Successors (e.g. Malik, al-Thawri)",
+   "8": "middle Followers of the Successors (e.g. Ibn 'Uyayna, Ibn 'Ulayya)",
+   "9": "junior Followers of the Successors (e.g. Yazid b. Harun, al-Shafi'i, 'Abd al-Razzaq)"
   }
  },
  "traditions": {
