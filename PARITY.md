@@ -19,7 +19,9 @@ Python `iy` does on the same data.
 | `iy search --grade …`, `--every-grader`, `--no-sahihayn` | ⏳ | |
 | `iy search --chapter BOOK:CHAPTER` | ⏳ | |
 | `iy search --mode meaning`, `--in narrators/scholars`, `--recent`, `--clear-recent` | ⏳ | |
-| `iy chain`, `iy isnads` | ⏳ | the chain reader (isnady-isnad-15) and the narrator matcher (isnady-narrators-17) are next |
+| `iy chain BOOK`, `iy chain BOOK NUMBER` | ✅ | `--raw`, `--lang`. Every link with its term, the narrator Ibn Hajar's Taqrib or al-Najashi identifies (tabaqa, year of death, the first verdict), tahwil meetings, groups and unnamed narrators of road B, whom the chain reaches, and the chain in words in Turkish and English. About 30 ms where `iy` takes seconds. |
+| `iy chain BOOK --chapter CH` | ⏳ | |
+| reading the chains, identifying the narrators (`iy isnads`) | ⏳ | the chain reader (isnady-isnad-15) and the narrator matcher (isnady-narrators-17) stay with the Python isnady for now: `iy-rs chain` shows what it stored, and asks for one `iy chain` after books are imported |
 | `iy narrator`, `iy scholar`, `iy life`, `iy tree`, `iy group` | ⏳ | |
 | `iy book`, `iy quran`, `iy sira`, `iy sahifa` | ⏳ | |
 | `iy stats …` | ⏳ | |
@@ -42,6 +44,10 @@ Python `iy` does on the same data.
 | `isnady.core.books` (order, active books) | ✅ `books.rs` | |
 | `isnady.config` (settings, state), `isnady.core.profiles` | ✅ `config.rs` (reading, the recent searches) | |
 | `isnady.data.db` | ✅ reading schema 8 (`db.rs`) | creating and upgrading stay with the Python isnady |
+| `isnady.core.isnad` (the stored chains, reading aids, the chain in words), `tahwil_meet.meeting` | ✅ `isnad.rs` | the parser itself: ⏳ |
+| `isnady.core.names` (names in Latin letters), `names_lexicon` | ✅ `names.rs` | the word list itself is read from the Python isnady (`data/tables.json`) |
+| `isnady.core.narrators.describe`, `known_aliases`, `links_ready`; `rijal.display_name`; `name_parts` (the name he is known by) | ✅ `narrators.rs` | the matcher: ⏳ |
+| `isnady.core.traditions`, `companions` (what a chain needs of them) | ✅ `isnad.rs` | |
 | everything else | ⏳ | |
 
 ## How parity is kept
@@ -55,6 +61,10 @@ Python `iy` does on the same data.
 - **One rule, two places.** A rule changed in one isnady is changed in the other in the same release. Where Python
   left a choice open, both now make it the same way (0.7.4: spellings of equal frequency are ordered by the word,
   in both).
+- **The same word lists.** The names list, the Companions' names, the Ma'sumun, the transmission terms, the
+  Turkish of the chain's words and the patterns that cut a name are not copied by hand: `tools/gen_tables.py` writes
+  them from the Python isnady into `crates/isnady-core/data/tables.json`, and the Parity workflow checks with
+  `--check` that they are still the Python isnady's.
 - **The same README.** isnady-rs's README is isnady's README, word for word, under a head of its own
   (`tools/sync_readme.py`).
 - **The same places.** The Python isnady is on PyPI and npm. isnady-rs is on crates.io (`cargo install isnady`) and

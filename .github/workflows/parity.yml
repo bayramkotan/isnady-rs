@@ -1,7 +1,8 @@
 name: Parity
 
 # The Rust iy-rs and the Python iy on the same data: a few books imported from isnady-data by the Python isnady of the
-# same version (its tag, or main), then tools/parity.py compares what both print, word for word.
+# same version (its tag, or main), then tools/parity.py compares what both print, word for word. The word lists and
+# patterns isnady-rs reads (crates/isnady-core/data/tables.json) are checked against that isnady too.
 on:
   workflow_call:
     inputs:
@@ -28,7 +29,13 @@ jobs:
           iy catalog import al_arbain_al_nawawiyya --language ara --language eng --language tur
           iy catalog import riyad_al_salihin_al_nawawi
           iy catalog import al_shamail_al_muhammadiyya_al_tirmidhi
+          iy catalog import sifat_al_shia_al_shaykh_al_saduq
+          iy catalog import taqrib_al_tahdhib_ibn_hajar_al_asqalani
+          iy catalog import rijal_al_najashi_ahmad_ibn_ali_al_najashi
           iy search النيات > /dev/null
+          iy chain nawawi 1 > /dev/null
+      - name: The tables are the Python isnady's
+        run: python tools/gen_tables.py --check
       - name: Build iy-rs
         run: cargo build --release --locked
       - name: Compare

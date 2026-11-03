@@ -3,6 +3,20 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [Unreleased]
+
+- **`iy-rs chain` (RS2), word for word as `iy chain`.** `iy-rs chain BOOK` gives the book's numbers; `iy-rs chain BOOK
+  NUMBER` shows every chain of the hadith: each link with its term, the narrator Ibn Hajar's Taqrib or al-Najashi
+  identifies (tabaqa, year of death, the first verdict, how sure the match is), tahwil meetings, al-Kulayni's groups
+  and unnamed narrators, whom the chain reaches, and the chain in words in Turkish and English (`--lang`), with
+  `--raw`. It takes about 30 ms. Reading the chains and identifying the narrators stay with the Python isnady: after
+  books are imported, one `iy chain` does it, then `iy-rs chain` shows what it stored.
+- **The word lists come from the Python isnady.** `tools/gen_tables.py` writes the names list, the Companions' names,
+  the Ma'sumun, the terms, the Turkish of the chain's words and the patterns into `crates/isnady-core/data/tables.json`;
+  the Parity workflow checks they are still the Python isnady's.
+- **Parity: 35 cases**, 17 of them chains, on road A (Ibn Hajar's Taqrib) and road B (al-Najashi, Sifat al-Shi'a);
+  the Parity workflow imports those two rijal works and a Shia book too.
+
 ## [0.7.4] — 2026-11-03
 
 - **The first isnady-rs (Bayram, 2026-11-03: "isnady-rs ile olur. Ama birebir aynı olması lazım … sürüm numaraları

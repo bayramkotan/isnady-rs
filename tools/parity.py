@@ -1,7 +1,7 @@
 """Parity: the Rust iy-rs and the Python iy give the same answer — word for word.
 
 Runs every case below with both programs on the same data folder and compares what they print; only the time a
-search took ("in 61 ms") is left out of the comparison. Run it before every release (the release blocks do):
+search took ("in 61 ms") and the number `iy chain BOOK` picks at random are left out of the comparison. Run it before every release (the release blocks do):
 
     python tools/parity.py                              # the Python iy on PATH, target/release/iy-rs
     python tools/parity.py --python "python -m isnady" --rust target/release/iy-rs.exe
@@ -36,14 +36,33 @@ CASES = [
     ["search", "النياتت", "--limit", "2"],                      # not found as typed: its near spellings
     ["search", "«قَالَ: لا يُؤْمِنُ»", "--mode", "phrase", "--limit", "2"],
     ["search", "zzzqqq"],
+    # the chains (RS2): read by the Python isnady, shown by both; road A with Ibn Hajar's Taqrib, road B with al-Najashi
+    ["chain", "nawawi"],
+    ["chain", "nawawi", "1"],
+    ["chain", "nawawi", "2", "--raw"],
+    ["chain", "nawawi", "10", "--lang", "tr"],
+    ["chain", "nawawi", "15", "--lang", "en,tr,ar"],
+    ["chain", "riyad", "1"],
+    ["chain", "riyad", "12"],
+    ["chain", "riyad", "100"],
+    ["chain", "riyad", "500", "--raw"],
+    ["chain", "shamail", "1"],
+    ["chain", "shamail", "7"],
+    ["chain", "shamail", "40", "--lang", "en"],
+    ["chain", "sifat-shia", "1"],
+    ["chain", "sifat-shia", "5", "--raw"],
+    ["chain", "sifat-shia", "20"],
+    ["chain", "nawawi", "999"],                        # a number the book does not have
+    ["chain", "nosuch", "1"],
 ]
 
 TIME = re.compile(r" in \d+ ms")
+EXAMPLE = re.compile(r"(Example: iy chain \S+) \S+")     # a number chosen at random
 
 
 def run(cmd: list[str], args: list[str], env: dict) -> tuple[int, str]:
     p = subprocess.run(cmd + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
-    return p.returncode, TIME.sub(" in N ms", p.stdout)
+    return p.returncode, EXAMPLE.sub(r"\1 N", TIME.sub(" in N ms", p.stdout))
 
 
 def main() -> int:

@@ -1,8 +1,8 @@
 //! The database the Python isnady builds (isnady.db in the data folder). isnady-rs reads it; creating it, importing
 //! and upgrading its schema stay with the Python isnady until they are ported (PARITY.md).
 
-pub use rusqlite::Connection;
 use rusqlite::OpenFlags;
+pub use rusqlite::{Connection, Error};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
