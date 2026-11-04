@@ -13,6 +13,7 @@ pub mod names;
 pub mod narrators;
 pub mod normalize;
 pub mod paths;
+pub mod people;
 pub mod py;
 pub mod readmarks;
 pub mod search;

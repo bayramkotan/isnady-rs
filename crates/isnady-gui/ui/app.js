@@ -28,6 +28,7 @@ const LOCAL = {
     "{n} hadith · {b} books": "{n} hadis · {b} kitap",
     "NOT_LAID_OUT": "Son içe aktarılan kitaplar henüz bölümlere ayrılmadı. Python isnady bunu bir kez yapar: Kitaplar sayfasını açın ya da iy book çalıştırın.",
     "Sunni": "Sünnî", "Shia": "Şiî", "All": "Hepsi", "Other": "Diğer",
+    "Teachers": "Hocaları", "Students": "Talebeleri", "No narrators found": "Râvi bulunamadı",
   },
   ar: {
     "Number": "الرقم",
@@ -37,6 +38,7 @@ const LOCAL = {
     "{n} hadith · {b} books": "{n} حديث · {b} كتب",
     "NOT_LAID_OUT": "لم تُقسَّم الكتب المستوردة أخيرًا إلى أبواب بعد. يفعل isnady بلغة Python ذلك مرة واحدة: افتح صفحة الكتب فيه أو شغّل iy book.",
     "Sunni": "سني", "Shia": "شيعي", "All": "الكل", "Other": "أخرى",
+    "Teachers": "شيوخه", "Students": "تلاميذه", "No narrators found": "لم يوجد راوٍ",
   },
 };
 const ENGLISH = {
@@ -95,7 +97,7 @@ function applyTheme(name) {
 // ------------------------------------------------------------------ the sidebar (gui/main_window.py SECTIONS)
 
 const SECTIONS = [
-  ["search", "Search", true], ["books", "Books", true], ["narrators", "Narrators"], ["chains", "Isnad Chains", true],
+  ["search", "Search", true], ["books", "Books", true], ["narrators", "Narrators", true], ["chains", "Isnad Chains", true],
   ["scholars", "Hadith Scholars"], ["companions", "Companions and the Household"], ["sira", "Sira"],
   ["sahifa", "Written sources"], ["genealogy", "Genealogy"], ["statistics", "Statistics"], ["bookmarks", "Bookmarks"],
   ["learn", "Learn"],
@@ -123,6 +125,8 @@ function show(key) {
   $("page-search").hidden = key !== "search";
   $("page-chains").hidden = key !== "chains";
   $("page-books").hidden = key !== "books";
+  $("page-narrators").hidden = key !== "narrators";
+  if (key === "narrators" && !NARR.loaded) loadNarrators();
   if (key === "books" && !BOOKS.loaded) loadShelf();
   $("page-later").hidden = !!ready;
   if (!ready) {
@@ -412,6 +416,76 @@ async function readChapter(key, index, more) {
   $("ch-more").textContent = `${t("Next")} ${BOOKS.limit} (${BOOKS.offset} / ${d.total.toLocaleString("en-US")})`;
 }
 
+// ------------------------------------------------------------------ Narrators (gui/narrators_page.py)
+
+let NARR = { loaded: false, road: "sunni", id: null };
+
+function personButton(p) {
+  const name = p.title || p.reading || p.arabic;
+  const facts = [];
+  if (p.tabaqa) facts.push(t("tabaqa {tabaqa}", { tabaqa: p.tabaqa }));
+  if (p.death) facts.push(t("d. {year}", { year: p.death }));
+  if (p.rank && !p.shia) facts.push(t("rank {rank}", { rank: p.rank }));
+  facts.push(t("{n:,} in chains", { n: p.in_chains }));
+  return `<button class="person ${NARR.id === p.id ? "on" : ""}" data-person="${p.id}">
+    <div class="t">${esc(name)}</div><div class="a" lang="ar">${esc(p.arabic)}</div><div class="n">${esc(facts.join(" · "))}</div></button>`;
+}
+
+async function loadNarrators() {
+  NARR.loaded = true;
+  const roads = [["sunni", "Sunni"], ["shia", "Shia"], ["all", "All"]];
+  $("n-roads").innerHTML = roads.map(([k, l]) => `<button class="quiet ${NARR.road === k ? "on" : ""}" data-road="${k}">${esc(t(l))}</button>`).join("");
+  $("nq").placeholder = t("Name, kunya or nisba — Arabic or Latin letters");
+  await listNarrators();
+}
+
+async function listNarrators() {
+  const text = $("nq").value.trim();
+  if (!text) {
+    const f = await invoke("famous", { tradition: NARR.road });
+    $("n-list").innerHTML = f.groups.map((g) => `<div class="kind-head">${esc(t(g.title))}</div>` + g.people.map(personButton).join("")).join("");
+    if (!NARR.id && f.groups.length && f.groups[0].people.length) openNarrator(f.groups[0].people[0].id);
+    return;
+  }
+  const r = await invoke("find_narrators", { text, tradition: NARR.road });
+  $("n-list").innerHTML = r.people.length ? r.people.map(personButton).join("") : `<div class="muted">${esc(t("No narrators found"))}</div>`;
+  if (r.people.length && !r.people.some((p) => p.id === NARR.id)) openNarrator(r.people[0].id);
+}
+
+async function openNarrator(id) {
+  NARR.id = id;
+  for (const b of $("n-list").querySelectorAll("button[data-person]")) b.classList.toggle("on", Number(b.dataset.person) === id);
+  const d = await invoke("narrator", { id });
+  if (d.error) return;
+  const head = `<div class="n-head"><h1>${esc(d.title || d.reading || d.arabic)}</h1><div class="a" lang="ar">${esc(d.arabic)}</div>
+    ${d.full_reading ? `<div class="muted">${esc(d.full_reading)}</div>` : ""}</div>`;
+  const facts = [];
+  if (d.tabaqa) facts.push(t("tabaqa {tabaqa}", { tabaqa: d.tabaqa }) + (d.tabaqa_label ? ": " + t(d.tabaqa_label) : ""));
+  if (d.death || d.death_note) facts.push(t("d. {year} AH", { year: d.death || "?" }) + (d.death_note ? ` (${d.death_note})` : ""));
+  facts.push(t("{n:,} in chains", { n: d.in_chains }));
+  if (d.source) facts.push(d.source);
+  let html = head + `<div class="facts-row">${esc(facts.join(" · "))}</div>`;
+  if (d.other_names.length) html += `<div class="chips">${d.other_names.slice(0, 12).map((n) => `<span class="chip"><span class="ar" lang="ar">${esc(n)}</span></span>`).join("")}</div>`;
+  for (const v of d.verdicts) {
+    const color = v.shia ? "var(--gold)" : rankColor(v.rank);
+    const rank = v.rank ? (v.shia ? t(v.label) + (v.madhhab ? ", " + t(v.madhhab) : "") : t("rank {rank} of 12", { rank: v.rank }) + ": " + t(v.label)) : t("no judgment");
+    html += `<div class="verdict-card" style="border-inline-start-color:${color}"><b>${esc(v.critic)}</b>, <i>${esc(v.work)}</i>
+      <div class="phrase" lang="ar">${esc(v.phrase)}</div><div class="muted">${esc(rank)}</div></div>`;
+  }
+  if (d.marks.length) html += `<h3 class="sec">${esc(t("Books"))}</h3><div class="chips">${d.marks.map(([m, meaning]) => `<span class="chip"><span class="ar">${esc(m)}</span> ${esc(t(meaning))}</span>`).join("")}</div>`;
+  const people = (list) => list.map((r) => `<span class="chip" data-person="${r.id}"><span class="ar" lang="ar">${esc(r.name)}</span> (${r.count})</span>`).join("");
+  if (d.teachers.length) html += `<h3 class="sec">${esc(t("Teachers"))}</h3><div class="chips">${people(d.teachers)}</div>`;
+  if (d.students.length) html += `<h3 class="sec">${esc(t("Students"))}</h3><div class="chips">${people(d.students)}</div>`;
+  if (d.compilers.length) html += `<div class="muted">${esc(d.compilers.map((c) => `${c.book} (${c.count})`).join(" · "))}</div>`;
+  if (d.hadith.length) {
+    html += `<h3 class="sec">${esc(t("{n:,} hadith", { n: d.hadith_total }))}</h3><div class="chips">` +
+      d.hadith.map((h) => `<span class="chip" data-book="${esc(h.key)}" data-number="${esc(h.number)}">${esc(h.book)} ${esc(h.number)}</span>`).join("") +
+      (d.hadith_total > d.hadith.length ? " …" : "") + "</div>";
+  }
+  $("n-view").innerHTML = html;
+  $("main").scrollTop = 0;
+}
+
 // ------------------------------------------------------------------ start
 
 async function start() {
@@ -447,6 +521,25 @@ async function start() {
 
   $("go").onclick = () => runSearch(false);
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(false); });
+  $("n-roads").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-road]");
+    if (!b) return;
+    NARR.road = b.dataset.road;
+    for (const x of $("n-roads").children) x.classList.toggle("on", x === b);
+    listNarrators();
+  });
+  let typing = null;
+  $("nq").addEventListener("input", () => { clearTimeout(typing); typing = setTimeout(listNarrators, 250); });
+  $("n-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-person]");
+    if (b) openNarrator(Number(b.dataset.person));
+  });
+  $("n-view").addEventListener("click", (e) => {
+    const p = e.target.closest("[data-person]");
+    if (p) { openNarrator(Number(p.dataset.person)); return; }
+    const h = e.target.closest("[data-book]");
+    if (h) showChain(h.dataset.book, h.dataset.number);
+  });
   $("roads").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-road]");
     if (!b) return;
@@ -488,6 +581,11 @@ async function start() {
     await loadShelf();
     await openBook(key);
     if (n) await readChapter(key, Number(n));
+  } else if (open.startsWith("narrator:")) {
+    show("narrators");
+    await loadNarrators();
+    const q = open.slice(9);
+    if (/^\d+$/.test(q)) await openNarrator(Number(q)); else { $("nq").value = q; await listNarrators(); }
   } else if (open.startsWith("search:")) {
     $("q").value = open.slice(7);
     show("search");

@@ -70,6 +70,27 @@ pub struct NameParts {
 }
 
 #[derive(Deserialize)]
+pub struct Famous {
+    /// [key, Turkish, English, Arabic, honour ("m", "f", "2", ""), tradition]
+    pub people: Vec<[String; 6]>,
+    /// [id, title, tradition, [keys]]
+    pub groups: Vec<(String, String, String, Vec<String>)>,
+    /// [key, tradition, compact, skeleton]: every spelling of every famous one, folded
+    pub keys: Vec<[String; 4]>,
+    pub honour: String,
+    pub honour_ar: String,
+    pub ibn: HashSet<String>,
+    pub too_short: HashSet<String>,
+}
+
+#[derive(Deserialize)]
+pub struct NarratorTables {
+    pub book_marks: HashMap<String, String>,
+    pub madhhabs: HashMap<String, String>,
+    pub famous: Famous,
+}
+
+#[derive(Deserialize)]
 pub struct Tables {
     pub parser_id: String,
     pub matcher_id: String,
@@ -79,6 +100,7 @@ pub struct Tables {
     pub traditions: Traditions,
     pub isnad: Isnad,
     pub rijal: Rijal,
+    pub narrators: NarratorTables,
     pub name_parts: NameParts,
 }
 

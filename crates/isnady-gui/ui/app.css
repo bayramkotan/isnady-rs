@@ -156,3 +156,22 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
 .crumbs b { color: var(--ink); }
 .entry p { margin: 6px 0; font-size: 15px; }
 .entry.ar p, .entry .ar { font-family: var(--arabic); font-size: 22px; direction: rtl; text-align: right; line-height: 1.9; }
+
+/* ------------------------------------------------------------ narrators */
+#nq { width: 100%; margin-bottom: 10px; }
+.person { display: block; width: 100%; text-align: start; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; cursor: pointer; }
+.person.on { border-color: var(--lapis); box-shadow: inset 3px 0 0 var(--gold); }
+.person .t { font-weight: 600; }
+.person .a { font-family: var(--arabic); font-size: 17px; direction: rtl; text-align: right; color: var(--muted); }
+.person .n { color: var(--muted); font-size: 12px; }
+.n-head .a { font-family: var(--arabic); font-size: 28px; direction: rtl; text-align: right; }
+.n-head h1 { font-family: Georgia, serif; font-size: 28px; margin: 4px 0; }
+.facts-row { color: var(--muted); margin: 4px 0 10px; }
+.verdict-card { border-inline-start: 4px solid var(--border); padding: 6px 12px; margin: 8px 0; background: var(--surface); border-radius: 6px; }
+.verdict-card .phrase { font-family: var(--arabic); font-size: 20px; }
+.chips { margin: 6px 0; }
+.chip { display: inline-block; background: var(--pill); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px;
+  margin: 3px 4px 3px 0; font-size: 13px; cursor: pointer; }
+.chip .ar { font-family: var(--arabic); font-size: 16px; }
+h3.sec { margin: 18px 0 6px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }

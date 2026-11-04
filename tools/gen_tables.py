@@ -77,10 +77,31 @@ def tables() -> dict:
             "ranks": {str(k): v[1] for k, v in rijal.RANK_LABELS.items()},
             "tabaqat": {str(k): v for k, v in rijal.TABAQA_LABELS.items()},
         },
+        "narrators": narrators_tables(),
         "name_parts": {
             "not_names": sorted(name_parts._NOT_NAMES),
             "laqab": name_parts._LAQAB_PHRASE.pattern,
             "known": name_parts._KNOWN_PHRASE.pattern,
+        },
+    }
+
+
+def narrators_tables() -> dict:
+    """What `iy narrator` needs: Ibn Hajar's book marks, al-Najashi's schools, and the famous ones (core.famous):
+    each person, the groups, and the spellings people type for them, already folded as the Python isnady folds them."""
+    from isnady.core import famous, rijal, shia_rijal
+
+    return {
+        "book_marks": rijal.BOOK_MARKS,
+        "madhhabs": shia_rijal.MADHHAB_LABELS,
+        "famous": {
+            "people": [[p[0], p[1], p[2], p[3], p[4], tradition] for p, tradition in famous._all()],
+            "groups": [[g["id"], g["title"], g["tradition"], [p[0] for p in g["people"]]] for g in famous.GROUPS],
+            "keys": [list(k) for k in famous._keys()],
+            "honour": famous._HONOUR_RE.pattern,
+            "honour_ar": famous._HONOUR_AR_RE.pattern,
+            "ibn": sorted(famous._IBN),
+            "too_short": sorted(famous._TOO_SHORT),
         },
     }
 

@@ -70,6 +70,21 @@ CASES = [
     ["chain", "riyad", "--chapter", "1"],
     ["chain", "shamail", "--chapter", "3"],
     ["chain", "riyad", "--chapter", "nosuch"],
+    # the narrators (RS4): by Arabic or Latin letters, close spellings, the famous ones by any spelling
+    ["narrator", "--famous"],
+    ["narrator", "--famous", "--tradition", "shia"],
+    ["narrator", "--famous", "--tradition", "all"],
+    ["narrator", "الزهري"],
+    ["narrator", "ابو هريرة", "--limit", "1"],
+    ["narrator", "Ebu Bekir"],
+    ["narrator", "Omer ibn Hattap"],
+    ["narrator", "Zuhri", "--limit", "3"],
+    ["narrator", "Buhaari"],
+    ["narrator", "Aysha", "--limit", "1"],
+    ["narrator", "Ibn Abbas", "--limit", "1"],
+    ["narrator", "زرارة", "--tradition", "shia"],
+    ["narrator", "zzzqqq"],
+    ["narrator"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

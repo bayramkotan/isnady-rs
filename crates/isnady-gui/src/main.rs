@@ -6,8 +6,8 @@
 
 use isnady_core::narrators::Person;
 use isnady_core::{
-    books, config, db, i18n, isnad, names, narrators, paths, readmarks, search, tables, works,
-    VERSION,
+    books, config, db, i18n, isnad, names, narrators, paths, people, readmarks, search, tables,
+    works, VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -390,6 +390,143 @@ fn read_chapter(
     })
 }
 
+fn ui_reading_lang() -> &'static str {
+    if i18n::ui_language() == "tr" {
+        "tr"
+    } else {
+        "en"
+    }
+}
+
+fn person_row(conn: &db::Connection, pid: i64, titles: &HashMap<i64, String>) -> Option<Value> {
+    let p = narrators::describe(conn, pid)?;
+    let v = p.verdicts.first();
+    let n: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM isnad_links WHERE person_id = ?",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+    let reading = if p.known_arabic.is_empty() {
+        String::new()
+    } else {
+        isnad::name_reading(&p.known_arabic, ui_reading_lang()).0
+    };
+    Some(json!({
+        "id": pid, "title": titles.get(&pid), "arabic": p.display_name, "reading": reading,
+        "tabaqa": p.tabaqa, "death": p.death_year_ah, "in_chains": n,
+        "rank": v.and_then(|v| v.rank), "shia": v.map(|v| v.rank_scheme.as_deref() == Some("shia")),
+    }))
+}
+
+/// The famous ones, group by group, as the Narrators page opens.
+#[tauri::command]
+fn famous(state: tauri::State<Data>, tradition: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let titles = people::famous_titles(conn, &lang);
+        let road = if tradition == "all" {
+            None
+        } else {
+            Some(tradition.as_str())
+        };
+        let groups: Vec<Value> = people::famous_groups(road)
+            .into_iter()
+            .map(|g| {
+                let ids = people::famous_ids(conn, &g.keys);
+                json!({"id": g.id, "title": g.title, "tradition": g.tradition,
+                       "people": ids.iter().filter_map(|pid| person_row(conn, *pid, &titles)).collect::<Vec<_>>()})
+            })
+            .filter(|g| g["people"].as_array().is_some_and(|a| !a.is_empty()))
+            .collect();
+        Ok(json!({"groups": groups}))
+    })
+}
+
+/// Narrators whose names contain the words typed (Arabic or Latin letters), the famous ones first.
+#[tauri::command]
+fn find_narrators(
+    state: tauri::State<Data>,
+    text: String,
+    tradition: String,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let road = if tradition == "all" {
+            None
+        } else {
+            Some(tradition.as_str())
+        };
+        let mut found: Vec<i64> = people::search_persons(conn, &text, 60)
+            .map_err(err)?
+            .into_iter()
+            .map(|f| f.0)
+            .collect();
+        let first = people::famous_ids(conn, &people::famous_named(&text, road));
+        if !first.is_empty() {
+            let mut merged = first.clone();
+            merged.extend(found.into_iter().filter(|f| !first.contains(f)));
+            found = merged;
+        }
+        if let Some(r) = road {
+            found.retain(|pid| {
+                conn.query_row(
+                    "SELECT COALESCE(tradition, 'sunni') FROM persons WHERE id = ?",
+                    [*pid],
+                    |x| x.get::<_, String>(0),
+                )
+                .map(|t| t == r)
+                .unwrap_or(true)
+            });
+        }
+        let titles = people::famous_titles(conn, &lang);
+        Ok(
+            json!({"people": found.iter().filter_map(|pid| person_row(conn, *pid, &titles)).collect::<Vec<_>>()}),
+        )
+    })
+}
+
+/// One narrator: his names, every verdict, his generation, his books, his teachers and students, his hadith.
+#[tauri::command]
+fn narrator(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let Some(d) = people::describe(conn, id) else {
+            return Ok(json!({"error": "no_person"}));
+        };
+        let titles = people::famous_titles(conn, &lang);
+        let rel = people::relations(conn, id, 12).map_err(err)?;
+        let (hadith, total) = people::hadiths_of(conn, id, 60, &lang).map_err(err)?;
+        let reading = if d.person.known_arabic.is_empty() {
+            String::new()
+        } else {
+            isnad::name_reading(&d.person.known_arabic, ui_reading_lang()).0
+        };
+        let rl = |v: &Vec<people::Related>| -> Vec<Value> {
+            v.iter()
+                .map(|r| json!({"id": r.id, "name": r.name, "count": r.count}))
+                .collect()
+        };
+        Ok(json!({
+            "id": id, "title": titles.get(&id), "arabic": d.person.display_name, "known_arabic": d.person.known_arabic,
+            "reading": reading, "full_reading": names::latin(&d.person.display_name, ui_reading_lang(), 8),
+            "tradition": d.tradition, "source": d.source,
+            "tabaqa": d.person.tabaqa, "tabaqa_label": d.tabaqa_label, "death": d.person.death_year_ah,
+            "death_note": d.death_year_note, "other_names": d.other_names,
+            "verdicts": d.verdicts.iter().map(|v| json!({
+                "critic": v.critic_name, "work": v.work, "phrase": v.phrase, "rank": v.rank,
+                "shia": v.rank_scheme.as_deref() == Some("shia"), "label": v.rank_label, "madhhab": v.madhhab_label,
+            })).collect::<Vec<_>>(),
+            "marks": d.marks, "in_chains": d.in_chains,
+            "teachers": rl(&rel.teachers), "students": rl(&rel.students),
+            "compilers": rel.compilers.iter().map(|(b, k, n)| json!({"book": works::book_title(k, b, &lang), "count": n})).collect::<Vec<_>>(),
+            "hadith": hadith.iter().map(|h| json!({"key": h.key, "book": h.book, "number": h.number})).collect::<Vec<_>>(),
+            "hadith_total": total,
+        }))
+    })
+}
+
 /// A number of the book chosen at random, of a hadith whose chain was read.
 #[tauri::command]
 fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<String>, String> {
@@ -406,7 +543,10 @@ fn main() {
             random_number,
             shelf,
             contents,
-            read_chapter
+            read_chapter,
+            famous,
+            find_narrators,
+            narrator
         ])
         .run(tauri::generate_context!())
         .expect("isnady-rs could not open its window");

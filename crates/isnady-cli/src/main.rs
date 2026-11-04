@@ -3,7 +3,7 @@
 //! the Python `iy`; PARITY.md lists them.
 
 use clap::{Parser, Subcommand};
-use isnady_core::{db, isnad, narrators, paths, py, readmarks, search, works, VERSION};
+use isnady_core::{db, isnad, narrators, paths, people, py, readmarks, search, works, VERSION};
 use std::collections::HashMap;
 use std::process::ExitCode;
 
@@ -38,6 +38,22 @@ enum Command {
     Chain(ChainArgs),
     /// Read a book in its own order: the list, a book's chapters, or a chapter
     Book(BookArgs),
+    /// Look up a narrator: verdict, rank, tabaqa, death, books
+    Narrator(NarratorArgs),
+}
+
+#[derive(clap::Args)]
+struct NarratorArgs {
+    /// Part of the name, e.g. الزهري, 'سفيان بن عيينة', 'Ebu Bekir', 'Omer ibn Hattap'
+    words: Vec<String>,
+    #[arg(long, default_value_t = 5)]
+    limit: usize,
+    /// List the famous Companions by group (and road B's Ashab al-Ijma')
+    #[arg(long)]
+    famous: bool,
+    /// Only this road's famous ones (with --famous: Sunni unless asked) or matches
+    #[arg(long, value_parser = ["sunni", "shia", "all"])]
+    tradition: Option<String>,
 }
 
 #[derive(clap::Args)]
@@ -139,7 +155,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs narrator NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -159,6 +175,7 @@ fn main() -> ExitCode {
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
         Some(Command::Book(a)) => book_cmd(a),
+        Some(Command::Narrator(a)) => narrator_cmd(a),
     }
 }
 
@@ -856,6 +873,212 @@ fn book_shown(conn: &db::Connection, a: &mut BookArgs) -> rusqlite_conn::Result<
     }
     if total > items.len() as i64 && focus.is_none() {
         println!("\n… {} more (--limit)", total - items.len() as i64);
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn narrator_cmd(a: NarratorArgs) -> ExitCode {
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    match narrator_shown(&conn, &a) {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// iy narrator --famous: the famous Companions group by group, and road B's own famous narrators.
+fn famous_list(conn: &db::Connection, tradition: Option<&str>) -> rusqlite_conn::Result<ExitCode> {
+    for g in people::famous_groups(tradition) {
+        let ids = people::famous_ids(conn, &g.keys);
+        if ids.is_empty() {
+            continue;
+        }
+        println!(
+            "\n{}{}",
+            g.title,
+            if g.tradition == "shia" {
+                "  (Shia, al-Najashi)"
+            } else {
+                ""
+            }
+        );
+        for key in &g.keys {
+            let Some(pid) = people::famous_ids(conn, std::slice::from_ref(key))
+                .first()
+                .copied()
+            else {
+                continue;
+            };
+            let (tab, death, n): (Option<i64>, Option<i64>, i64) = conn.query_row(
+                "SELECT p.tabaqa, p.death_year_ah, (SELECT COUNT(*) FROM isnad_links l WHERE l.person_id = p.id) \
+                 FROM persons p WHERE p.id = ?",
+                [pid],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )?;
+            let mut facts: Vec<String> = Vec::new();
+            if let Some(t) = tab.filter(|t| *t != 0) {
+                facts.push(format!("tabaqa {t}"));
+            }
+            if let Some(d) = death.filter(|d| *d != 0) {
+                facts.push(format!("d. {d} AH"));
+            }
+            facts.push(format!("{n} in chains"));
+            println!(
+                "  {:<46} {}  (id {pid}) · {}",
+                people::famous_title(key, "en"),
+                people::famous_arabic(key),
+                facts.join(" · ")
+            );
+        }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn narrator_shown(conn: &db::Connection, a: &NarratorArgs) -> rusqlite_conn::Result<ExitCode> {
+    let road = match a.tradition.as_deref() {
+        Some("all") => None,
+        other => other,
+    };
+    if a.famous {
+        return famous_list(
+            conn,
+            if a.tradition.as_deref() == Some("all") {
+                None
+            } else {
+                Some(road.unwrap_or("sunni"))
+            },
+        );
+    }
+    if a.words.is_empty() {
+        eprintln!("Name a narrator, e.g. iy narrator 'Ebu Bekir', or list the famous ones: iy narrator --famous");
+        return Ok(ExitCode::from(2));
+    }
+    let text = a.words.join(" ");
+    let mut found = people::search_persons(conn, &text, a.limit)?;
+    let first = people::famous_ids(conn, &people::famous_named(&text, road));
+    if !first.is_empty() {
+        let mut merged: Vec<(i64, String)> = first.iter().map(|p| (*p, String::new())).collect();
+        merged.extend(found.into_iter().filter(|f| !first.contains(&f.0)));
+        merged.truncate(a.limit.max(first.len()));
+        found = merged;
+    }
+    let titles = people::famous_titles(conn, "en");
+    if found.is_empty() {
+        println!("No narrator found. Import a rijal work first, for example: iy import taqrib <file-or-url>");
+        return Ok(ExitCode::from(1));
+    }
+    let n_found = found.len();
+    for (pid, _name) in &found {
+        let Some(who) = people::describe(conn, *pid) else {
+            continue;
+        };
+        let shown = &who.person.display_name;
+        match titles.get(pid) {
+            Some(t) => println!("\n{t}  —  {shown}"),
+            None => println!("\n{shown}"),
+        }
+        if !who.other_names.is_empty() {
+            let names: Vec<&str> = who.other_names.iter().take(6).map(String::as_str).collect();
+            println!("  also: {}", names.join(", "));
+        }
+        if let Some(t) = who.person.tabaqa.filter(|t| *t != 0) {
+            println!("  tabaqa {t}: {}", who.tabaqa_label);
+        }
+        let death = who.person.death_year_ah.filter(|d| *d != 0);
+        let note = who.death_year_note.clone().filter(|n| !n.is_empty());
+        if death.is_some() || note.is_some() {
+            println!(
+                "  death: {} AH{}",
+                death.map(|d| d.to_string()).unwrap_or_else(|| "?".into()),
+                note.map(|n| format!("  ({n})")).unwrap_or_default()
+            );
+        }
+        for v in &who.verdicts {
+            let rank = if v.rank_scheme.as_deref() == Some("shia") {
+                if v.rank.is_some_and(|r| r != 0) {
+                    format!(
+                        "  {}{}",
+                        v.rank_label,
+                        if v.madhhab_label.is_empty() {
+                            String::new()
+                        } else {
+                            format!(", {}", v.madhhab_label)
+                        }
+                    )
+                } else {
+                    "  no judgment in these words".to_string()
+                }
+            } else if let Some(r) = v.rank.filter(|r| *r != 0) {
+                format!("  rank {r}: {}", v.rank_label)
+            } else {
+                String::new()
+            };
+            println!("  {}, {}: {}{rank}", v.critic_name, v.work, v.phrase);
+        }
+        if !who.marks.is_empty() {
+            let m: Vec<String> = who
+                .marks
+                .iter()
+                .map(|(m, meaning)| format!("{m} {meaning}"))
+                .collect();
+            println!("  books: {}", m.join(", "));
+        }
+        println!(
+            "  identified in {} chain link{} of the imported collections",
+            who.in_chains,
+            if who.in_chains != 1 { "s" } else { "" }
+        );
+        if a.limit == 1 || n_found == 1 {
+            let rel = people::relations(conn, *pid, 8)?;
+            if !rel.teachers.is_empty() {
+                let t: Vec<String> = rel
+                    .teachers
+                    .iter()
+                    .map(|r| format!("{} ({})", r.name, r.count))
+                    .collect();
+                println!("  narrates from: {}", t.join("; "));
+            }
+            if !rel.students.is_empty() {
+                let t: Vec<String> = rel
+                    .students
+                    .iter()
+                    .map(|r| format!("{} ({})", r.name, r.count))
+                    .collect();
+                println!("  narrated to:   {}", t.join("; "));
+            }
+            if !rel.compilers.is_empty() {
+                let c: Vec<String> = rel
+                    .compilers
+                    .iter()
+                    .map(|(b, _k, n)| format!("{b} ({n})"))
+                    .collect();
+                println!(
+                    "  compilers who narrate from him directly: {}",
+                    c.join("; ")
+                );
+            }
+            let (hadith, total) = people::hadiths_of(conn, *pid, 12, "en")?;
+            if !hadith.is_empty() {
+                let h: Vec<String> = hadith
+                    .iter()
+                    .map(|h| format!("{} {}", h.book, h.number))
+                    .collect();
+                println!(
+                    "  in the chains of {total} hadith: {}{}",
+                    h.join(", "),
+                    if total > hadith.len() as i64 {
+                        " …"
+                    } else {
+                        ""
+                    }
+                );
+            }
+        }
     }
     Ok(ExitCode::SUCCESS)
 }

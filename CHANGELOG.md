@@ -5,6 +5,16 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The narrators (RS4; Bayram, 2026-11-04: "bir sonraki problemi çöz (Rust için)").** `iy-rs narrator` as `iy
+  narrator`, word for word: a name in Arabic or Latin letters (the consonant skeleton, "Zuhri" = الزهري), close
+  spellings ("Buhaari", "zuberyyyr", زبيير), the famous ones by any spelling people type ("Ebubekir", "Omer ibn
+  Hattap", "Hz. Ali") first, `--famous` group by group, `--tradition`, `--limit`; each with his other names, tabaqa,
+  death, every verdict (Ibn Hajar's rank, al-Najashi's category and school), the book marks, and for one narrator his
+  teachers, students, the compilers who narrate from him and his hadith. New in the core: `people.rs`. The window's
+  **Narrators** page: the famous ones group by group, the search as you type, a narrator with everything above, his
+  teachers and students to open, his hadith to open as chains. Parity: 64 cases (14 of them narrators); 284 lookups
+  on the test database, the same as Python's.
+
 - **The books (RS3; Bayram, 2026-11-03: "bir sonraki aşamayı yap rust ile").** `iy-rs book` as `iy book`, word for
   word: the shelf (`--tradition`), a book's chapters in reading order, a chapter with its hadith in the languages asked
   for, the sira's and the tabaqat's sections wrapped as Python's textwrap wraps them, and the reader's places and
