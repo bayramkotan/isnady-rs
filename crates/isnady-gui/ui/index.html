@@ -7,16 +7,22 @@
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
+  <!-- the menu bar: File, Edit, View, Tools, Help (frame.js) -->
+  <div id="menubar" role="menubar"></div>
+
+  <div id="frame">
   <aside id="sidebar">
     <div class="brand">
       <div class="brand-latin">isnady</div>
       <div class="brand-arabic" lang="ar">إسناد</div>
     </div>
+    <div class="history"><button id="back" class="side-button">◀</button><button id="forward" class="side-button">▶</button></div>
     <nav id="nav"></nav>
-    <div class="side-foot">
-      <div id="corpus"></div>
-      <div id="version"></div>
+    <div class="langs">
+      <button id="ui-lang" class="side-button"></button>
+      <button id="content-lang" class="side-button"></button>
     </div>
+    <div id="footer"></div>
   </aside>
 
   <main id="main">
@@ -82,7 +88,9 @@
       </div>
     </section>
   </main>
+  </div>
 
   <script src="app.js"></script>
+  <script src="frame.js"></script>
 </body>
 </html>

@@ -25,26 +25,27 @@ const LOCAL = {
     "LATER": "Bu sayfa isnady-rs'e sonraki sürümlerde, birer birer gelecek. O zamana kadar Python isnady (isnady ya da komut satırında iy) aynı verilerle gösteriyor.",
     "NOT_READ": "Son içe aktarılan kitapların senedleri henüz okunmadı. Python isnady her kitap için bir kez okur: onun İsnad Zincirleri sayfasını açın ya da şunu çalıştırın: {cmd}. Sonra isnady-rs gösterir.",
     "LATER_TIP": "isnady-rs {v}: henüz burada değil — Python isnady aynı verilerle gösteriyor",
-    "{n} hadith · {b} books": "{n} hadis · {b} kitap",
     "NOT_LAID_OUT": "Son içe aktarılan kitaplar henüz bölümlere ayrılmadı. Python isnady bunu bir kez yapar: Kitaplar sayfasını açın ya da iy book çalıştırın.",
     "Sunni": "Sünnî", "Shia": "Şiî", "All": "Hepsi", "Other": "Diğer",
     "Teachers": "Hocaları", "Students": "Talebeleri", "No narrators found": "Râvi bulunamadı",
+    "LATER_MENU": "isnady-rs {v}: bu henüz burada değil. Python isnady aynı verilerle yapıyor: penceresinde {menu}.",
   },
   ar: {
     "Number": "الرقم",
     "LATER": "تأتي هذه الصفحة إلى isnady-rs في الإصدارات القادمة، صفحةً بعد صفحة. وإلى ذلك الحين يعرضها isnady بلغة Python (isnady، أو iy في سطر الأوامر) على البيانات نفسها.",
     "NOT_READ": "لم تُقرأ أسانيد الكتب المستوردة أخيرًا بعد. يقرؤها isnady بلغة Python مرة واحدة لكل كتاب: افتح صفحة سلاسل الإسناد فيه أو شغّل {cmd}. ثم يعرضها isnady-rs.",
     "LATER_TIP": "isnady-rs {v}: ليست هنا بعد — يعرضها isnady بلغة Python على البيانات نفسها",
-    "{n} hadith · {b} books": "{n} حديث · {b} كتب",
     "NOT_LAID_OUT": "لم تُقسَّم الكتب المستوردة أخيرًا إلى أبواب بعد. يفعل isnady بلغة Python ذلك مرة واحدة: افتح صفحة الكتب فيه أو شغّل iy book.",
     "Sunni": "سني", "Shia": "شيعي", "All": "الكل", "Other": "أخرى",
     "Teachers": "شيوخه", "Students": "تلاميذه", "No narrators found": "لم يوجد راوٍ",
+    "LATER_MENU": "isnady-rs {v}: ليس هذا هنا بعد. يفعله isnady بلغة Python على البيانات نفسها: {menu} في نافذته.",
   },
 };
 const ENGLISH = {
   "LATER": "This page comes to isnady-rs in the next versions, one page at a time. Until then the Python isnady (isnady, or iy on the command line) shows it, on the same data.",
   "NOT_READ": "The chains of the books imported last are not read yet. The Python isnady reads them once for every book: open its Isnad Chains page, or run {cmd}. Then isnady-rs shows them.",
   "LATER_TIP": "isnady-rs {v}: not here yet — the Python isnady shows it, on the same data",
+  "LATER_MENU": "isnady-rs {v}: not here yet. The Python isnady does it, on the same data: {menu} in its window.",
   "NOT_LAID_OUT": "The books imported last are not laid out in chapters yet. The Python isnady does it once: open its Books page, or run iy book.",
 };
 
@@ -81,10 +82,15 @@ const RANK_COLORS = {
 };
 let DARK = false;
 
+// "Follow system": Sky by day, Starry Night by night (theme.apply, UI-FRESH)
+function resolvedTheme(name) {
+  const key = (name || "system").toLowerCase();
+  if (key in THEMES) return key;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "starry" : "sky";
+}
+
 function applyTheme(name) {
-  let key = (name || "system").toLowerCase();
-  if (!(key in THEMES)) key = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  const tokens = THEMES[key];
+  const tokens = THEMES[resolvedTheme(name)];
   DARK = tokens.dark;
   for (const [k, v] of Object.entries(tokens)) {
     if (k !== "dark") document.documentElement.style.setProperty("--" + k, v);
@@ -94,47 +100,28 @@ function applyTheme(name) {
   document.documentElement.style.setProperty("--mark-ink", tokens.ink);
 }
 
-// ------------------------------------------------------------------ the sidebar (gui/main_window.py SECTIONS)
+// ------------------------------------------------------------------ the pages (the sidebar and menus: frame.js)
 
-const SECTIONS = [
-  ["search", "Search", true], ["books", "Books", true], ["narrators", "Narrators", true], ["chains", "Isnad Chains", true],
-  ["scholars", "Hadith Scholars"], ["companions", "Companions and the Household"], ["sira", "Sira"],
-  ["sahifa", "Written sources"], ["genealogy", "Genealogy"], ["statistics", "Statistics"], ["bookmarks", "Bookmarks"],
-  ["learn", "Learn"],
-];
-
-function buildNav() {
-  const nav = $("nav");
-  nav.innerHTML = "";
-  for (const [key, label, ready] of SECTIONS) {
-    const b = document.createElement("button");
-    b.textContent = t(label);
-    b.dataset.key = key;
-    if (!ready) {
-      b.classList.add("later");
-      b.title = t("LATER_TIP", { v: APP.version });
-    }
-    b.onclick = () => show(key);
-    nav.appendChild(b);
-  }
-}
+let CURRENT = null;
 
 function show(key) {
+  CURRENT = key;
   for (const b of $("nav").children) b.classList.toggle("on", b.dataset.key === key);
-  const ready = SECTIONS.find((s) => s[0] === key)[2];
+  const ready = READY.has(key);
   $("page-search").hidden = key !== "search";
   $("page-chains").hidden = key !== "chains";
   $("page-books").hidden = key !== "books";
   $("page-narrators").hidden = key !== "narrators";
   if (key === "narrators" && !NARR.loaded) loadNarrators();
   if (key === "books" && !BOOKS.loaded) loadShelf();
-  $("page-later").hidden = !!ready;
+  $("page-later").hidden = ready;
   if (!ready) {
-    $("later-title").textContent = t(SECTIONS.find((s) => s[0] === key)[1]);
+    $("later-title").textContent = t(sectionLabel(key));
     $("later-text").textContent = t("LATER");
   }
   if (key === "search") $("q").focus();
   if (key === "chains" && !CHAIN_SHOWN) showChain();
+  if (!HISTORY.opening) record(["section", key]);
 }
 
 let CHAIN_SHOWN = true;
@@ -296,7 +283,10 @@ async function showChain(book, number) {
   if (book) $("chain-book").value = book;
   if (number !== undefined) $("chain-number").value = number;
   CHAIN_SHOWN = true;
+  const before = HISTORY.opening;
+  HISTORY.opening = true;
   show("chains");
+  HISTORY.opening = before;
   const view = $("chain-view");
   view.innerHTML = '<p class="muted">…</p>';
   try {
@@ -318,6 +308,7 @@ async function showChain(book, number) {
       if (d.nearest) $("nearest").onclick = () => showChain(d.book, d.nearest);
       return;
     }
+    record(["chain", $("chain-book").value, d.number]);
     const summary = verdictText(d.chains[0], d.tradition);
     view.innerHTML = `<div class="chain-title"><h1>${esc(d.name)}</h1><span class="num">${esc(t("hadith {number}", { number: d.number }))}</span>
         ${d.tradition === "shia" ? `<span class="road">${esc(t("Shia — read the Shia way"))}</span>` : ""}</div>
@@ -346,7 +337,7 @@ async function loadShelf() {
   const roads = [["sunni", "Sunni"], ["shia", "Shia"], ["all", "All"]];
   $("roads").innerHTML = roads.map(([k, l]) => `<button class="quiet ${BOOKS.road === k ? "on" : ""}" data-road="${k}">${esc(t(l))}</button>`).join("");
   drawShelf();
-  if (!BOOKS.key && s.works.length) openBook(s.works[0].key);
+  if (!BOOKS.key && s.works.length) openBook(s.works[0].key, true);
 }
 
 function drawShelf() {
@@ -363,8 +354,10 @@ function drawShelf() {
   $("shelf").innerHTML = html;
 }
 
-async function openBook(key) {
+async function openBook(key, quiet) {
   BOOKS.key = key;
+  BOOKS.chapter = 0;
+  if (!quiet) record(["book", key]);
   drawShelf();
   const c = await invoke("contents", { key });
   if (c.error) { $("reader").innerHTML = ""; return; }
@@ -389,7 +382,7 @@ function itemHtml(it) {
 }
 
 async function readChapter(key, index, more) {
-  if (!more) { BOOKS.offset = 0; }
+  if (!more) { BOOKS.offset = 0; record(["chapter", key, index]); }
   BOOKS.chapter = index;
   const d = await invoke("read_chapter", { key, index, offset: BOOKS.offset, limit: BOOKS.limit });
   if (d.error) return;
@@ -444,16 +437,17 @@ async function listNarrators() {
   if (!text) {
     const f = await invoke("famous", { tradition: NARR.road });
     $("n-list").innerHTML = f.groups.map((g) => `<div class="kind-head">${esc(t(g.title))}</div>` + g.people.map(personButton).join("")).join("");
-    if (!NARR.id && f.groups.length && f.groups[0].people.length) openNarrator(f.groups[0].people[0].id);
+    if (!NARR.id && f.groups.length && f.groups[0].people.length) openNarrator(f.groups[0].people[0].id, true);
     return;
   }
   const r = await invoke("find_narrators", { text, tradition: NARR.road });
   $("n-list").innerHTML = r.people.length ? r.people.map(personButton).join("") : `<div class="muted">${esc(t("No narrators found"))}</div>`;
-  if (r.people.length && !r.people.some((p) => p.id === NARR.id)) openNarrator(r.people[0].id);
+  if (r.people.length && !r.people.some((p) => p.id === NARR.id)) openNarrator(r.people[0].id, true);
 }
 
-async function openNarrator(id) {
+async function openNarrator(id, quiet) {
   NARR.id = id;
+  if (!quiet) record(["narrator", id]);
   for (const b of $("n-list").querySelectorAll("button[data-person]")) b.classList.toggle("on", Number(b.dataset.person) === id);
   const d = await invoke("narrator", { id });
   if (d.error) return;
@@ -494,10 +488,8 @@ async function start() {
   document.documentElement.lang = s.ui_language;
   document.documentElement.dir = s.rtl ? "rtl" : "ltr";
   applyTheme(s.theme);
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyTheme(s.theme));
-  buildNav();
-  $("corpus").textContent = s.error ? s.error : t("{n} hadith · {b} books", { n: s.hadith.toLocaleString("en-US"), b: s.books.length });
-  $("version").textContent = `isnady-rs ${s.version}`;
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTheme(THEME_MODE); buildNav(); });
+  buildFrame(s);
 
   $("q").placeholder = t("Search the hadith: a word or phrase in Arabic, Turkish or English (? an unknown letter, * any letters)");
   $("go").textContent = t("Search");

@@ -4,7 +4,8 @@ forms and the same patterns, never a copy kept by hand.
     python tools/gen_tables.py                 # the Python isnady installed (pip install isnady), or ../isnady/src
     python tools/gen_tables.py --check         # exit 1 when data/tables.json or data/i18n/*.json is not what it writes
 
-It also writes the interface catalogs (crates/isnady-core/data/i18n/<code>.json) of every language the Python isnady
+It also writes what the frame of the window needs (data/window.json: the sections, themes, languages, shortcuts,
+search tips) and the interface catalogs (crates/isnady-core/data/i18n/<code>.json) of every language the Python isnady
 translates, so the isnady-rs window speaks the same Turkish and Arabic as the Python one.
 
 The Parity workflow runs --check against the Python isnady of the same version: a word added to the names list there
@@ -165,8 +166,97 @@ def books() -> str:
     return _json.dumps(out, ensure_ascii=False, indent=0, sort_keys=True) + "\n"
 
 
+WINDOW = os.path.join(HERE, "..", "crates", "isnady-core", "data", "window.json")
+
+
+class _Source:
+    """The plain values of a module of the Python window, read from its source (ast) — no Qt is imported, so the
+    Parity workflow needs no display libraries. N_("text") is its text; a call like Tokens(...) is its keywords."""
+
+    def __init__(self, module: str) -> None:
+        import ast
+        from importlib.util import find_spec
+
+        self.ast = ast
+        self.file = find_spec(module).origin
+        with open(self.file, encoding="utf-8") as f:
+            self.tree = ast.parse(f.read())
+        self.names = {}
+        for node in self.tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        self.names[target.id] = node.value
+                    elif isinstance(target, ast.Tuple) and isinstance(node.value, ast.Tuple):
+                        for t, v in zip(target.elts, node.value.elts):
+                            self.names[t.id] = v
+
+    def value(self, node):
+        ast = self.ast
+        if isinstance(node, str):
+            node = self.names[node]
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, (ast.Tuple, ast.List)):
+            return [self.value(e) for e in node.elts]
+        if isinstance(node, ast.Dict):
+            return {self.value(k): self.value(v) for k, v in zip(node.keys, node.values)}
+        if isinstance(node, ast.Name):
+            return self.value(self.names[node.id])
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return self.value(node.left) + self.value(node.right)
+        if isinstance(node, ast.Call):
+            if getattr(node.func, "id", "") == "N_":
+                return self.value(node.args[0])
+            return {k.arg: self.value(k.value) for k in node.keywords}
+        raise SystemExit(f"{self.file}: cannot read {ast.dump(node)[:80]}")
+
+    def tr_texts(self, function: str) -> list:
+        """The texts a function passes to tr(), in order."""
+        ast = self.ast
+        for node in ast.walk(self.tree):
+            if isinstance(node, ast.FunctionDef) and node.name == function:
+                return [c.args[0].value for c in ast.walk(node)
+                        if isinstance(c, ast.Call) and getattr(c.func, "id", "") == "tr" and c.args
+                        and isinstance(c.args[0], ast.Constant) and isinstance(c.args[0].value, str)]
+        raise SystemExit(f"no {function} in {self.file}")
+
+
+def window() -> str:
+    """What the frame of the window needs (gui/main_window.py, gui/theme.py, gui/dialogs.py, core/i18n.py): the
+    sections and their order and signs, the themes, the reading text sizes, the interface languages with their names
+    and how much of each is translated, the keyboard shortcuts and the search tips."""
+    _import()
+    from isnady import config
+    from isnady.core import i18n, learn
+
+    main_window = _Source("isnady.gui.main_window")
+    theme = _Source("isnady.gui.theme")
+    dialogs = _Source("isnady.gui.dialogs")
+    themes = theme.value("THEMES")
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "sections": [[k, label] for k, label, _tip in main_window.value("SECTIONS")],
+        "sidebar": list(config.SIDEBAR),
+        "signs": theme.value("NAV_SIGNS"),
+        "nav_signs": {k: bool(v[2].get("nav_signs", False)) for k, v in themes.items()},
+        "themes": [[k, v[0]] for k, v in themes.items()],
+        "text_scale": [theme.value("TEXT_SCALE_MIN"), theme.value("TEXT_SCALE_MAX"), theme.value("TEXT_SCALE_STEP")],
+        "languages": [[code, own, english, rtl, round(i18n.coverage(code), 4)]
+                      for code, (own, english, rtl) in i18n.LANGUAGES.items()],
+        "names": i18n.NAMES,
+        "learn_languages": list(learn.LANGUAGES),
+        "shortcuts": dialogs.value("SHORTCUTS"),
+        "search_tips": dialogs.tr_texts("search_tips"),
+        "repo_url": dialogs.value("REPO_URL"),
+        "issues_url": dialogs.value("ISSUES_URL"),
+        "pypi_url": dialogs.value("PYPI_URL"),
+    }
+    return json.dumps(out, ensure_ascii=False, indent=1) + "\n"
+
+
 def outputs() -> dict:
-    files = {OUT: text(), BOOKS: books()}
+    files = {OUT: text(), BOOKS: books(), WINDOW: window()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

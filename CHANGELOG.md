@@ -5,6 +5,25 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The frame of the window, as the Python window has it (RS-WIN1; Bayram, 2026-11-04: "iy-rs de neden iy deki gibi
+  menu yok? … iy ile iy-rs birbirinin aynısı olacak! Temalardan ayarlardan ... arayüzden, prosedürlerden … hepsi aynı
+  olacak").** The menu bar: File, Edit, View, Tools and Help with every item of the Python window, in its order, with
+  its separators, its shortcuts and its letters (Alt+D opens Dosya in Turkish). What isnady-rs already does works
+  there: Open Data Folder, Profiles (switching), Quit; Find, Copy, Back, Forward; every section (Ctrl+1 … Ctrl+9),
+  Interface Language (English and the translated languages first, the others in their own submenu, each with its
+  name in the interface language and how much of it is translated), Content Languages (ticked in place, applied when
+  the menu closes), Theme (Follow system = Sky by day, Starry Night by night, and the ten themes), Reading Text Size
+  (Ctrl++, Ctrl+−, Ctrl+0), Full Screen (F11); Search Tips, Keyboard Shortcuts, Licences, isnady on GitHub, Report an
+  Issue, About isnady. What it does not do yet (Data Sources, Export, Import, Preferences, the Tools, Check for
+  Updates, Check Installation, Log, making or renaming profiles) says so and names its place in the Python window.
+  The sidebar: Back and Forward (◀ ▶, Alt+Left, Alt+Right, the mouse's own buttons; sections, chains, books,
+  chapters and narrators), the sections in the order chosen (view.sidebar) with their signs, the Interface and
+  Content buttons with their menus, the footer "N hadith in M books / version X". Every choice is written to the
+  same settings.json in the same form as `config.set` writes it (byte for byte), so the Python window opens with
+  it. The sections, themes, languages, shortcuts and search tips come from the Python isnady through
+  `tools/gen_tables.py` into `data/window.json`, read from its source without Qt; `--check` keeps them its own. New
+  in the core: `config::set`, `state_forget`, `all_profiles`, `switch_profile`, `i18n::languages`.
+
 - **The narrators (RS4; Bayram, 2026-11-04: "bir sonraki problemi çöz (Rust için)").** `iy-rs narrator` as `iy
   narrator`, word for word: a name in Arabic or Latin letters (the consonant skeleton, "Zuhri" = الزهري), close
   spellings ("Buhaari", "zuberyyyr", زبيير), the famous ones by any spelling people type ("Ebubekir", "Omer ibn

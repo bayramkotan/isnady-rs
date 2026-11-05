@@ -30,10 +30,18 @@ fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
-/// What the window needs to start: the version, the interface language and its catalog, the theme, the books.
+/// What the window needs to start: the version, the interface language and its catalog, the theme, the text size,
+/// the order of the sections, what the frame needs (data/window.json), the books and how many hadith there are.
 #[tauri::command]
-fn start(state: tauri::State<Data>) -> Value {
+fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
     let lang = i18n::ui_language();
+    // the profile in use in the title, as the Python window has it (PRF1)
+    let person = config::profile_name(&config::active_profile());
+    let _ = window.set_title(&if person.is_empty() {
+        "isnady".to_string()
+    } else {
+        format!("isnady — {person}")
+    });
     let mut out = json!({
         "version": VERSION,
         "data_dir": paths::shown(&paths::data_dir()),
@@ -41,9 +49,14 @@ fn start(state: tauri::State<Data>) -> Value {
         "rtl": i18n::rtl(&lang),
         "catalog": serde_json::from_str::<Value>(i18n::catalog_json(&lang)).unwrap_or(json!({})),
         "theme": config::get_str("view.theme", "system"),
+        "text_scale": config::get_f64("view.text_scale", 1.0),
+        "sidebar": config::get_str("view.sidebar", ""),
         "content_languages": config::get_str("view.content_languages", ""),
+        "window": serde_json::from_str::<Value>(i18n::window_json()).unwrap_or(json!({})),
         "books": [],
         "hadith": 0,
+        "hadith_all": 0,
+        "collections": 0,
         "error": Value::Null,
         // a page to open at once, for screenshots and tests: "search:WORDS" or "chain:BOOK:NUMBER"
         "open": std::env::var("ISNADY_RS_OPEN").unwrap_or_default(),
@@ -60,7 +73,173 @@ fn start(state: tauri::State<Data>) -> Value {
         }
         Err(e) => out["error"] = json!(e),
     }
+    // the footer: every hadith in every book, as the Python window counts them
+    if let Ok((hadith, books)) = with_db(&state, |conn| {
+        let count = |sql: &str| conn.query_row(sql, [], |r| r.get::<_, i64>(0)).map_err(err);
+        Ok((
+            count("SELECT COUNT(*) FROM hadiths")?,
+            count("SELECT COUNT(*) FROM collections")?,
+        ))
+    }) {
+        out["hadith_all"] = json!(hadith);
+        out["collections"] = json!(books);
+    }
     out
+}
+
+/// A setting the menus change, stored as the Python isnady stores it (config.set), with what goes with it: the
+/// glossary follows the interface language where it has one; every book follows new content languages.
+#[tauri::command]
+fn set_setting(key: String, value: Value) -> Result<(), String> {
+    let value = match (key.as_str(), value) {
+        ("view.text_scale", Value::Number(n)) => {
+            let v = (n.as_f64().unwrap_or(1.0) * 100.0).round() / 100.0;
+            json!(v)
+        }
+        ("view.theme" | "view.ui_language" | "view.content_languages", Value::String(s)) => {
+            Value::String(s)
+        }
+        _ => return Err(format!("not a setting the window changes: {key}")),
+    };
+    if key == "view.theme" {
+        let known: Value = serde_json::from_str(i18n::window_json()).map_err(err)?;
+        let ok = value == "system"
+            || known["themes"]
+                .as_array()
+                .is_some_and(|a| a.iter().any(|t| t[0] == value));
+        if !ok {
+            return Err(format!("no theme {value}"));
+        }
+    }
+    config::set(&key, value.clone())?;
+    if key == "view.ui_language" {
+        let known: Value = serde_json::from_str(i18n::window_json()).map_err(err)?;
+        if known["learn_languages"]
+            .as_array()
+            .is_some_and(|a| a.contains(&value))
+        {
+            config::state_set("learn.language", value);
+        }
+    }
+    if key == "view.content_languages" {
+        config::state_forget("reader.languages.");
+    }
+    Ok(())
+}
+
+/// File → Profiles: every profile, the one in use marked.
+#[tauri::command]
+fn profiles() -> Vec<config::Profile> {
+    config::all_profiles()
+}
+
+#[tauri::command]
+fn use_profile(id: String) -> Result<(), String> {
+    config::switch_profile(&id)
+}
+
+/// The languages of the imported texts, Arabic first, then the order chosen (search.list_languages).
+#[tauri::command]
+fn content_languages(state: tauri::State<Data>) -> Result<Vec<String>, String> {
+    with_db(&state, |conn| {
+        let mut stmt = conn
+            .prepare("SELECT DISTINCT language FROM editions WHERE language IS NOT NULL AND text_count > 0 ORDER BY language")
+            .map_err(err)?;
+        let mut list: Vec<String> = stmt
+            .query_map([], |r| r.get::<_, String>(0))
+            .map_err(err)?
+            .filter_map(Result::ok)
+            .collect();
+        let chosen = books::language_order();
+        list.sort_by_key(|l| books::language_rank(l, &chosen));
+        Ok(list)
+    })
+}
+
+/// A folder or a web page opened by the system, as QDesktopServices.openUrl does.
+fn open_external(target: &str) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let mut cmd = std::process::Command::new("explorer");
+    #[cfg(target_os = "macos")]
+    let mut cmd = std::process::Command::new("open");
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(target).spawn().map(|_| ()).map_err(err)
+}
+
+/// File → Open Data Folder.
+#[tauri::command]
+fn open_data_folder() -> Result<(), String> {
+    open_external(&paths::shown(&paths::data_dir()))
+}
+
+/// Help → isnady on GitHub, Report an Issue; the links of the dialogs. Web pages only.
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") {
+        return Err(format!("not a web page: {url}"));
+    }
+    open_external(&url)
+}
+
+/// File → Quit.
+#[tauri::command]
+fn quit(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
+/// View → Full Screen (F11): on, or off again.
+#[tauri::command]
+fn full_screen(window: tauri::WebviewWindow) -> Result<(), String> {
+    let on = window.is_fullscreen().map_err(err)?;
+    window.set_fullscreen(!on).map_err(err)
+}
+
+/// Help → About isnady: the versions and the places, as the Python dialog shows them.
+#[tauri::command]
+fn about(state: tauri::State<Data>) -> Value {
+    let sqlite = with_db(&state, |conn| {
+        conn.query_row("SELECT sqlite_version()", [], |r| r.get::<_, String>(0))
+            .map_err(err)
+    })
+    .unwrap_or_default();
+    let fts5 = db::Connection::open_in_memory()
+        .and_then(|c| c.execute_batch("CREATE VIRTUAL TABLE t USING fts5(x, tokenize='trigram')"))
+        .is_ok();
+    json!({
+        "rust": env!("ISNADY_RUSTC"),
+        "os": std::env::consts::OS,
+        "tauri": tauri::VERSION,
+        "webview": tauri::webview_version().unwrap_or_default(),
+        "sqlite": sqlite,
+        "fts5": fts5,
+        "data_dir": paths::shown(&paths::data_dir()),
+        "db_path": paths::shown(&paths::db_path()),
+    })
+}
+
+/// Help → Licences: the data sources in this database.
+#[tauri::command]
+fn licences(state: tauri::State<Data>) -> Value {
+    let sources = with_db(&state, |conn| {
+        let mut stmt = conn
+            .prepare("SELECT name, license, tier, origin, location FROM sources ORDER BY origin, name")
+            .map_err(err)?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(json!({
+                    "name": r.get::<_, Option<String>>(0)?, "license": r.get::<_, Option<String>>(1)?,
+                    "tier": r.get::<_, Option<String>>(2)?, "origin": r.get::<_, Option<String>>(3)?,
+                    "location": r.get::<_, Option<String>>(4)?,
+                }))
+            })
+            .map_err(err)?
+            .filter_map(Result::ok)
+            .collect::<Vec<_>>();
+        Ok(rows)
+    })
+    .unwrap_or_default();
+    json!({"sources": sources})
 }
 
 /// A search, as the Search page shows it.
@@ -546,7 +725,17 @@ fn main() {
             read_chapter,
             famous,
             find_narrators,
-            narrator
+            narrator,
+            set_setting,
+            profiles,
+            use_profile,
+            content_languages,
+            open_data_folder,
+            open_url,
+            quit,
+            full_screen,
+            about,
+            licences
         ])
         .run(tauri::generate_context!())
         .expect("isnady-rs could not open its window");

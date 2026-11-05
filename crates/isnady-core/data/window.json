@@ -1,0 +1,713 @@
+{
+ "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+ "sections": [
+  [
+   "search",
+   "Search"
+  ],
+  [
+   "books",
+   "Books"
+  ],
+  [
+   "narrators",
+   "Narrators"
+  ],
+  [
+   "chains",
+   "Isnad Chains"
+  ],
+  [
+   "scholars",
+   "Hadith Scholars"
+  ],
+  [
+   "companions",
+   "Companions and the Household"
+  ],
+  [
+   "sira",
+   "Sira"
+  ],
+  [
+   "sahifa",
+   "Written sources"
+  ],
+  [
+   "genealogy",
+   "Genealogies"
+  ],
+  [
+   "statistics",
+   "Statistics"
+  ],
+  [
+   "bookmarks",
+   "Bookmarks"
+  ],
+  [
+   "learn",
+   "Learn"
+  ]
+ ],
+ "sidebar": [
+  "search",
+  "books",
+  "narrators",
+  "chains",
+  "scholars",
+  "companions",
+  "sira",
+  "sahifa",
+  "genealogy",
+  "statistics",
+  "bookmarks",
+  "learn"
+ ],
+ "signs": {
+  "search": "🔎",
+  "books": "📚",
+  "narrators": "👥",
+  "chains": "🔗",
+  "scholars": "🎓",
+  "companions": "🌿",
+  "sira": "🕌",
+  "sahifa": "📜",
+  "genealogy": "🌳",
+  "statistics": "📊",
+  "bookmarks": "⭐",
+  "learn": "💡"
+ },
+ "nav_signs": {
+  "sky": true,
+  "starry": true,
+  "garden": true,
+  "light": true,
+  "dark": true,
+  "paper": true,
+  "slate": true,
+  "emerald": true,
+  "midnight": true,
+  "contrast": true
+ },
+ "themes": [
+  [
+   "sky",
+   "Sky"
+  ],
+  [
+   "starry",
+   "Starry Night"
+  ],
+  [
+   "garden",
+   "Rose Garden"
+  ],
+  [
+   "light",
+   "Lapis"
+  ],
+  [
+   "dark",
+   "Lapis Night"
+  ],
+  [
+   "paper",
+   "Paper"
+  ],
+  [
+   "slate",
+   "Slate"
+  ],
+  [
+   "emerald",
+   "Emerald"
+  ],
+  [
+   "midnight",
+   "Midnight"
+  ],
+  [
+   "contrast",
+   "High Contrast"
+  ]
+ ],
+ "text_scale": [
+  0.8,
+  1.6,
+  0.1
+ ],
+ "languages": [
+  [
+   "en",
+   "English",
+   "English",
+   false,
+   1.0
+  ],
+  [
+   "tr",
+   "Türkçe",
+   "Turkish",
+   false,
+   1.0
+  ],
+  [
+   "ar",
+   "العربية",
+   "Arabic",
+   true,
+   1.0
+  ],
+  [
+   "de",
+   "Deutsch",
+   "German",
+   false,
+   0.0
+  ],
+  [
+   "fr",
+   "Français",
+   "French",
+   false,
+   0.0
+  ],
+  [
+   "es",
+   "Español",
+   "Spanish",
+   false,
+   0.0
+  ],
+  [
+   "pt",
+   "Português",
+   "Portuguese",
+   false,
+   0.0
+  ],
+  [
+   "ru",
+   "Русский",
+   "Russian",
+   false,
+   0.0
+  ],
+  [
+   "id",
+   "Bahasa Indonesia",
+   "Indonesian",
+   false,
+   0.0
+  ],
+  [
+   "ms",
+   "Bahasa Melayu",
+   "Malay",
+   false,
+   0.0
+  ],
+  [
+   "hi",
+   "हिन्दी",
+   "Hindi",
+   false,
+   0.0
+  ],
+  [
+   "ur",
+   "اردو",
+   "Urdu",
+   true,
+   0.0
+  ],
+  [
+   "bn",
+   "বাংলা",
+   "Bengali",
+   false,
+   0.0
+  ],
+  [
+   "zh",
+   "中文",
+   "Chinese",
+   false,
+   0.0
+  ],
+  [
+   "ja",
+   "日本語",
+   "Japanese",
+   false,
+   0.0
+  ],
+  [
+   "ko",
+   "한국어",
+   "Korean",
+   false,
+   0.0
+  ],
+  [
+   "fa",
+   "فارسی",
+   "Persian",
+   true,
+   0.0
+  ],
+  [
+   "prs",
+   "دری",
+   "Dari",
+   true,
+   0.0
+  ],
+  [
+   "ps",
+   "پښتو",
+   "Pashto",
+   true,
+   0.0
+  ],
+  [
+   "az",
+   "Azərbaycan türkcəsi",
+   "Azerbaijani Turkish",
+   false,
+   0.0
+  ],
+  [
+   "uz",
+   "Oʻzbekcha",
+   "Uzbek",
+   false,
+   0.0
+  ],
+  [
+   "kk",
+   "Қазақша",
+   "Kazakh",
+   false,
+   0.0
+  ],
+  [
+   "ky",
+   "Кыргызча",
+   "Kyrgyz",
+   false,
+   0.0
+  ],
+  [
+   "tk",
+   "Türkmençe",
+   "Turkmen",
+   false,
+   0.0
+  ],
+  [
+   "ug",
+   "ئۇيغۇرچە",
+   "Uyghur",
+   true,
+   0.0
+  ],
+  [
+   "tt",
+   "Татарча",
+   "Tatar",
+   false,
+   0.0
+  ],
+  [
+   "ba",
+   "Башҡортса",
+   "Bashkir",
+   false,
+   0.0
+  ],
+  [
+   "crh",
+   "Qırımtatarca",
+   "Crimean Tatar",
+   false,
+   0.0
+  ],
+  [
+   "it",
+   "Italiano",
+   "Italian",
+   false,
+   0.0
+  ],
+  [
+   "nl",
+   "Nederlands",
+   "Dutch",
+   false,
+   0.0
+  ],
+  [
+   "pl",
+   "Polski",
+   "Polish",
+   false,
+   0.0
+  ],
+  [
+   "cs",
+   "Čeština",
+   "Czech",
+   false,
+   0.0
+  ],
+  [
+   "sk",
+   "Slovenčina",
+   "Slovak",
+   false,
+   0.0
+  ],
+  [
+   "hu",
+   "Magyar",
+   "Hungarian",
+   false,
+   0.0
+  ],
+  [
+   "ro",
+   "Română",
+   "Romanian",
+   false,
+   0.0
+  ],
+  [
+   "bg",
+   "Български",
+   "Bulgarian",
+   false,
+   0.0
+  ],
+  [
+   "el",
+   "Ελληνικά",
+   "Greek",
+   false,
+   0.0
+  ],
+  [
+   "uk",
+   "Українська",
+   "Ukrainian",
+   false,
+   0.0
+  ],
+  [
+   "sr",
+   "Српски",
+   "Serbian",
+   false,
+   0.0
+  ],
+  [
+   "hr",
+   "Hrvatski",
+   "Croatian",
+   false,
+   0.0
+  ],
+  [
+   "sl",
+   "Slovenščina",
+   "Slovenian",
+   false,
+   0.0
+  ],
+  [
+   "mk",
+   "Македонски",
+   "Macedonian",
+   false,
+   0.0
+  ],
+  [
+   "sq",
+   "Shqip",
+   "Albanian",
+   false,
+   0.0
+  ],
+  [
+   "sv",
+   "Svenska",
+   "Swedish",
+   false,
+   0.0
+  ],
+  [
+   "da",
+   "Dansk",
+   "Danish",
+   false,
+   0.0
+  ],
+  [
+   "nb",
+   "Norsk",
+   "Norwegian",
+   false,
+   0.0
+  ],
+  [
+   "fi",
+   "Suomi",
+   "Finnish",
+   false,
+   0.0
+  ],
+  [
+   "et",
+   "Eesti",
+   "Estonian",
+   false,
+   0.0
+  ],
+  [
+   "lv",
+   "Latviešu",
+   "Latvian",
+   false,
+   0.0
+  ],
+  [
+   "lt",
+   "Lietuvių",
+   "Lithuanian",
+   false,
+   0.0
+  ],
+  [
+   "th",
+   "ไทย",
+   "Thai",
+   false,
+   0.0
+  ],
+  [
+   "vi",
+   "Tiếng Việt",
+   "Vietnamese",
+   false,
+   0.0
+  ],
+  [
+   "ta",
+   "தமிழ்",
+   "Tamil",
+   false,
+   0.0
+  ],
+  [
+   "ku",
+   "Kurdî",
+   "Kurdish (Kurmanji)",
+   false,
+   0.0
+  ],
+  [
+   "so",
+   "Soomaali",
+   "Somali",
+   false,
+   0.0
+  ],
+  [
+   "bs",
+   "Bosanski",
+   "Bosnian",
+   false,
+   0.0
+  ],
+  [
+   "sw",
+   "Kiswahili",
+   "Swahili",
+   false,
+   0.0
+  ],
+  [
+   "ha",
+   "Hausa",
+   "Hausa",
+   false,
+   0.0
+  ]
+ ],
+ "names": {
+  "tr": {
+   "en": "İngilizce",
+   "tr": "Türkçe",
+   "ar": "Arapça",
+   "de": "Almanca",
+   "fr": "Fransızca",
+   "es": "İspanyolca",
+   "pt": "Portekizce",
+   "ru": "Rusça",
+   "id": "Endonezce",
+   "ms": "Malayca",
+   "hi": "Hintçe",
+   "ur": "Urduca",
+   "bn": "Bengalce",
+   "zh": "Çince",
+   "ja": "Japonca",
+   "ko": "Korece",
+   "fa": "Farsça",
+   "prs": "Darice",
+   "ps": "Peştuca",
+   "az": "Azerbaycan Türkçesi",
+   "uz": "Özbekçe",
+   "kk": "Kazakça",
+   "ky": "Kırgızca",
+   "tk": "Türkmence",
+   "ug": "Uygurca",
+   "tt": "Tatarca",
+   "ba": "Başkurtça",
+   "crh": "Kırım Tatarcası",
+   "bs": "Boşnakça",
+   "sw": "Svahili",
+   "ha": "Hausaca",
+   "it": "İtalyanca",
+   "nl": "Felemenkçe",
+   "pl": "Lehçe",
+   "cs": "Çekçe",
+   "sk": "Slovakça",
+   "hu": "Macarca",
+   "ro": "Rumence",
+   "bg": "Bulgarca",
+   "el": "Yunanca",
+   "uk": "Ukraynaca",
+   "sr": "Sırpça",
+   "hr": "Hırvatça",
+   "sl": "Slovence",
+   "mk": "Makedonca",
+   "sq": "Arnavutça",
+   "sv": "İsveççe",
+   "da": "Danca",
+   "nb": "Norveççe",
+   "fi": "Fince",
+   "et": "Estonca",
+   "lv": "Letonca",
+   "lt": "Litvanca",
+   "th": "Tayca",
+   "vi": "Vietnamca",
+   "ta": "Tamilce",
+   "ku": "Kürtçe (Kurmancî)",
+   "so": "Somalice"
+  },
+  "ar": {
+   "en": "الإنجليزية",
+   "tr": "التركية",
+   "ar": "العربية",
+   "de": "الألمانية",
+   "fr": "الفرنسية",
+   "es": "الإسبانية",
+   "pt": "البرتغالية",
+   "ru": "الروسية",
+   "id": "الإندونيسية",
+   "ms": "الملايوية",
+   "hi": "الهندية",
+   "ur": "الأردية",
+   "bn": "البنغالية",
+   "zh": "الصينية",
+   "ja": "اليابانية",
+   "ko": "الكورية",
+   "fa": "الفارسية",
+   "prs": "الدرية",
+   "ps": "البشتوية",
+   "az": "التركية الأذربيجانية",
+   "uz": "الأوزبكية",
+   "kk": "الكازاخية",
+   "ky": "القيرغيزية",
+   "tk": "التركمانية",
+   "ug": "الأويغورية",
+   "tt": "التتارية",
+   "ba": "الباشكيرية",
+   "crh": "تتارية القرم",
+   "bs": "البوسنية",
+   "sw": "السواحيلية",
+   "ha": "الهوسا",
+   "it": "الإيطالية",
+   "nl": "الهولندية",
+   "pl": "البولندية",
+   "cs": "التشيكية",
+   "sk": "السلوفاكية",
+   "hu": "المجرية",
+   "ro": "الرومانية",
+   "bg": "البلغارية",
+   "el": "اليونانية",
+   "uk": "الأوكرانية",
+   "sr": "الصربية",
+   "hr": "الكرواتية",
+   "sl": "السلوفينية",
+   "mk": "المقدونية",
+   "sq": "الألبانية",
+   "sv": "السويدية",
+   "da": "الدنماركية",
+   "nb": "النرويجية",
+   "fi": "الفنلندية",
+   "et": "الإستونية",
+   "lv": "اللاتفية",
+   "lt": "الليتوانية",
+   "th": "التايلاندية",
+   "vi": "الفيتنامية",
+   "ta": "التاميلية",
+   "ku": "الكردية",
+   "so": "الصومالية"
+  }
+ },
+ "learn_languages": [
+  "en",
+  "tr",
+  "ar"
+ ],
+ "shortcuts": [
+  [
+   "Ctrl+F",
+   "Find: jump to the search field"
+  ],
+  [
+   "Enter",
+   "Run the search"
+  ],
+  [
+   "Ctrl+1 … Ctrl+9",
+   "Switch between sections"
+  ],
+  [
+   "Ctrl++ / Ctrl+− / Ctrl+0",
+   "Larger, smaller or default reading text"
+  ],
+  [
+   "F11",
+   "Full screen"
+  ],
+  [
+   "Ctrl+Q",
+   "Quit"
+  ]
+ ],
+ "search_tips": [
+  "<b>Arabic is matched without diacritics.</b> الاعمال finds الأَعْمَالُ. Alef forms (أ إ آ ٱ), alef maqsura, hamza seats and ta marbuta are treated alike, so you can type the way you normally write.",
+  "<b>Attached prefixes are found.</b> النيات also finds بالنيات, because Arabic joins bi-, wa-, fa- and al- to the word. Turn on <i>Whole words only</i> to find the word standing on its own.",
+  "<b>Latin-script text ignores case and accents.</b> NIYET, niyet and nîyet are the same; Muʿādh, Mu'adh and Muadh are the same.",
+  "<b>Match.</b> <i>All words</i> needs every word in the same text. <i>Any word</i> needs one of them. <i>Exact phrase</i> needs the words together, in order.",
+  "<b>Book and Language</b> narrow the results. The language filter also decides which translations appear under each hadith.",
+  "<b>Grades</b> are shown exactly as each scholar gave them, with the scholar's name. isnady does not merge or rewrite them.",
+  "Search tips"
+ ],
+ "repo_url": "https://github.com/bayramkotan/isnady",
+ "issues_url": "https://github.com/bayramkotan/isnady/issues",
+ "pypi_url": "https://pypi.org/project/isnady/"
+}
