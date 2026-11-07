@@ -16,7 +16,7 @@ fn re(p: &str) -> Regex {
     Regex::new(p).expect("pattern")
 }
 
-fn arabic_letter(s: &str) -> bool {
+pub(crate) fn arabic_letter(s: &str) -> bool {
     s.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c))
 }
 
@@ -248,7 +248,7 @@ pub fn fold_latin(text: &str) -> String {
         .join(" ")
 }
 
-fn loose(word: &str) -> String {
+pub(crate) fn loose(word: &str) -> String {
     let mut w = word.to_string();
     if !w.is_empty() && !arabic_letter(&w) {
         for (d, s) in [
@@ -272,7 +272,7 @@ fn loose(word: &str) -> String {
     single(&w)
 }
 
-fn near(a: &str, b: &str) -> bool {
+pub(crate) fn near(a: &str, b: &str) -> bool {
     if a == b {
         return true;
     }
@@ -303,7 +303,7 @@ fn starts(w: &str, q: &str) -> bool {
     w.starts_with(q)
 }
 
-fn exact(q: &str, word: &str) -> bool {
+pub(crate) fn exact(q: &str, word: &str) -> bool {
     let word = if word.starts_with("ال") && word.chars().count() > 3 && !q.starts_with("ال") {
         &word["ال".len()..]
     } else {
@@ -316,12 +316,12 @@ fn exact(q: &str, word: &str) -> bool {
     }
 }
 
-fn same_loose(q: &str, word: &str) -> bool {
+pub(crate) fn same_loose(q: &str, word: &str) -> bool {
     let w = loose(word);
     w == q || (q.chars().count() >= 3 && w.starts_with(q))
 }
 
-fn one_off(q: &str, word: &str) -> bool {
+pub(crate) fn one_off(q: &str, word: &str) -> bool {
     let w = loose(word);
     if w == q {
         return true;
@@ -333,7 +333,7 @@ fn one_off(q: &str, word: &str) -> bool {
     near(q, &w) || (w.chars().count() > qn && near(q, &w.chars().take(qn).collect::<String>()))
 }
 
-fn ordered_score(
+pub(crate) fn ordered_score(
     wanted: &[String],
     name: &[String],
     whole: &[String],
@@ -409,6 +409,16 @@ pub fn search_persons(
     text: &str,
     limit: usize,
 ) -> rusqlite::Result<Vec<(i64, String)>> {
+    search_persons_close(conn, text, limit, None)
+}
+
+/// search_persons, the ids found by a close spelling (not the letters typed) added to `close` (S4).
+pub fn search_persons_close(
+    conn: &Connection,
+    text: &str,
+    limit: usize,
+    mut close: Option<&mut std::collections::HashSet<i64>>,
+) -> rusqlite::Result<Vec<(i64, String)>> {
     if text.trim().is_empty() {
         return Ok(Vec::new());
     }
@@ -480,6 +490,9 @@ pub fn search_persons(
                     s + 10 * i64::from(*own) + offset,
                     -1_000_000,
                 );
+                if let Some(c) = close.as_deref_mut() {
+                    c.insert(*pid);
+                }
             }
         }
     }
@@ -499,7 +512,7 @@ pub fn search_persons(
         .collect()
 }
 
-fn link_counts(conn: &Connection) -> rusqlite::Result<HashMap<i64, i64>> {
+pub(crate) fn link_counts(conn: &Connection) -> rusqlite::Result<HashMap<i64, i64>> {
     static USES: OnceLock<HashMap<i64, i64>> = OnceLock::new();
     if let Some(u) = USES.get() {
         return Ok(u.clone());

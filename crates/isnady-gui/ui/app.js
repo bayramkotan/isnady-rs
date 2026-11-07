@@ -517,6 +517,11 @@ async function start() {
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTheme(THEME_MODE); buildNav(); });
   buildFrame(s);
   wireTooltips();
+  // the web view's own menu (Back, Reload, Inspect Element) is not the program's: a widget without a menu of its own
+  // shows none, as in the Python window; a text field keeps the system's (cut, copy, paste)
+  document.addEventListener("contextmenu", (e) => {
+    if (!e.target.closest("input, textarea")) e.preventDefault();
+  });
   try { await document.fonts.ready; } catch (_) { /* the fonts load later: the lines are measured then */ }
   buildSearchPage();
   await fillSearchFilters();

@@ -783,6 +783,55 @@
    "الهاء",
    "الواو",
    "الياء"
+  ],
+  "places": [
+   "الاصبهاني",
+   "الافريقي",
+   "الانطاكي",
+   "الاهوازي",
+   "الايلي",
+   "البخاري",
+   "البصري",
+   "البغدادي",
+   "البلخي",
+   "البلدي",
+   "البيروتي",
+   "الترمذي",
+   "التنيسي",
+   "الجزري",
+   "الحجازي",
+   "الحراني",
+   "الحلبي",
+   "الحمصي",
+   "الخراساني",
+   "الدمشقي",
+   "الرازي",
+   "الرملي",
+   "السجستاني",
+   "الشامي",
+   "الصنعاني",
+   "الطايفي",
+   "الطرسوسي",
+   "العراقي",
+   "العسقلاني",
+   "العسكري",
+   "القزويني",
+   "القمي",
+   "الكرخي",
+   "الكرماني",
+   "الكوفي",
+   "المدايني",
+   "المدني",
+   "المروزي",
+   "المصري",
+   "المكي",
+   "الموصلي",
+   "النسايي",
+   "النيسابوري",
+   "الهروي",
+   "الواسطي",
+   "اليمامي",
+   "اليماني"
   ]
  },
  "names": {
@@ -9236,6 +9285,553 @@
    "7": "senior Followers of the Successors (e.g. Malik, al-Thawri)",
    "8": "middle Followers of the Successors (e.g. Ibn 'Uyayna, Ibn 'Ulayya)",
    "9": "junior Followers of the Successors (e.g. Yazid b. Harun, al-Shafi'i, 'Abd al-Razzaq)"
+  }
+ },
+ "scholars": {
+  "list": [
+   {
+    "arabic": "محمد بن إسماعيل بن إبراهيم البخاري",
+    "compiler_of": [
+     "bukhari",
+     "adab"
+    ],
+    "dates": "194–256 AH (810–870 CE)",
+    "full": "Muhammad b. Isma'il al-Bukhari",
+    "id": "bukhari",
+    "known_ar": "البخاري",
+    "name": "al-Bukhari",
+    "taqrib": "محمد بن إسماعيل بن إبراهيم بن المغيرة",
+    "tr": "Buhârî (Muhammed b. İsmâil)",
+    "works": [
+     "al-Jami' al-Sahih",
+     "al-Adab al-Mufrad"
+    ]
+   },
+   {
+    "arabic": "مسلم بن الحجاج النيسابوري",
+    "compiler_of": [
+     "muslim"
+    ],
+    "dates": "d. 261 AH (875 CE)",
+    "full": "Muslim b. al-Hajjaj al-Naysaburi",
+    "id": "muslim",
+    "known_ar": "مسلم",
+    "name": "Muslim",
+    "taqrib": "مسلم بن الحجاج",
+    "tr": "Müslim b. Haccâc",
+    "works": [
+     "al-Sahih"
+    ]
+   },
+   {
+    "arabic": "أبو داود سليمان بن الأشعث السجستاني",
+    "compiler_of": [
+     "abudawud"
+    ],
+    "dates": "202–275 AH (817–889 CE)",
+    "full": "Abu Dawud Sulayman b. al-Ash'ath al-Sijistani",
+    "id": "abudawud",
+    "known_ar": "أبو داود",
+    "name": "Abu Dawud",
+    "taqrib": "سليمان بن الأشعث",
+    "tr": "Ebû Dâvûd es-Sicistânî",
+    "works": [
+     "al-Sunan",
+     "al-Marasil"
+    ]
+   },
+   {
+    "arabic": "محمد بن عيسى الترمذي",
+    "compiler_of": [
+     "tirmidhi",
+     "shamail"
+    ],
+    "dates": "d. 279 AH (892 CE)",
+    "full": "Muhammad b. 'Isa al-Tirmidhi",
+    "id": "tirmidhi",
+    "known_ar": "الترمذي",
+    "name": "al-Tirmidhi",
+    "taqrib": "محمد بن عيسى بن سورة",
+    "tr": "Tirmizî",
+    "works": [
+     "al-Jami'",
+     "al-Shama'il"
+    ]
+   },
+   {
+    "arabic": "أحمد بن شعيب النسائي",
+    "compiler_of": [
+     "nasai"
+    ],
+    "dates": "d. 303 AH (915 CE)",
+    "full": "Ahmad b. Shu'ayb al-Nasa'i",
+    "id": "nasai",
+    "known_ar": "النسائي",
+    "name": "al-Nasa'i",
+    "taqrib": "أحمد بن شعيب بن علي",
+    "tr": "Nesâî",
+    "works": [
+     "al-Sunan"
+    ]
+   },
+   {
+    "arabic": "محمد بن يزيد القزويني",
+    "compiler_of": [
+     "ibnmajah"
+    ],
+    "dates": "d. 273 AH (887 CE)",
+    "full": "Muhammad b. Yazid Ibn Maja al-Qazwini",
+    "id": "ibnmajah",
+    "known_ar": "ابن ماجه",
+    "name": "Ibn Maja",
+    "taqrib": "محمد بن يزيد الربعي",
+    "tr": "İbn Mâce",
+    "works": [
+     "al-Sunan"
+    ]
+   },
+   {
+    "arabic": "مالك بن أنس",
+    "compiler_of": [
+     "malik"
+    ],
+    "dates": "d. 179 AH (795 CE)",
+    "full": "Malik b. Anas",
+    "id": "malik",
+    "known_ar": "مالك",
+    "name": "Malik",
+    "taqrib": "مالك بن أنس بن مالك",
+    "tr": "Mâlik b. Enes",
+    "works": [
+     "al-Muwatta'"
+    ]
+   },
+   {
+    "arabic": "أحمد بن محمد بن حنبل الشيباني",
+    "compiler_of": [
+     "ahmad"
+    ],
+    "dates": "164–241 AH (780–855 CE)",
+    "full": "Ahmad b. Muhammad b. Hanbal al-Shaybani",
+    "id": "ahmad",
+    "known_ar": "أحمد بن حنبل",
+    "name": "Ahmad b. Hanbal",
+    "taqrib": "أحمد بن محمد بن حنبل",
+    "tr": "Ahmed b. Hanbel",
+    "works": [
+     "al-Musnad"
+    ]
+   },
+   {
+    "arabic": "عبد الله بن عبد الرحمن الدارمي",
+    "compiler_of": [
+     "darimi"
+    ],
+    "dates": "181–255 AH (797–869 CE)",
+    "full": "'Abd Allah b. 'Abd al-Rahman al-Darimi",
+    "id": "darimi",
+    "known_ar": "الدارمي",
+    "name": "al-Darimi",
+    "taqrib": "عبد الله بن عبد الرحمن بن الفضل",
+    "tr": "Dârimî",
+    "works": [
+     "al-Sunan"
+    ]
+   },
+   {
+    "arabic": "يحيى بن شرف النووي",
+    "compiler_of": [
+     "nawawi",
+     "riyad"
+    ],
+    "dates": "631–676 AH (1233–1277 CE)",
+    "full": "Yahya b. Sharaf al-Nawawi",
+    "id": "nawawi",
+    "known_ar": "النووي",
+    "name": "al-Nawawi",
+    "tr": "Nevevî",
+    "works": [
+     "al-Arba'un",
+     "Riyad al-Salihin",
+     "Sharh Sahih Muslim"
+    ]
+   },
+   {
+    "arabic": "شاه ولي الله الدهلوي",
+    "compiler_of": [
+     "dehlawi"
+    ],
+    "dates": "1114–1176 AH (1703–1762 CE)",
+    "full": "Shah Waliullah al-Dihlawi",
+    "id": "dehlawi",
+    "known_ar": "الدهلوي",
+    "name": "Shah Waliullah al-Dihlawi",
+    "tr": "Şah Veliyyullah ed-Dihlevî",
+    "works": [
+     "al-Arba'un",
+     "Hujjat Allah al-Baligha"
+    ]
+   },
+   {
+    "arabic": "محمد بن عبد الله الخطيب التبريزي",
+    "compiler_of": [
+     "mishkat"
+    ],
+    "dates": "d. after 737 AH (1337 CE)",
+    "full": "Muhammad b. 'Abd Allah al-Khatib al-Tabrizi",
+    "id": "tabrizi",
+    "known_ar": "الخطيب التبريزي",
+    "name": "al-Khatib al-Tabrizi",
+    "tr": "Hatîb et-Tebrîzî",
+    "works": [
+     "Mishkat al-Masabih"
+    ]
+   },
+   {
+    "arabic": "أحمد بن علي بن حجر العسقلاني",
+    "compiler_of": [
+     "bulugh"
+    ],
+    "critic_names": [
+     "Ibn Hajar al-'Asqalani"
+    ],
+    "dates": "773–852 AH (1372–1449 CE)",
+    "full": "Ahmad b. 'Ali Ibn Hajar al-'Asqalani",
+    "id": "ibnhajar",
+    "known_ar": "ابن حجر",
+    "name": "Ibn Hajar al-'Asqalani",
+    "tr": "İbn Hacer el-Askalânî",
+    "works": [
+     "Taqrib al-Tahdhib",
+     "Tahdhib al-Tahdhib",
+     "Fath al-Bari",
+     "al-Isaba",
+     "Bulugh al-Maram"
+    ]
+   },
+   {
+    "arabic": "محمد ناصر الدين الألباني",
+    "dates": "1333–1420 AH (1914–1999 CE)",
+    "full": "Muhammad Nasir al-Din al-Albani",
+    "grader_names": [
+     "Al-Albani"
+    ],
+    "id": "albani",
+    "known_ar": "الألباني",
+    "name": "al-Albani",
+    "tr": "Nâsırüddîn el-Elbânî",
+    "works": [
+     "Silsilat al-Ahadith al-Sahiha",
+     "Silsilat al-Ahadith al-Da'ifa",
+     "Sahih / Da'if Sunan Abi Dawud"
+    ]
+   },
+   {
+    "arabic": "شعيب الأرناؤوط",
+    "dates": "1928–2016 CE",
+    "full": "Shu'ayb al-Arna'ut",
+    "grader_names": [
+     "Shuaib Al Arnaut"
+    ],
+    "id": "arnaut",
+    "known_ar": "الأرناؤوط",
+    "name": "Shu'ayb al-Arna'ut",
+    "short": "al-Arna'ut",
+    "tr": "Şuayb el-Arnaût",
+    "works": [
+     "editions of the Sunan and the Musnad of Ahmad with grading"
+    ]
+   },
+   {
+    "arabic": "زبير علي زئي",
+    "dates": "1957–2013 CE",
+    "full": "Hafiz Zubair 'Ali Za'i",
+    "grader_names": [
+     "Zubair Ali Zai"
+    ],
+    "id": "zubairalizai",
+    "known_ar": "زبير علي زئي",
+    "name": "Zubair 'Ali Za'i",
+    "tr": "Zübeyr Ali Zaî",
+    "works": [
+     "grading of the Sunan (Urdu editions)"
+    ]
+   },
+   {
+    "arabic": "محمد محيي الدين عبد الحميد",
+    "dates": "",
+    "full": "Muhammad Muhyi al-Din 'Abd al-Hamid",
+    "grader_names": [
+     "Muhammad Muhyi Al-Din Abdul Hamid"
+    ],
+    "id": "muhyialdin",
+    "known_ar": "محمد محيي الدين عبد الحميد",
+    "name": "Muhammad Muhyi al-Din 'Abd al-Hamid",
+    "short": "Muhyi al-Din",
+    "tr": "Muhammed Muhyiddin Abdülhamîd",
+    "works": [
+     "edition of Sunan Abi Dawud"
+    ]
+   },
+   {
+    "arabic": "محمد بن يعقوب الكليني",
+    "compiler_of": [
+     "kafi"
+    ],
+    "dates": "d. 329 AH (941 CE)",
+    "full": "Muhammad b. Ya'qub al-Kulayni",
+    "id": "kulayni",
+    "known_ar": "الكليني",
+    "najashi": "محمد بن يعقوب بن إسحاق",
+    "name": "al-Kulayni",
+    "tr": "Küleynî",
+    "tradition": "shia",
+    "works": [
+     "al-Kafi"
+    ]
+   },
+   {
+    "arabic": "محمد بن علي بن الحسين بن بابويه القمي",
+    "compiler_of": [
+     "uyun",
+     "amali-saduq",
+     "khisal",
+     "tawhid",
+     "maani",
+     "thawab",
+     "sifat-shia",
+     "fadail-shia",
+     "faqih"
+    ],
+    "dates": "d. 381 AH (991 CE)",
+    "full": "Muhammad b. 'Ali b. al-Husayn Ibn Babawayh al-Qummi",
+    "id": "saduq",
+    "known_ar": "الصدوق",
+    "najashi": "محمد بن علي بن الحسين بن موسى بن بابويه",
+    "name": "al-Shaykh al-Saduq",
+    "tr": "Şeyh Sadûk (İbn Bâbeveyh)",
+    "tradition": "shia",
+    "works": [
+     "Man la yahduruhu al-faqih",
+     "'Uyun Akhbar al-Rida",
+     "al-Amali",
+     "al-Khisal",
+     "al-Tawhid",
+     "Ma'ani al-Akhbar",
+     "Thawab al-A'mal",
+     "Sifat al-Shi'a",
+     "Fada'il al-Shi'a"
+    ]
+   },
+   {
+    "arabic": "محمد بن محمد بن النعمان المفيد",
+    "compiler_of": [
+     "amali-mufid"
+    ],
+    "dates": "d. 413 AH (1022 CE)",
+    "full": "Muhammad b. Muhammad b. al-Nu'man al-Mufid",
+    "id": "mufid",
+    "known_ar": "المفيد",
+    "najashi": "محمد بن محمد بن النعمان",
+    "name": "al-Shaykh al-Mufid",
+    "tr": "Şeyh Müfîd",
+    "tradition": "shia",
+    "works": [
+     "al-Amali",
+     "al-Irshad",
+     "al-Muqni'a"
+    ]
+   },
+   {
+    "arabic": "جعفر بن محمد بن جعفر بن موسى بن قولويه القمي",
+    "compiler_of": [
+     "kamil-ziyarat"
+    ],
+    "dates": "d. 368 AH (978 CE)",
+    "full": "Ja'far b. Muhammad Ibn Qulawayh al-Qummi",
+    "id": "ibnqulawayh",
+    "known_ar": "ابن قولويه",
+    "najashi": "جعفر بن محمد بن جعفر بن موسى بن قولويه",
+    "name": "Ibn Qulawayh",
+    "tr": "İbn Kulaveyh",
+    "tradition": "shia",
+    "works": [
+     "Kamil al-Ziyarat"
+    ]
+   },
+   {
+    "arabic": "محمد بن إبراهيم بن جعفر النعماني",
+    "compiler_of": [
+     "ghayba-numani"
+    ],
+    "dates": "d. c. 360 AH (971 CE)",
+    "full": "Muhammad b. Ibrahim al-Nu'mani (Ibn Abi Zaynab)",
+    "id": "numani",
+    "known_ar": "النعماني",
+    "najashi": "محمد بن إبراهيم بن جعفر",
+    "name": "al-Nu'mani",
+    "tr": "Nu'mânî (İbn Ebî Zeyneb)",
+    "tradition": "shia",
+    "works": [
+     "Kitab al-Ghayba"
+    ]
+   },
+   {
+    "arabic": "محمد بن الحسن بن علي الطوسي",
+    "compiler_of": [
+     "ghayba-tusi",
+     "tahdhib",
+     "istibsar"
+    ],
+    "dates": "385–460 AH (995–1067 CE)",
+    "full": "Muhammad b. al-Hasan al-Tusi (Shaykh al-Ta'ifa)",
+    "id": "tusi",
+    "known_ar": "الطوسي",
+    "najashi": "محمد بن الحسن بن علي الطوسي",
+    "name": "al-Shaykh al-Tusi",
+    "tr": "Şeyh Tûsî (Şeyhü't-Tâife)",
+    "tradition": "shia",
+    "works": [
+     "Tahdhib al-Ahkam",
+     "al-Istibsar",
+     "Kitab al-Ghayba",
+     "al-Rijal",
+     "al-Fihrist"
+    ]
+   },
+   {
+    "arabic": "الحسين بن سعيد بن حماد الأهوازي",
+    "compiler_of": [
+     "mumin",
+     "zuhd"
+    ],
+    "dates": "3rd century AH",
+    "full": "al-Husayn b. Sa'id b. Hammad al-Ahwazi",
+    "id": "ahwazi",
+    "known_ar": "الحسين بن سعيد",
+    "name": "al-Husayn b. Sa'id al-Ahwazi",
+    "tr": "Hüseyin b. Saîd el-Ahvâzî",
+    "tradition": "shia",
+    "works": [
+     "Kitab al-Mu'min",
+     "Kitab al-Zuhd"
+    ]
+   },
+   {
+    "arabic": "محمد آصف المحسني",
+    "compiler_of": [
+     "mujam-mutabara"
+    ],
+    "dates": "1935–2019 CE",
+    "full": "Muhammad Asif al-Muhsini",
+    "grader_names": [
+     "al-Muhsini (Mu'jam al-Ahadith al-Mu'tabara)"
+    ],
+    "id": "muhsini",
+    "known_ar": "المحسني",
+    "name": "Asif al-Muhsini",
+    "short": "al-Muhsini",
+    "tr": "Âsıf Muhsinî",
+    "tradition": "shia",
+    "works": [
+     "Mu'jam al-Ahadith al-Mu'tabara",
+     "Mashra'at Bihar al-Anwar"
+    ]
+   },
+   {
+    "arabic": "محمد باقر المجلسي",
+    "dates": "1037–1110 AH (1627–1699 CE)",
+    "full": "Muhammad Baqir al-Majlisi",
+    "grader_names": [
+     "al-Majlisi (Mir'at al-'Uqul)"
+    ],
+    "id": "majlisi",
+    "known_ar": "المجلسي",
+    "name": "al-'Allama al-Majlisi",
+    "short": "al-Majlisi",
+    "tr": "Allâme Meclisî",
+    "tradition": "shia",
+    "works": [
+     "Mir'at al-'Uqul (his grading of al-Kafi)",
+     "Bihar al-Anwar",
+     "Malaz al-Akhyar"
+    ]
+   },
+   {
+    "arabic": "محمد باقر البهبودي",
+    "dates": "1928–2015 CE",
+    "full": "Muhammad Baqir al-Behbudi",
+    "grader_names": [
+     "al-Behbudi (Sahih al-Kafi)"
+    ],
+    "id": "behbudi",
+    "known_ar": "البهبودي",
+    "name": "Muhammad Baqir al-Behbudi",
+    "short": "al-Behbudi",
+    "tr": "Muhammed Bâkır Behbûdî",
+    "tradition": "shia",
+    "works": [
+     "Sahih al-Kafi (his selection of al-Kafi)"
+    ]
+   },
+   {
+    "arabic": "أحمد بن علي بن أحمد بن العباس النجاشي",
+    "critic_names": [
+     "al-Najashi"
+    ],
+    "dates": "372–450 AH (982–1058 CE)",
+    "full": "Ahmad b. 'Ali al-Najashi",
+    "id": "najashi",
+    "known_ar": "النجاشي",
+    "najashi": "أحمد بن علي بن أحمد بن العباس",
+    "name": "al-Najashi",
+    "tr": "Necâşî",
+    "tradition": "shia",
+    "works": [
+     "Rijal al-Najashi (Fihrist asma' musannifi al-Shi'a)"
+    ]
+   }
+  ],
+  "role_help": {
+   "compiler": [
+    "Compiler (musannif)",
+    "A scholar who gathered hadith into a book, each with the chain he heard it through. The first link of every chain is his own teacher; the last is usually the Companion who heard the Prophet."
+   ],
+   "critic": [
+    "Critic of narrators (rijal)",
+    "A scholar who judged the narrators themselves — their honesty and the accuracy of their memory — in fixed words that rank them, from Companion down to liar (Ibn Hajar uses twelve ranks)."
+   ],
+   "grader": [
+    "Grader",
+    "A scholar who judged each hadith of a book: sahih (sound), hasan (good), da'if (weak), and so on. Different scholars can judge the same hadith differently; comparing them shows how strict each one is."
+   ]
+  },
+  "short_tr": {
+   "abudawud": "Ebû Dâvûd",
+   "ahwazi": "Ahvâzî",
+   "albani": "Elbânî",
+   "arnaut": "Arnaût",
+   "behbudi": "Behbûdî",
+   "bukhari": "Buhârî",
+   "dehlawi": "Dihlevî",
+   "ibnhajar": "İbn Hacer",
+   "ibnmajah": "İbn Mâce",
+   "ibnqulawayh": "İbn Kûleveyh",
+   "kulayni": "Küleynî",
+   "majlisi": "Meclisî",
+   "malik": "Mâlik",
+   "mufid": "Müfîd",
+   "muhsini": "Muhsinî",
+   "muhyialdin": "Muhyiddin",
+   "muslim": "Müslim",
+   "najashi": "Necâşî",
+   "nasai": "Nesâî",
+   "nawawi": "Nevevî",
+   "numani": "Nu'mânî",
+   "saduq": "Sadûk",
+   "tirmidhi": "Tirmizî",
+   "tusi": "Tûsî",
+   "zubairalizai": "Zübeyr Ali Zaî"
   }
  },
  "traditions": {

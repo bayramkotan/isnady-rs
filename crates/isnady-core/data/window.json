@@ -1231,6 +1231,139 @@
   "<b>Grades</b> are shown exactly as each scholar gave them, with the scholar's name. isnady does not merge or rewrite them.",
   "Search tips"
  ],
+ "people": {
+  "ranks": {
+   "1": [
+    "الصحابة",
+    "Companion"
+   ],
+   "2": [
+    "من أكد مدحه",
+    "praise confirmed (thiqa thiqa, thiqa hafiz, awthaq al-nas)"
+   ],
+   "3": [
+    "ثقة",
+    "trustworthy (thiqa, mutqin, thabt, 'adl)"
+   ],
+   "4": [
+    "صدوق",
+    "truthful (saduq, la ba's bih)"
+   ],
+   "5": [
+    "صدوق يهم",
+    "truthful with lapses (saduq yahim, lahu awham, yukhti', taghayyara)"
+   ],
+   "6": [
+    "مقبول",
+    "acceptable when followed, otherwise weak (maqbul)"
+   ],
+   "7": [
+    "مستور",
+    "unestablished (mastur, majhul al-hal)"
+   ],
+   "8": [
+    "ضعيف",
+    "weak (da'if)"
+   ],
+   "9": [
+    "مجهول",
+    "unknown (majhul)"
+   ],
+   "10": [
+    "متروك",
+    "abandoned (matruk, wahi, saqit)"
+   ],
+   "11": [
+    "متهم بالكذب",
+    "accused of lying"
+   ],
+   "12": [
+    "كذاب",
+    "liar, fabricator"
+   ]
+  },
+  "shia_ranks": {
+   "1": [
+    "ثقة إمامي",
+    "trustworthy (thiqa)",
+    "The critic calls him thiqa; his creed is Imami or not said to differ."
+   ],
+   "2": [
+    "ممدوح",
+    "praised (mamduh)",
+    "Praised (jalil, wajh, 'ayn, la ba's bihi …) without the word thiqa."
+   ],
+   "3": [
+    "موثق",
+    "trustworthy, not Imami (muwaththaq)",
+    "Called thiqa, but of another school: Waqifi, Fathi, Zaydi, 'ammi …"
+   ],
+   "4": [
+    "ضعيف",
+    "weak (da'if)",
+    "Called weak, confused, a liar, an extremist (ghali) or the like."
+   ]
+  },
+  "shia_color": {
+   "1": 2,
+   "2": 4,
+   "3": 5,
+   "4": 9
+  },
+  "tabaqat": {
+   "1": "Companions",
+   "2": "senior Successors (e.g. Ibn al-Musayyab)",
+   "3": "middle Successors (e.g. al-Hasan, Ibn Sirin)",
+   "4": "Successors who narrate mostly from senior Successors (e.g. al-Zuhri, Qatada)",
+   "5": "junior Successors (e.g. al-A'mash)",
+   "6": "contemporaries of the junior Successors with no proven meeting with a Companion (e.g. Ibn Jurayj)",
+   "7": "senior Followers of the Successors (e.g. Malik, al-Thawri)",
+   "8": "middle Followers of the Successors (e.g. Ibn 'Uyayna, Ibn 'Ulayya)",
+   "9": "junior Followers of the Successors (e.g. Yazid b. Harun, al-Shafi'i, 'Abd al-Razzaq)",
+   "10": "senior narrators from the Followers' followers (e.g. Ahmad b. Hanbal)",
+   "11": "middle narrators from them (e.g. al-Dhuhli, al-Bukhari)",
+   "12": "junior narrators from them (e.g. al-Tirmidhi)"
+  },
+  "madhhabs": {
+   "imami": "Imami",
+   "waqifi": "Waqifi",
+   "fathi": "Fathi",
+   "zaydi": "Zaydi",
+   "ammi": "'Ammi (Sunni)",
+   "nawusi": "Nawusi",
+   "kaysani": "Kaysani",
+   "ghali": "Ghali (extremist)"
+  },
+  "tradition": {
+   "sunni": [
+    "Sunni",
+    "A narrator of the Sunni books, as Ibn Hajar's Taqrib al-Tahdhib records him."
+   ],
+   "shia": [
+    "Shia",
+    "A narrator of the Shia books, as al-Najashi's Rijal records him. His judgment is given in its own terms, not mapped to Ibn Hajar's ranks."
+   ]
+  },
+  "role_help": {
+   "compiler": [
+    "Compiler (musannif)",
+    "A scholar who gathered hadith into a book, each with the chain he heard it through. The first link of every chain is his own teacher; the last is usually the Companion who heard the Prophet."
+   ],
+   "grader": [
+    "Grader",
+    "A scholar who judged each hadith of a book: sahih (sound), hasan (good), da'if (weak), and so on. Different scholars can judge the same hadith differently; comparing them shows how strict each one is."
+   ],
+   "critic": [
+    "Critic of narrators (rijal)",
+    "A scholar who judged the narrators themselves — their honesty and the accuracy of their memory — in fixed words that rank them, from Companion down to liar (Ibn Hajar uses twelve ranks)."
+   ]
+  },
+  "tips": {
+   "CLOSE_TIP": "Found by a close spelling, not by the letters typed: a letter typed twice or missing, or one that Turkish and English write differently (h and kh, z and dh).",
+   "WEAK_TIP": "The consonants typed are in this name, but its reading sounds different (Bayram and al-Barmaki are both b-r-m). Arabic is written without its short vowels, so consonants are matched first.",
+   "UNREAD_TIP": "The consonants typed are in this name, and isnady has no reading of it to compare the vowels with, so it cannot say whether it sounds like what you typed."
+  }
+ },
  "repo_url": "https://github.com/bayramkotan/isnady",
  "issues_url": "https://github.com/bayramkotan/isnady/issues",
  "pypi_url": "https://pypi.org/project/isnady/"

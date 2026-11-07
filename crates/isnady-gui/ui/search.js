@@ -137,6 +137,8 @@ function labelCombos() {
   $("q").placeholder = t(KIND_TEXT[SEARCH.kind][0]);
   $("s-hadith-filters").hidden = SEARCH.kind !== "hadith";
   $("s-people-filters").hidden = SEARCH.kind !== "narrators";
+  // the scholars have no filters: the row is only as tall as the count beside it
+  document.querySelector("#page-search .s-filters").classList.toggle("bare", SEARCH.kind === "scholars");
 }
 
 function labelPickers() {
@@ -355,7 +357,7 @@ function setKind(kind) {
   $("s-summary").textContent = "";
   $("s-export").hidden = true;
   if ($("q").value.trim()) runSearch();
-  else { SEARCH.page = null; SEARCH.searched = false; showStart(); }
+  else { SEARCH.page = null; SEARCH.found = null; SEARCH.searched = false; showStart(); }
   $("q").focus();
 }
 
@@ -378,6 +380,7 @@ function goHome() {
   $("q").value = "";
   $("q-clear").hidden = true;
   SEARCH.page = null;
+  SEARCH.found = null;
   SEARCH.searched = false;
   showStart();
   $("s-body").scrollTop = 0;
@@ -413,17 +416,14 @@ function rerunIfSearched() {
 
 async function runSearch() {
   const text = $("q").value.trim();
-  if (!text) { SEARCH.page = null; SEARCH.searched = false; showStart(); return; }
+  if (!text) { SEARCH.page = null; SEARCH.found = null; SEARCH.searched = false; showStart(); return; }
   SEARCH.searched = true;
   if (SEARCH.kind !== "hadith") {
-    // the narrators and the scholars of the drop-down (S3) come with the narrators' search of the Search page
     invoke("remember_search", { text, kind: SEARCH.kind });
-    notice(t(SEARCH.kind === "narrators" ? "Search the narrators" : "Search the scholars"),
-      t("LATER_MENU", { v: APP.version, menu: `${t("Search")} → ${t(SEARCH.kind === "narrators" ? "Narrators" : "Scholars")}` }));
-    $("s-summary").textContent = "";
-    $("s-export").hidden = true;
+    await searchPeople(text);
     return;
   }
+  SEARCH.found = null;
   if (SEARCH.mode === "meaning") {
     notice(t("Search by meaning"), t("LATER_MENU", { v: APP.version, menu: `${t("Match")} → ${t("By meaning (AI)")}` }) + "\n\n" +
       t("Search by meaning finds hadith that say the same thing in other words or in another language. It learns from the texts imported here; building it takes a few seconds to a minute."));
@@ -453,6 +453,11 @@ function fetchPage(offset, remember) {
 }
 
 async function loadMore() {
+  if (SEARCH.found) {
+    if (SEARCH.peopleShown >= SEARCH.found.length && SEARCH.peopleTotal > SEARCH.found.length) await readMorePeople();
+    showPeople(true);
+    return;
+  }
   if (!SEARCH.page) return;
   document.body.classList.add("busy");
   try {
@@ -571,6 +576,237 @@ function updateSummary() {
     delete $("s-summary").dataset.tip;
   }
   $("s-summary").textContent = t("{total:,} hadith, {ms} ms", { total: page.total, ms: page.elapsed_ms }) + note;
+}
+
+// ------------------------------------------------------------------ narrators and scholars (S3, people_results)
+
+async function searchPeople(text) {
+  SEARCH.page = null;
+  document.body.classList.add("busy");
+  try {
+    const d = await invoke("find_people", { kind: SEARCH.kind, text, tradition: SEARCH.tradition });
+    SEARCH.found = d.rows;
+    SEARCH.peopleTotal = d.total;
+    SEARCH.peopleRead = d.read || 0;       // the matches find() read; the next from here (NR-B1)
+    SEARCH.peopleMs = d.ms;
+  } catch (e) {
+    SEARCH.found = null;
+    notice(t(KIND_TEXT[SEARCH.kind][1]), String(e));
+    return;
+  } finally {
+    document.body.classList.remove("busy");
+  }
+  showPeople(false);
+}
+
+async function readMorePeople() {
+  document.body.classList.add("busy");
+  try {
+    const have = new Set(SEARCH.found.map((r) => r.id));
+    const d = await invoke("more_people", { text: $("q").value.trim(), tradition: SEARCH.tradition, offset: SEARCH.peopleRead, limit: PAGE_SIZE * 4 });
+    SEARCH.peopleRead += d.rows.length;
+    SEARCH.found.push(...d.rows.filter((r) => !have.has(r.id)));
+    if (!d.rows.length) SEARCH.peopleTotal = SEARCH.found.length;   // nothing more to read: the total said more
+  } finally {
+    document.body.classList.remove("busy");
+  }
+}
+
+function addTo(body, html) {
+  const box = document.createElement("div");
+  box.innerHTML = html;
+  const nodes = Array.from(box.children);
+  for (const n of nodes) body.appendChild(n);
+  return nodes;
+}
+
+function showPeople(more) {
+  SEARCH.atStart = false;
+  const body = $("s-body");
+  const kind = SEARCH.kind;
+  const typed = $("q").value.trim();
+  if (!more) {
+    ++SEARCH.token;
+    body.innerHTML = "";
+    SEARCH.peopleShown = 0;
+    body.scrollTop = 0;
+  }
+  $("s-export").hidden = true;                     // narrators and scholars: no export of hadith
+  const found = SEARCH.found;
+  if (!found.length) {
+    const title = kind === "narrators" ? t("No narrators found for “{typed}”", { typed }) : t("No scholars found for “{typed}”", { typed });
+    const hint = kind === "narrators"
+      ? t("Names are matched by their letters, without vowels or diacritics: “Abu Hurayra”, “Ebû Hüreyre” and أبو هريرة all find him. Try fewer words, or the name he is known by.")
+      : t("Try his best-known name (al-Bukhari, Buhârî, البخاري) or the title of one of his works.");
+    body.innerHTML = `<div class="hero people-empty"><div class="hero-title small">${esc(title)}</div><div class="lead">${esc(hint)}</div></div>`;
+    $("s-summary").textContent = "";
+    return;
+  }
+  $("s-more-row") && $("s-more-row").remove();
+  if (!more && found.every((r) => r.weak)) {
+    addTo(body, `<div class="lead">${esc(t("No name reads “{typed}”. Arabic is written without its short vowels, so isnady first matches the consonants — these names have the consonants typed, but their readings sound different.", { typed }))}</div>`);
+  } else if (!more && found.every((r) => r.close)) {
+    addTo(body, `<div class="lead">${esc(t("Nothing is written exactly “{typed}”. These are the closest spellings: a letter typed twice or missing, or written as Turkish and English differ (h and kh, z and dh).", { typed }))}</div>`);
+  }
+  const batch = found.slice(SEARCH.peopleShown, SEARCH.peopleShown + PAGE_SIZE);
+  batch.forEach((row, k) => {
+    const index = SEARCH.peopleShown + k;
+    if (row.weak && index > 0 && !found[index - 1].weak) {
+      // the weaker matches, after the others, under their own heading (S4)
+      addTo(body, `<div class="weaker-space"></div><div class="weaker-title">${esc(t("Weaker matches"))}</div>
+        <div class="caption wrap">${esc(t("The same consonants as “{typed}”, but the names read differently — Arabic is written without its short vowels, so the consonants are matched first.", { typed }))}</div>`);
+    }
+    body.appendChild(kind === "narrators" ? personCard(row) : scholarCard(row));
+  });
+  SEARCH.peopleShown += batch.length;
+  requestAnimationFrame(() => squareTags(body));
+  // every match can be reached: after the ones read, the next are read when asked for (NR-B1)
+  const remaining = Math.max(found.length, SEARCH.peopleTotal) - SEARCH.peopleShown;
+  if (remaining > 0) {
+    const [row] = addTo(body, `<div id="s-more-row" class="more-row"><button class="quiet">${esc(t("Show {page_size} more ({remaining:,} left)", { page_size: Math.min(PAGE_SIZE, remaining), remaining }))}</button></div>`);
+    row.firstChild.onclick = loadMore;
+  }
+  const total = SEARCH.peopleTotal;
+  const close = found.filter((r) => r.close).length;
+  const weak = found.filter((r) => r.weak).length;
+  let note = !close ? "" : (close === found.length ? " — " + t("by close spelling") : ", " + t("{n:,} by close spelling", { n: close }));
+  if (weak) note += weak === found.length ? " — " + t("all weaker matches") : ", " + t("{n:,} weaker", { n: weak });
+  const count = kind === "narrators" ? n_("{n:,} narrator", "{n:,} narrators", total) : n_("{n:,} scholar", "{n:,} scholars", total);
+  delete $("s-summary").dataset.tip;
+  $("s-summary").textContent = count + note + `, ${SEARCH.peopleMs} ms`;
+}
+
+// Qt draws a box square when its radius is more than half its height (the tags of a roomy, round theme)
+function squareTags(root) {
+  for (const tag of root.querySelectorAll(".p-tag:not(.checked)")) {
+    tag.classList.add("checked");
+    const r = parseFloat(getComputedStyle(tag).borderTopLeftRadius) || 0;
+    if (r > tag.offsetHeight / 2) tag.classList.add("square");
+  }
+}
+
+// [reading                Arabic]  then the full name, muted, when it says more (people_results._head)
+function personHead(reading, arabic, sub) {
+  const s = scriptOf("arabic");
+  const scale = Number(getComputedStyle(document.documentElement).getPropertyValue("--scale")) || 1;
+  const size = (s.size * 1.05 * scale).toFixed(1);
+  const ar = `<span class="p-arabic${reading ? "" : " alone"}" lang="ar" dir="rtl" style="font-family:${esc(s.family)};font-size:${size}pt;color:${esc(s.color)}">${esc(arabic)}</span>`;
+  return `<div class="p-top">${reading ? `<span class="p-title">${esc(reading)}</span>` : ""}${ar}</div>` +
+    (sub ? `<div class="p-sub">${esc(sub)}</div>` : "");
+}
+
+// one line: tags (tradition, roles), then facts, each with its explanation on hover; the page it opens
+function personFacts(tags, parts, action) {
+  return `<div class="p-facts">${tags.map(([text, tip]) => `<span class="p-tag" data-tip="${esc(tip)}">${esc(text)}</span>`).join("")}` +
+    parts.map(([html, tip]) => `<span class="p-fact"${tip ? ` data-tip="${esc(tip)}"` : ""}><span>${html}</span></span>`).join("") +
+    `<span class="grow"></span><span class="p-go">${esc(action)} →</span></div>`;
+}
+
+function clickCard(html, tip, open, menu) {
+  const el = document.createElement("div");
+  el.className = "pcard";
+  el.dataset.tip = tip;
+  el.innerHTML = html;
+  el.addEventListener("click", (e) => { if (e.button === 0) open(); });
+  el.addEventListener("contextmenu", async (e) => { e.preventDefault(); popupAt(e, await menu()); });
+  return el;
+}
+
+function firstPart(text) {
+  return text.split(" (")[0];
+}
+
+// a narrator found by Search, from either tradition (people_results.person_card)
+function personCard(row) {
+  const P = WIN.people;
+  const shia = row.tradition === "shia";
+  const view = row.view;
+  const open = () => openPerson(row.id, row.tradition);
+  const menu = () => {
+    const reading = view.reading || view.full_reading;
+    return [act("Open in Narrators", open), SEP,
+      act("Copy", null, "", { submenu: () => [
+        act("His name in Arabic", () => copyText(view.arabic || row.name)),
+        ...(reading ? [act("His name as read", () => copyText(reading))] : []),
+        act("The whole entry heading", () => copyText(row.name))] })];
+  };
+  const known = view.reading || view.full_reading;
+  const full = view.full_reading && view.full_reading !== known ? view.full_reading : "";
+  let html = personHead(known, view.arabic || row.name, full);
+  const [tag, why0] = P.tradition[row.tradition];
+  const why = t(why0);
+  const tags = [[t(tag), row.source ? why + "\n" + t("Source: {source}", { source: row.source }) : why]];
+  const parts = [];
+  const rank = row.rank;
+  const dot = (color) => `<span style="color:${esc(color)}">●</span> `;
+  if (shia) {
+    if (rank) {
+      const [ar, en0, meaning] = P.shia_ranks[rank];
+      const en = t(en0);
+      parts.push([dot(rankColor(P.shia_color[rank])) + esc(firstPart(en)), `${ar} — ${en}\n${t(meaning)}`]);
+    } else {
+      parts.push([esc(t("no judgment")), t("al-Najashi names him without judging him.")]);
+    }
+    if (row.madhhab) parts.push([esc(t(P.madhhabs[row.madhhab] || row.madhhab)), t("His school, as the critic gives it.")]);
+  } else if (rank) {
+    const [ar, en0] = P.ranks[rank];
+    const en = t(en0);
+    parts.push([dot(rankColor(rank)) + esc(firstPart(en)),
+      t("Ibn Hajar's rank {rank} of 12: {arabic} — {meaning}", { rank, arabic: ar, meaning: en }) +
+      (row.verdict ? "\n" + t("His words: {words}", { words: row.verdict }) : "")]);
+  }
+  if (row.tabaqa) {
+    parts.push([esc(t("tabaqa {tabaqa}", { tabaqa: row.tabaqa })),
+      t("Generation (tabaqa) {tabaqa} of 12 in Ibn Hajar's count: {meaning}", { tabaqa: row.tabaqa, meaning: t(P.tabaqat[row.tabaqa] || "") })]);
+  }
+  if (row.death) parts.push([esc(t("d. {year} AH", { year: row.death })), t("Year of death in the Hijri calendar, as the source gives it.")]);
+  if (!shia) {
+    parts.push([esc(row.in_chains ? t("{n:,} in chains", { n: row.in_chains }) : t("not in the imported chains")),
+      t("How often he is identified in the chains of the imported books.")]);
+  }
+  const matched = (row.matched || []).join(" ");
+  const shown = matched ? ` <span class="p-matched" style="font-family:${esc(scriptOf("arabic").family)}">${esc(matched)}</span>` : "";
+  if (row.weak) parts.push([`<span class="muted">≈ ${esc(t("same consonants:"))}${shown}</span>`, t(P.tips.WEAK_TIP)]);
+  else if (row.close) parts.push([`<span class="gold">≈ ${esc(t("close spelling:"))}${shown}</span>`, t(P.tips.CLOSE_TIP)]);
+  else if (row.unread) parts.push([`<span class="muted">≈ ${esc(t("same consonants:"))}${shown}</span>`, t(P.tips.UNREAD_TIP)]);
+  html += personFacts(tags, parts, t("Open in Narrators"));
+  return clickCard(html, t("Open {name} on the Narrators page", { name: row.name }), open, menu);
+}
+
+// a scholar found by Search: who he is and what of his work is in this database (people_results.scholar_card)
+function scholarCard(s) {
+  const P = WIN.people;
+  const open = () => show("scholars");        // the Hadith Scholars page comes with RS5
+  const menu = async () => {
+    const marked = await invoke("is_bookmarked", { kind: "scholar", reference: s.id });
+    return [act("Open in Hadith Scholars", open), SEP,
+      act(marked ? "★  " + t("Remove from bookmarks") : "☆  " + t("Add to bookmarks"),
+        () => invoke("toggle_bookmark", { kind: "scholar", reference: s.id, title: s.short, subtitle: s.arabic || "" }), "", { raw: true }),
+      act("Copy", null, "", { submenu: () => [
+        act("His name as read", () => copyText(s.short)),
+        ...(s.arabic ? [act("His name in Arabic", () => copyText(s.arabic))] : [])] })];
+  };
+  const sub = [s.fuller !== s.short ? s.fuller : "", s.dates].filter((x) => x).join(" · ");
+  let html = personHead(s.short, s.head, sub);
+  html += `<div class="caption wrap p-works">${esc(t("Works: ") + s.works.join(", "))}</div>`;
+  const tags = [], parts = [];
+  for (const role of s.roles) {
+    const title = t(P.role_help[role][0]), meaning = t(P.role_help[role][1]);
+    tags.push([title.split(" (")[0].split(" · ")[0], `${title}\n${meaning}`]);
+  }
+  if (!tags.length) parts.push([esc(t("nothing of his is imported yet")), t("Import his book or his grades (File → Data Sources) to see his work measured.")]);
+  if (s.close) parts.push([`<span class="gold">≈ ${esc(t("close spelling"))}</span>`, t(P.tips.CLOSE_TIP)]);
+  html += personFacts(tags, parts, t("Open in Hadith Scholars"));
+  return clickCard(html, t("Open {name} on the Hadith Scholars page", { name: s.short }), open, menu);
+}
+
+// a narrator opened on the Narrators page, in his own tradition (open_person)
+async function openPerson(id, road) {
+  NARR.road = road === "shia" ? "shia" : "sunni";
+  NARR.id = id;
+  if (NARR.loaded) await loadNarrators();
+  show("narrators");
+  await openNarrator(id);
 }
 
 // ------------------------------------------------------------------ a hadith (ResultCard)

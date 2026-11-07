@@ -79,12 +79,22 @@ def tables() -> dict:
             "tabaqat": {str(k): v for k, v in rijal.TABAQA_LABELS.items()},
         },
         "narrators": narrators_tables(),
+        "scholars": scholars_tables(),
         "name_parts": {
+            "places": sorted(name_parts.PLACES),
             "not_names": sorted(name_parts._NOT_NAMES),
             "laqab": name_parts._LAQAB_PHRASE.pattern,
             "known": name_parts._KNOWN_PHRASE.pattern,
         },
     }
+
+
+def scholars_tables() -> dict:
+    """The scholars of hadith (core.scholars): who they are, the short Turkish names, what each role means."""
+    from isnady.core import scholars
+
+    return {"list": scholars.SCHOLARS, "short_tr": scholars.SHORT_TR,
+            "role_help": {k: list(v) for k, v in scholars.ROLE_HELP.items()}}
 
 
 def narrators_tables() -> dict:
@@ -228,9 +238,10 @@ def window() -> str:
     and how much of each is translated, the keyboard shortcuts and the search tips."""
     _import()
     from isnady import config
-    from isnady.core import catalog, genealogy, i18n, learn, scholars, traditions
+    from isnady.core import catalog, genealogy, i18n, learn, rijal, scholars, shia_rijal, traditions
 
     main_window = _Source("isnady.gui.main_window")
+    people_results = _Source("isnady.gui.people_results")
     theme = _Source("isnady.gui.theme")
     dialogs = _Source("isnady.gui.dialogs")
     themes = theme.value("THEMES")
@@ -264,6 +275,18 @@ def window() -> str:
         "learn_languages": list(learn.LANGUAGES),
         "shortcuts": dialogs.value("SHORTCUTS"),
         "search_tips": dialogs.tr_texts("search_tips"),
+        # Search → Narrators and Scholars (gui/people_results.py): the ranks in Arabic and English, the Shia
+        # categories with their meanings and colours, the tabaqat, the schools, what a scholar's role means
+        "people": {
+            "ranks": {str(k): list(v) for k, v in rijal.RANK_LABELS.items()},
+            "shia_ranks": {str(k): list(v) for k, v in shia_rijal.RANKS.items()},
+            "shia_color": {str(k): v for k, v in people_results.value("SHIA_COLOR").items()},
+            "tabaqat": {str(k): v for k, v in rijal.TABAQA_LABELS.items()},
+            "madhhabs": shia_rijal.MADHHAB_LABELS,
+            "tradition": people_results.value("TRADITION"),
+            "role_help": {k: list(v) for k, v in scholars.ROLE_HELP.items()},
+            "tips": {k: people_results.value(k) for k in ("CLOSE_TIP", "WEAK_TIP", "UNREAD_TIP")},
+        },
         "repo_url": dialogs.value("REPO_URL"),
         "issues_url": dialogs.value("ISSUES_URL"),
         "pypi_url": dialogs.value("PYPI_URL"),

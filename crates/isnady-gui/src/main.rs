@@ -7,7 +7,7 @@
 use isnady_core::narrators::Person;
 use isnady_core::{
     bookmarks, books, config, db, i18n, isnad, names, narrators, paths, people, quran, readmarks,
-    search, tables, works, VERSION,
+    scholars, search, tables, works, VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -342,6 +342,76 @@ fn clear_recent_searches() -> usize {
 #[tauri::command]
 fn remember_search(text: String, kind: String) {
     search::add_recent(text.trim(), &kind);
+}
+
+/// Search → Narrators or Scholars (S3, search_page._search_people): the narrators of both traditions, or one, the
+/// closest first (narrators.find), or the scholars (scholars.search); with how many there are and how long it took.
+#[tauri::command]
+fn find_people(
+    state: tauri::State<Data>,
+    kind: String,
+    text: String,
+    tradition: String,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let started = std::time::Instant::now();
+    with_db(&state, |conn| {
+        if kind == "scholars" {
+            let found = scholars::search(conn, text.trim());
+            let rows: Vec<Value> = found.iter().map(|f| scholar_json(f, &lang)).collect();
+            return Ok(json!({"rows": rows, "total": rows.len(),
+                             "ms": started.elapsed().as_millis() as i64}));
+        }
+        let langs = narrators::Langs {
+            reading: &lang,
+            words: &lang,
+        };
+        let road = Some(tradition.as_str()).filter(|t| !t.is_empty());
+        let (rows, total) = narrators::find(conn, text.trim(), road, langs).map_err(err)?;
+        Ok(
+            json!({"rows": rows, "total": total, "read": narrators::SEARCH_RERANK,
+                  "ms": started.elapsed().as_millis() as i64}),
+        )
+    })
+}
+
+/// The next narrators found, after those read (NR-B1, search_page._read_more_people).
+#[tauri::command]
+fn more_people(
+    state: tauri::State<Data>,
+    text: String,
+    tradition: String,
+    offset: usize,
+    limit: usize,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let langs = narrators::Langs {
+            reading: &lang,
+            words: &lang,
+        };
+        let road = Some(tradition.as_str()).filter(|t| !t.is_empty());
+        let rows =
+            narrators::find_more(conn, text.trim(), road, offset, limit, langs).map_err(err)?;
+        Ok(json!({"rows": rows}))
+    })
+}
+
+/// A scholar found, as his card shows him (people_results.scholar_card).
+fn scholar_json(f: &scholars::Found, lang: &str) -> Value {
+    let s = f.scholar;
+    let shown = scholars::short_name(s, lang);
+    let view = scholars::name_view(s, lang, lang);
+    let fuller = if lang == "tr" {
+        s.tr.clone()
+    } else {
+        s.full.clone()
+    };
+    json!({
+        "id": s.id, "short": shown, "fuller": fuller, "dates": s.dates, "works": s.works, "roles": f.roles,
+        "close": f.close, "arabic": s.arabic,
+        "head": if s.known_ar.is_empty() { view.arabic } else { s.known_ar.clone() },
+    })
 }
 
 fn content_languages_of(conn: &db::Connection) -> Result<Vec<String>, String> {
@@ -1085,6 +1155,8 @@ fn main() {
             recent_searches,
             clear_recent_searches,
             remember_search,
+            find_people,
+            more_people,
             toggle_bookmark,
             is_bookmarked,
             hadith_place

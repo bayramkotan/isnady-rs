@@ -14,12 +14,13 @@ database, the same settings and the same version number, and it gives the same a
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
 **Version 0.7.4 — what `iy-rs` does today:** `iy-rs search` (all, any, phrase, whole words, books, languages,
-grades, chapters, paging, wildcards, near spellings, the recent searches), `iy-rs chain` (every link, its narrator and his
+grades, chapters, paging, wildcards, near spellings, the recent searches; the narrators of both traditions and the
+scholars by name), `iy-rs chain` (every link, its narrator and his
 grade, whom the chain reaches, the chain in Turkish and English), `iy-rs book` (the shelf, a book's chapters, a
 chapter, your places and markers in each book), `iy-rs narrator` (by any spelling, his verdicts, teachers, students
 and hadith), `iy-rs sources`, `iy-rs datadir` and `iy-rs -V`.
 A search takes about 60 ms, a chain about 30 ms. **The window, `isnady-rs`,** has begun: the menus and the sidebar of the Python window, its Search page as it
-is (filters, cards, chains, bookmarks), and Books, Narrators and Isnad Chains, in English, Turkish or Arabic, in every theme of the Python window; the other pages come
+is (filters, cards, chains, bookmarks, the narrators and the scholars), and Books, Narrators and Isnad Chains, in English, Turkish or Arabic, in every theme of the Python window; the other pages come
 one at a time. Each of these prints what `iy` prints, word for word; `tools/parity.py` checks it on
 every push and before every release. Everything else below is still done by the Python isnady, on the same data. The
 ported parts are listed in [PARITY.md](PARITY.md), and more are ported with every release.

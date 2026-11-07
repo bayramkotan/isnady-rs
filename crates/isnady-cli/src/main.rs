@@ -4,7 +4,8 @@
 
 use clap::{Parser, Subcommand};
 use isnady_core::{
-    db, grades, isnad, narrators, paths, people, py, readmarks, search, works, VERSION,
+    db, grades, i18n, isnad, narrators, paths, people, py, readmarks, scholars, search, tables,
+    works, VERSION,
 };
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -296,6 +297,151 @@ fn chapters_given(conn: &db::Connection, given: &[String]) -> Option<Vec<(String
     Some(out)
 }
 
+/// iy-rs search --in narrators|scholars: the same people search as the Search page (S3, `cli._search_people`).
+fn search_people(
+    conn: &db::Connection,
+    a: &SearchArgs,
+    text: &str,
+) -> rusqlite_conn::Result<ExitCode> {
+    if a.kind == "scholars" {
+        let found = scholars::search(conn, text);
+        println!(
+            "{} scholar{} found",
+            found.len(),
+            if found.len() != 1 { "s" } else { "" }
+        );
+        for f in found.iter().skip(a.offset).take(a.limit) {
+            let s = f.scholar;
+            let roles = if f.roles.is_empty() {
+                "nothing of his imported yet".to_string()
+            } else {
+                f.roles.join(", ")
+            };
+            let arabic = if s.known_ar.is_empty() {
+                &s.arabic
+            } else {
+                &s.known_ar
+            };
+            println!(
+                "\n{}  {arabic}  ({}){}",
+                s.name,
+                s.id,
+                if f.close { "  ≈ close spelling" } else { "" }
+            );
+            if s.dates.is_empty() {
+                println!("  {}", s.tr);
+            } else {
+                println!("  {} · {}", s.tr, s.dates);
+            }
+            println!("  roles here: {roles}");
+            println!("  works: {}", s.works.join(", "));
+        }
+        return Ok(ExitCode::SUCCESS);
+    }
+    let reading = i18n::ui_language();
+    let langs = narrators::Langs {
+        reading: &reading,
+        words: "en",
+    };
+    let road = a.tradition.as_deref();
+    let (mut rows, total) = narrators::find(conn, text, road, langs)?;
+    if a.offset + a.limit > rows.len() && total > rows.len() {
+        let have: Vec<i64> = rows.iter().map(|r| r.id).collect();
+        let wanted = a.offset + a.limit - rows.len();
+        let more = narrators::find_more(conn, text, road, narrators::SEARCH_RERANK, wanted, langs)?;
+        rows.extend(more.into_iter().filter(|r| !have.contains(&r.id)));
+    }
+    let more = if total > narrators::SEARCH_RERANK {
+        format!(
+            " (the closest {} are ranked first; --offset and --limit reach the others)",
+            narrators::SEARCH_RERANK
+        )
+    } else {
+        String::new()
+    };
+    println!(
+        "{total} narrator{} found{more}",
+        if total != 1 { "s" } else { "" }
+    );
+    let t = tables::get();
+    for r in rows.iter().skip(a.offset).take(a.limit) {
+        let view = &r.view;
+        let known = r
+            .famous
+            .clone()
+            .filter(|f| !f.is_empty())
+            .unwrap_or_else(|| {
+                if view.reading.is_empty() {
+                    view.full_reading.clone()
+                } else {
+                    view.reading.clone()
+                }
+            });
+        let arabic = if view.arabic.is_empty() {
+            &r.name
+        } else {
+            &view.arabic
+        };
+        let mark = if r.weak {
+            "  ≈ same consonants, other vowels"
+        } else if r.close {
+            "  ≈ close spelling"
+        } else if r.unread {
+            "  ≈ same consonants, reading unknown"
+        } else {
+            ""
+        };
+        let head = if known.is_empty() {
+            String::new()
+        } else {
+            format!("{known}  ")
+        };
+        println!("\n{head}{arabic}  (id {}, {}){mark}", r.id, r.tradition);
+        if !view.full_reading.is_empty() && view.full_reading != known {
+            println!("  {}", view.full_reading);
+        }
+        let mut facts: Vec<String> = Vec::new();
+        if r.tradition == "shia" {
+            facts.push(match r.rank.filter(|x| *x != 0) {
+                Some(k) => t
+                    .rijal
+                    .shia_ranks
+                    .get(&k.to_string())
+                    .cloned()
+                    .unwrap_or_default(),
+                None => "no judgment".into(),
+            });
+            if let Some(m) = r.madhhab.as_deref().filter(|m| !m.is_empty()) {
+                facts.push(
+                    t.narrators
+                        .madhhabs
+                        .get(m)
+                        .cloned()
+                        .unwrap_or_else(|| m.to_string()),
+                );
+            }
+        } else if let Some(k) = r.rank.filter(|x| *x != 0) {
+            facts.push(format!(
+                "rank {k}: {}",
+                t.rijal
+                    .ranks
+                    .get(&k.to_string())
+                    .cloned()
+                    .unwrap_or_default()
+            ));
+        }
+        if let Some(tb) = r.tabaqa.filter(|x| *x != 0) {
+            facts.push(format!("tabaqa {tb}"));
+        }
+        if let Some(d) = r.death.filter(|x| *x != 0) {
+            facts.push(format!("d. {d} AH"));
+        }
+        facts.push(format!("{} in chains", r.in_chains));
+        println!("  {}", facts.join(" · "));
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn search_cmd(a: SearchArgs) -> ExitCode {
     if a.clear_recent {
         println!("Forgot {} recent searches.", search::clear_recent());
@@ -324,10 +470,17 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
     let text = a.words.join(" ");
     search::add_recent(&text, &a.kind);
     if a.kind != "hadith" {
-        return not_yet(
-            &format!("Searching the {}", a.kind),
-            &format!("iy search --in {} ...", a.kind),
-        );
+        let conn = match open() {
+            Ok(c) => c,
+            Err(code) => return code,
+        };
+        return match search_people(&conn, &a, &text) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
     }
     if a.mode == "meaning" {
         return not_yet("Search by meaning", "iy search --mode meaning ...");

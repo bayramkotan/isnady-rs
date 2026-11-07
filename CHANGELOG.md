@@ -5,6 +5,25 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Search → Narrators and Scholars, as the Python window has them (RS-WIN2b, S3).** The drop-down's Narrators finds
+  the narrators of both traditions, or of one (Tradition), by any spelling of any part of the name — Arabic, English,
+  Turkish — the closest first, as `narrators.find` orders them: a famous Companion by any spelling ("Ebubekir"), a
+  scholar known by the name typed ("Bukhari"), the name he is known by, the query in his name, then only in the words
+  about him; close spellings after the exact ones; the same consonants read otherwise ("Bayram" and al-Barmaki) under
+  "Weaker matches". Each as his card: the name he is known by and its Arabic, his full name, Sunni or Shia (with the
+  work), Ibn Hajar's rank or al-Najashi's category in its colour with the Arabic on the hover, tabaqa, death, how
+  often in the chains, the words matched; a click opens him on the Narrators page in his tradition; right-click: Open
+  in Narrators, Copy. Scholars finds the scholars of hadith by a name or a work in any spelling, close spellings too:
+  his card gives his names, dates, works and the roles the imported data gives him (compiler, grader, critic);
+  right-click: Open in Hadith Scholars, the bookmark star, Copy. The count, the close and the weaker ones and the time
+  beside them; 25 more at a time, the matches after the first 400 read when asked for. The web view's own menu (Back,
+  Reload, Inspect Element) no longer appears where the Python window has no menu.
+- **`iy-rs search --in narrators [--tradition sunni|shia]` and `iy-rs search --in scholars`**, word for word as
+  `iy search --in …` prints them. New in the core: `name_parts.rs` (the parts of a name and the one he is known by),
+  `scholars.rs` (the register from the Python isnady, roles, search, named, as_narrator), `narrators::browse`, `find`,
+  `find_more`, `difflib.rs` (Python's SequenceMatcher ratio, letter for letter); the scholars' register and the name
+  parts' places in data/tables.json, the people cards' tables in data/window.json. 16 more parity cases (92 in all).
+
 - **The Search page as the Python window has it (RS-WIN2; Bayram: "iy ile iy-rs birbirinin aynısı olacak! Temalardan
   ayarlardan ... arayüzden ... hepsi aynı olacak").** The page is built again from gui/search_page.py, widgets.py and
   chain_widgets.py, piece by piece, and compared with the Python window side by side: ⌂ back to the start (Alt+Home);

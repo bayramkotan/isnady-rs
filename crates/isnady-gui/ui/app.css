@@ -304,6 +304,10 @@ button.primary.small { font-size: inherit; }
 .s-filters .row > .flabel, .s-filters .row > .gap { flex-shrink: 0; }
 #s-summary, #s-export { flex-shrink: 0; white-space: nowrap; }
 .s-filters .gap { width: 2px; }
+.s-filters.bare { min-height: 0; }
+/* an empty QLabel keeps the height of a line */
+.s-filters.bare::after { content: "\200b"; line-height: normal; }
+#s-summary { line-height: normal; }
 .flabel, #s-summary { color: var(--muted); }
 button.picker {
   background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
@@ -354,7 +358,7 @@ button.example {
   background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r17);
   padding: 0 16px; min-height: 34px; font-family: var(--heading); font-size: 13pt; cursor: pointer;
 }
-button.example.small { font-size: 12pt; }
+button.example.small { font-size: 12pt; white-space: pre; }
 button.example:hover { border-color: var(--gold); color: var(--gold); }
 .recent-head { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
 .ftitle { color: var(--muted); font-size: 8.5pt; font-weight: 600; letter-spacing: .3px; }
@@ -423,3 +427,32 @@ button.star.on { color: var(--gold); }
 .picker-pop .caption { max-width: 400px; white-space: normal; }
 .picker-pop .langs-list { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
 .picker-pop button.qlink { text-align: start; }
+
+/* Search → Narrators and Scholars: one card per person found (people_results, QFrame#PersonCard) */
+.pcard {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 14px 22px 12px;
+  display: flex; flex-direction: column; gap: 4px; flex: none; cursor: pointer; user-select: none; line-height: normal;
+}
+.pcard:hover { border-color: var(--lapis); background: var(--lapis-soft); }
+.pcard .p-top { display: flex; align-items: center; gap: 16px; }
+.pcard .p-title { flex: 1; font-family: var(--heading); font-weight: 700; font-size: calc(16pt * var(--scale)); color: var(--ink); line-height: normal; }
+.pcard .p-arabic { flex: none; font-weight: 700; text-align: right; unicode-bidi: plaintext; line-height: normal; }
+.pcard .p-arabic.alone { flex: 1; }
+.pcard .p-sub { color: var(--muted); font-size: 11pt; }
+/* a QHBoxLayout: every label as tall as the row, its text in the middle */
+.pcard .p-facts { display: flex; align-items: stretch; gap: 14px; flex-wrap: nowrap; }
+.pcard .p-facts > span { display: flex; align-items: center; }
+.pcard .grow { flex: 1; }
+.pcard .p-tag {
+  background: var(--lapis-soft); color: var(--lapis); border: 1px solid var(--lapis); border-radius: var(--r8);
+  padding: var(--p1) var(--p9); font-size: 8.5pt; font-weight: 600; white-space: nowrap;
+}
+.pcard .p-tag.square { border-radius: 0; }
+.pcard .p-fact { color: var(--muted); font-size: 9pt; white-space: nowrap; }
+.pcard .p-fact .gold { color: var(--gold); }
+.pcard .p-fact .muted { color: var(--muted); }
+.pcard .p-matched { font-size: 11pt; }
+.pcard .p-go { color: var(--lapis); font-weight: 600; white-space: nowrap; }
+.weaker-space { height: 10px; flex: none; }
+.weaker-title { font-family: var(--heading); font-weight: 700; font-size: 15pt; color: var(--ink); flex: none; }
+.s-body > .lead { flex: none; }

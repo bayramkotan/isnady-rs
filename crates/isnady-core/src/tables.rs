@@ -64,6 +64,8 @@ pub struct Rijal {
 
 #[derive(Deserialize)]
 pub struct NameParts {
+    /// the nisbas of places (normalised): shown "(place)"
+    pub places: HashSet<String>,
     pub not_names: HashSet<String>,
     pub laqab: String,
     pub known: String,
@@ -90,6 +92,42 @@ pub struct NarratorTables {
     pub famous: Famous,
 }
 
+/// One scholar of hadith (`scholars.SCHOLARS`).
+#[derive(Deserialize, Clone, Debug, serde::Serialize)]
+pub struct Scholar {
+    pub id: String,
+    #[serde(default)]
+    pub tradition: Option<String>,
+    #[serde(default)]
+    pub known_ar: String,
+    pub tr: String,
+    pub name: String,
+    pub full: String,
+    pub arabic: String,
+    pub dates: String,
+    pub works: Vec<String>,
+    #[serde(default)]
+    pub short: Option<String>,
+    #[serde(default)]
+    pub compiler_of: Vec<String>,
+    #[serde(default)]
+    pub grader_names: Vec<String>,
+    #[serde(default)]
+    pub critic_names: Vec<String>,
+    #[serde(default)]
+    pub taqrib: Option<String>,
+    #[serde(default)]
+    pub najashi: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ScholarTables {
+    pub list: Vec<Scholar>,
+    pub short_tr: HashMap<String, String>,
+    /// role → (title, meaning), in English
+    pub role_help: HashMap<String, (String, String)>,
+}
+
 #[derive(Deserialize)]
 pub struct Tables {
     pub parser_id: String,
@@ -102,6 +140,7 @@ pub struct Tables {
     pub rijal: Rijal,
     pub narrators: NarratorTables,
     pub name_parts: NameParts,
+    pub scholars: ScholarTables,
 }
 
 static TABLES: OnceLock<Tables> = OnceLock::new();
