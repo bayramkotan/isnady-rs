@@ -27,21 +27,7 @@
 
   <main id="main">
     <!-- Search -->
-    <section id="page-search" class="page">
-      <div class="bar">
-        <input id="q" type="search" autocomplete="off" spellcheck="false">
-        <button id="go" class="primary"></button>
-      </div>
-      <div class="bar filters">
-        <select id="mode"></select>
-        <label class="check"><input id="whole" type="checkbox"> <span id="whole-label"></span></label>
-        <select id="search-book"></select>
-        <span id="search-status" class="muted"></span>
-      </div>
-      <div id="spellings" class="muted"></div>
-      <div id="results"></div>
-      <div class="more-row"><button id="more" class="quiet" hidden></button></div>
-    </section>
+    <section id="page-search" class="page search-page"></section>
 
     <!-- Isnad Chains -->
     <section id="page-chains" class="page" hidden>
@@ -92,5 +78,6 @@
 
   <script src="app.js"></script>
   <script src="frame.js"></script>
+  <script src="search.js"></script>
 </body>
 </html>

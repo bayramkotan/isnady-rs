@@ -6,8 +6,8 @@
 
 use isnady_core::narrators::Person;
 use isnady_core::{
-    books, config, db, i18n, isnad, names, narrators, paths, people, readmarks, search, tables,
-    works, VERSION,
+    bookmarks, books, config, db, i18n, isnad, names, narrators, paths, people, quran, readmarks,
+    search, tables, works, VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -53,6 +53,7 @@ fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
         "sidebar": config::get_str("view.sidebar", ""),
         "content_languages": config::get_str("view.content_languages", ""),
         "window": serde_json::from_str::<Value>(i18n::window_json()).unwrap_or(json!({})),
+        "settings": look_settings(),
         "books": [],
         "hadith": 0,
         "hadith_all": 0,
@@ -85,6 +86,41 @@ fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
         out["collections"] = json!(books);
     }
     out
+}
+
+/// The settings of the look (config.DEFAULTS): the interface's typeface and size, each script's typeface, size,
+/// colour and line height; those not set are left out (the window takes the defaults of data/window.json).
+fn look_settings() -> Value {
+    let text: serde_json::Map<String, Value> = ["arabic", "latin", "cyrillic", "bengali", "tamil"]
+        .iter()
+        .map(|script| {
+            let mut one = serde_json::Map::new();
+            for (key, number) in [
+                ("family", false),
+                ("size", true),
+                ("color", false),
+                ("line_height", true),
+            ] {
+                let name = format!("text.{script}.{key}");
+                if let Some(v) = config::get(&name) {
+                    let v = if number {
+                        json!(v
+                            .as_f64()
+                            .or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+                    } else {
+                        v
+                    };
+                    one.insert(key.to_string(), v);
+                }
+            }
+            (script.to_string(), Value::Object(one))
+        })
+        .collect();
+    json!({
+        "ui.family": config::get_str("ui.family", ""),
+        "ui.size": config::get_f64("ui.size", 0.0),
+        "text": text,
+    })
 }
 
 /// A setting the menus change, stored as the Python isnady stores it (config.set), with what goes with it: the
@@ -242,26 +278,211 @@ fn licences(state: tauri::State<Data>) -> Value {
     json!({"sources": sources})
 }
 
-/// A search, as the Search page shows it.
+/// What the Search page needs before a search (gui/search_page.py _fill_filters, _show_start): the books grouped
+/// Sunni, Shia and other (core.books.grouped), the languages of the texts and those the data repository has more
+/// of, the recent searches, how many hadith there are, whether any narrators are imported.
 #[tauri::command]
+fn search_start(state: tauri::State<Data>) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let names: HashMap<String, String> = serde_json::from_str::<Value>(i18n::window_json())
+        .ok()
+        .and_then(|w| serde_json::from_value(w["catalog_languages"].clone()).ok())
+        .unwrap_or_default();
+    with_db(&state, |conn| {
+        let all = books::all_books(conn, false).map_err(err)?;
+        let mut groups = vec![];
+        for (t, label) in [("sunni", "Sunni"), ("shia", "Shia"), ("other", "Other")] {
+            let list: Vec<Value> = all
+                .iter()
+                .filter(|b| {
+                    let road = if ["sunni", "shia"].contains(&b.tradition.as_str()) {
+                        b.tradition.as_str()
+                    } else {
+                        "other"
+                    };
+                    road == t
+                })
+                .map(|b| json!({"key": b.key, "name": works::book_title(&b.key, &b.name, &lang), "count": b.count}))
+                .collect();
+            if !list.is_empty() {
+                groups.push(json!({"tradition": t, "label": label, "books": list}));
+            }
+        }
+        let languages = content_languages_of(conn)?;
+        let more = books::more_languages(conn, &languages, &names);
+        let hadith: i64 = conn
+            .query_row("SELECT COUNT(*) FROM hadiths", [], |r| r.get(0))
+            .map_err(err)?;
+        Ok(json!({
+            "groups": groups,
+            "languages": languages,
+            "more": more,
+            "recent": search::recent_items().into_iter().map(|(text, kind)| json!({"text": text, "kind": kind})).collect::<Vec<_>>(),
+            "hadith": hadith,
+            "persons": narrators::loaded(conn),
+        }))
+    })
+}
+
+/// The recent searches (S4), the newest first; and forgetting them.
+#[tauri::command]
+fn recent_searches() -> Vec<Value> {
+    search::recent_items()
+        .into_iter()
+        .map(|(text, kind)| json!({"text": text, "kind": kind}))
+        .collect()
+}
+
+#[tauri::command]
+fn clear_recent_searches() -> usize {
+    search::clear_recent()
+}
+
+/// A search not of the hadith (the Narrators and Scholars of the drop-down) is remembered too.
+#[tauri::command]
+fn remember_search(text: String, kind: String) {
+    search::add_recent(text.trim(), &kind);
+}
+
+fn content_languages_of(conn: &db::Connection) -> Result<Vec<String>, String> {
+    let mut stmt = conn
+        .prepare("SELECT DISTINCT language FROM editions WHERE language IS NOT NULL AND text_count > 0 ORDER BY language")
+        .map_err(err)?;
+    let mut list: Vec<String> = stmt
+        .query_map([], |r| r.get::<_, String>(0))
+        .map_err(err)?
+        .filter_map(Result::ok)
+        .collect();
+    let chosen = books::language_order();
+    list.sort_by_key(|l| books::language_rank(l, &chosen));
+    Ok(list)
+}
+
+/// The verses the hadith name, counted once per change of the database (quran.cites, core.cache).
+struct Cites(Mutex<Option<(i64, quran::Cites)>>);
+
+/// The script of a language for its typeface (config.script_for_language).
+fn script_of(language: &str, direction: &str, of_language: &HashMap<String, String>) -> String {
+    if let Some(s) = of_language.get(&language.to_lowercase()) {
+        return s.clone();
+    }
+    if direction == "rtl" {
+        "arabic".into()
+    } else {
+        "latin".into()
+    }
+}
+
+fn text_json(t: &search::TextHit, of_language: &HashMap<String, String>) -> Value {
+    json!({
+        "language": t.language,
+        "direction": t.direction,
+        "text": t.text,
+        "spans": t.spans,
+        "edition_key": t.edition_key,
+        "script": script_of(&t.language, &t.direction, of_language),
+    })
+}
+
+/// One chain as the strip of a card draws it (chain_widgets.ChainStrip): each link with its short name, its term,
+/// the narrator identified (his verdict, tabaqa, death) or why none; whom it reaches; the words of each language under
+/// each name.
+fn strip_json(ch: &isnad::Chain, people: &HashMap<i64, Person>, codes: &[String]) -> Value {
+    let links: Vec<Value> = ch
+        .links
+        .iter()
+        .enumerate()
+        .map(|(i, l)| {
+            let (ar, meaning) = isnad::term_label(&l.transmission);
+            let nxt = ch
+                .links
+                .get(i + 1)
+                .map(|x| x.raw_name.as_str())
+                .unwrap_or("");
+            let person = l.person_id.and_then(|p| people.get(&p)).map(|p| {
+                let v = p.verdicts.first();
+                json!({
+                    "id": p.id,
+                    "display_name": p.display_name,
+                    "tabaqa": p.tabaqa,
+                    "death": p.death_year_ah,
+                    "verdict": v.map(|v| json!({
+                        "scheme": v.rank_scheme, "critic_name": v.critic_name, "phrase": v.phrase,
+                        "rank": v.rank, "rank_label": v.rank_label,
+                    })),
+                })
+            });
+            json!({
+                "raw": l.raw_name,
+                "short": isnad::short_name(&l.raw_name),
+                "transmission": l.transmission,
+                "term_ar": ar,
+                "term_meaning": meaning,
+                "person": person,
+                "candidates": l.candidates,
+                "note": isnad::link_note(&l.raw_name, nxt),
+            })
+        })
+        .collect();
+    let words: Vec<Vec<String>> = codes
+        .iter()
+        .map(|c| isnad::chain_word_parts(ch, c, people))
+        .filter(|w| !w.is_empty())
+        .collect();
+    json!({
+        "links": links,
+        "problem": ch.problem,
+        "reaches_prophet": ch.reaches_prophet,
+        "ends_with": ch.ends_with,
+        "raised": ch.raised,
+        "end_label": isnad::end_label(ch),
+        "masum": isnad::masum_label(if ch.ends_with.is_empty() { "prophet" } else { &ch.ends_with }),
+        "words": words,
+    })
+}
+
+/// A search of the hadith with every filter of the page (gui/search_page.py _query), each hadith as its card
+/// shows it (make_card): the texts in the content languages and any text the search matched, the others folded;
+/// its chains with their narrators; its grades; the other narrations; the verses it names; its ☆.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn find(
     state: tauri::State<Data>,
+    cites: tauri::State<Cites>,
     text: String,
     mode: String,
     whole_words: bool,
     books: Vec<String>,
+    languages: Vec<String>,
+    grades: Vec<String>,
+    every: bool,
+    sahihayn: bool,
+    chapters: Vec<i64>,
     offset: usize,
     limit: usize,
+    remember: bool,
 ) -> Result<Value, String> {
     if text.trim().is_empty() {
-        return Ok(json!({"total": 0, "results": [], "elapsed_ms": 0, "spellings": []}));
+        return Ok(json!({"total": 0, "results": [], "elapsed_ms": 0, "spellings": ""}));
     }
-    search::add_recent(text.trim(), "hadith");
+    if remember {
+        search::add_recent(text.trim(), "hadith");
+    }
+    let lang = i18n::ui_language();
+    let window: Value = serde_json::from_str(i18n::window_json()).map_err(err)?;
+    let of_language: HashMap<String, String> =
+        serde_json::from_value(window["script_of_language"].clone()).unwrap_or_default();
+    let compilers = window["compilers"].clone();
     with_db(&state, |conn| {
         let mut q = search::SearchQuery::new(text.trim());
         q.mode = mode;
         q.whole_words = whole_words;
         q.collections = books;
+        q.languages = languages;
+        q.grades = grades;
+        q.every_grader = every;
+        q.sahihayn = sahihayn;
+        q.chapters = chapters;
         q.offset = offset;
         q.limit = limit;
         let page = search::search(conn, &q).map_err(err)?;
@@ -270,38 +491,161 @@ fn find(
             .filter(|s| !s.is_empty())
             .map(String::from)
             .collect();
-        let chosen = books::language_order();
-        let results: Vec<Value> = page
-            .results
+        let folds = config::get_str("view.other_languages", "fold") != "omit";
+        let verses_of = if quran::available() {
+            let version: i64 = conn
+                .query_row("PRAGMA data_version", [], |r| r.get(0))
+                .map_err(err)?;
+            let mut kept = cites.0.lock().map_err(err)?;
+            if kept.as_ref().map_or(true, |(v, _)| *v != version) {
+                *kept = Some((version, quran::cites(conn).map_err(err)?));
+            }
+            kept.as_ref().map(|(_, c)| c.clone()).unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+        let mut results = vec![];
+        for r in &page.results {
+            // the content languages (L1): the texts chosen and any the search matched; the others folded or left out
+            let kept: Vec<&search::TextHit> = r
+                .texts
+                .iter()
+                .filter(|t| shown.is_empty() || shown.contains(&t.language) || !t.spans.is_empty())
+                .collect();
+            let (texts, folded): (Vec<&search::TextHit>, Vec<&search::TextHit>) =
+                if !kept.is_empty() && kept.len() != r.texts.len() {
+                    let others = if folds {
+                        r.texts
+                            .iter()
+                            .filter(|t| !kept.iter().any(|k| std::ptr::eq(*k, *t)))
+                            .collect()
+                    } else {
+                        vec![]
+                    };
+                    (kept, others)
+                } else {
+                    (r.texts.iter().collect(), vec![])
+                };
+            let chains = isnad::chain(conn, r.hadith_id).map_err(err)?;
+            let mut people: HashMap<i64, Person> = HashMap::new();
+            for ch in &chains {
+                for l in &ch.links {
+                    if let Some(pid) = l.person_id {
+                        if let std::collections::hash_map::Entry::Vacant(e) = people.entry(pid) {
+                            if let Some(p) = narrators::describe(conn, pid) {
+                                e.insert(p);
+                            }
+                        }
+                    }
+                }
+            }
+            let mut codes: Vec<String> = vec![];
+            for t in &texts {
+                let code = match t.language.as_str() {
+                    "Turkish" => "tr",
+                    "English" => "en",
+                    _ => continue,
+                };
+                if !codes.iter().any(|c| c == code) {
+                    codes.push(code.into());
+                }
+            }
+            let direct = "no chain: the compiler gives the words without the narrators between";
+            let drawn: Vec<Value> = chains
+                .iter()
+                .filter(|c| !c.links.is_empty() || c.problem.as_deref() == Some(direct))
+                .map(|c| strip_json(c, &people, &codes))
+                .collect();
+            let name = works::book_title(&r.collection_key, &r.collection_name, &lang);
+            let first = r
+                .texts
+                .iter()
+                .find(|x| x.language != "Arabic")
+                .or(r.texts.first())
+                .map(|x| x.text.split_whitespace().collect::<Vec<_>>().join(" "))
+                .unwrap_or_default();
+            let reference = format!("{}:{}", r.collection_key, r.number);
+            results.push(json!({
+                "hadith_id": r.hadith_id,
+                "key": r.collection_key,
+                "name": name,
+                "number": r.number,
+                "texts": texts.iter().map(|t| text_json(t, &of_language)).collect::<Vec<_>>(),
+                "folded": folded.iter().map(|t| text_json(t, &of_language)).collect::<Vec<_>>(),
+                "grades": r.grades.iter().map(|(g, v)| json!([g, v, isnady_core::grades::group(v)])).collect::<Vec<_>>(),
+                "related": isnady_core::takhrij::related(conn, r.hadith_id, &lang).iter().map(|x| json!({
+                    "hadith_id": x.hadith_id, "kind": x.kind, "book": x.book, "book_name": x.book_name,
+                    "number": x.number,
+                })).collect::<Vec<_>>(),
+                "verses": verses_of.get(&r.hadith_id).map(|v| v.iter().map(|&(s, a, b)| json!([s, a, b,
+                    quran::label(s, a, b, &lang)])).collect::<Vec<_>>()).unwrap_or_default(),
+                "chains": drawn,
+                "compiler": compilers.get(&r.collection_key).cloned().unwrap_or(Value::Null),
+                "codes": codes,
+                "bookmarked": bookmarks::is_marked("hadith", &reference),
+                "subtitle": first.chars().take(160).collect::<String>(),
+            }));
+        }
+        let spellings: Vec<String> = page
+            .spellings
             .iter()
-            .map(|r| {
-                let mut texts: Vec<&search::TextHit> = r
-                    .texts
-                    .iter()
-                    .filter(|t| t.matched || shown.is_empty() || shown.contains(&t.language))
-                    .collect();
-                texts.sort_by_key(|t| books::language_rank(&t.language, &chosen));
-                json!({
-                    "key": r.collection_key,
-                    "name": r.collection_name,
-                    "number": r.number,
-                    "grades": r.grades,
-                    "texts": texts.iter().map(|t| json!({
-                        "language": t.language,
-                        "rtl": t.direction == "rtl",
-                        "text": t.text,
-                        "spans": t.spans,
-                        "matched": t.matched,
-                    })).collect::<Vec<_>>(),
-                })
+            .map(|(w, alts)| {
+                let shown: Vec<&str> = alts.iter().take(4).map(String::as_str).collect();
+                format!(
+                    "{w} → {}{}",
+                    shown.join(", "),
+                    if alts.len() > 4 { " …" } else { "" }
+                )
             })
             .collect();
         Ok(json!({
             "total": page.total,
             "elapsed_ms": page.elapsed_ms as u64,
-            "spellings": page.spellings,
+            "used_index": page.used_index,
+            "spellings": spellings.join("; "),
+            "before_grades": page.before_grades,
+            "terms": page.terms.len(),
             "results": results,
         }))
+    })
+}
+
+/// ☆ / ★ of a card (BookmarkButton): marked now?
+#[tauri::command]
+fn toggle_bookmark(
+    kind: String,
+    reference: String,
+    title: String,
+    subtitle: String,
+) -> Result<bool, String> {
+    bookmarks::toggle(&kind, &reference, &title, &subtitle).map_err(err)
+}
+
+#[tauri::command]
+fn is_bookmarked(kind: String, reference: String) -> bool {
+    bookmarks::is_marked(&kind, &reference)
+}
+
+/// Where a hadith stands in its book (In its book): the book and its chapter's place in the reading order.
+#[tauri::command]
+fn hadith_place(state: tauri::State<Data>, hadith_id: i64) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let (key, number): (String, String) = conn
+            .query_row(
+                "SELECT c.key, h.number FROM hadiths h JOIN collections c ON c.id = h.collection_id WHERE h.id = ?",
+                [hadith_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .map_err(err)?;
+        let index = works::find_work(conn, &key, &lang)
+            .map_err(err)?
+            .and_then(|w| {
+                let chapter = works::chapter_of_hadith(conn, hadith_id)?;
+                let order = works::reading_order(conn, w.id).ok()?;
+                order.iter().position(|c| *c == chapter).map(|i| i + 1)
+            });
+        Ok(json!({"key": key, "number": number, "index": index}))
     })
 }
 
@@ -715,6 +1059,7 @@ fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<Strin
 fn main() {
     tauri::Builder::default()
         .manage(Data(Mutex::new(None)))
+        .manage(Cites(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             start,
             find,
@@ -735,7 +1080,14 @@ fn main() {
             quit,
             full_screen,
             about,
-            licences
+            licences,
+            search_start,
+            recent_searches,
+            clear_recent_searches,
+            remember_search,
+            toggle_bookmark,
+            is_bookmarked,
+            hadith_place
         ])
         .run(tauri::generate_context!())
         .expect("isnady-rs could not open its window");

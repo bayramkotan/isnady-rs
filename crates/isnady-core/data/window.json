@@ -132,6 +132,530 @@
    "High Contrast"
   ]
  ],
+ "tokens": {
+  "sky": {
+   "dark": false,
+   "window": "#EEF5FF",
+   "surface": "#FFFFFF",
+   "border": "#D6E4F7",
+   "ink": "#1C2B44",
+   "muted": "#5F7190",
+   "lapis": "#2F74D9",
+   "lapis_soft": "#DDEBFF",
+   "gold": "#F29F2E",
+   "gilt": "#FFE9B8",
+   "sidebar": "#2F6CCB",
+   "sidebar_ink": "#FFFFFF",
+   "sidebar_muted": "#D4E4FF",
+   "sidebar_selected": "#4A86E3",
+   "pill": "#E8F0FC",
+   "ui_family": "Nunito",
+   "heading_family": "Nunito ExtraBold",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true,
+   "latin_family": "Nunito"
+  },
+  "starry": {
+   "dark": true,
+   "window": "#1A1730",
+   "surface": "#25213F",
+   "border": "#3A3460",
+   "ink": "#F1EEFF",
+   "muted": "#B1A9D6",
+   "lapis": "#A493FF",
+   "lapis_soft": "#342D5E",
+   "gold": "#FFC76B",
+   "gilt": "#5C4720",
+   "sidebar": "#131027",
+   "sidebar_ink": "#F1EEFF",
+   "sidebar_muted": "#9D95C4",
+   "sidebar_selected": "#2C2652",
+   "pill": "#2E2950",
+   "ui_family": "Lexend",
+   "heading_family": "Baloo 2",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true,
+   "latin_family": "Lexend"
+  },
+  "garden": {
+   "dark": false,
+   "window": "#FFF7F2",
+   "surface": "#FFFFFF",
+   "border": "#F3DCD3",
+   "ink": "#2E2433",
+   "muted": "#7B6E80",
+   "lapis": "#D6457A",
+   "lapis_soft": "#FDE6EE",
+   "gold": "#E79A2E",
+   "gilt": "#FFE6B3",
+   "sidebar": "#FFEFF3",
+   "sidebar_ink": "#3B2A3F",
+   "sidebar_muted": "#8C7590",
+   "sidebar_selected": "#FFD9E5",
+   "pill": "#FBEDE6",
+   "ui_family": "Nunito",
+   "heading_family": "Baloo 2",
+   "roundness": 1.7,
+   "room": 1.25,
+   "nav_signs": true,
+   "latin_family": "Nunito"
+  },
+  "light": {
+   "dark": false,
+   "window": "#EEF1F5",
+   "surface": "#FFFFFF",
+   "border": "#D9DFE7",
+   "ink": "#18212C",
+   "muted": "#5B6878",
+   "lapis": "#1D4777",
+   "lapis_soft": "#E3EBF5",
+   "gold": "#A47E24",
+   "gilt": "#F2E2B3",
+   "sidebar": "#14304F",
+   "sidebar_ink": "#F1F4F8",
+   "sidebar_muted": "#9DB0C6",
+   "sidebar_selected": "#22466F",
+   "pill": "#EDF1F6",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "dark": {
+   "dark": true,
+   "window": "#10151C",
+   "surface": "#18202A",
+   "border": "#2A3542",
+   "ink": "#E4E9EF",
+   "muted": "#8E9BAA",
+   "lapis": "#7FAEE0",
+   "lapis_soft": "#1F2C3B",
+   "gold": "#D6B25E",
+   "gilt": "#4B3C17",
+   "sidebar": "#0B1522",
+   "sidebar_ink": "#E4E9EF",
+   "sidebar_muted": "#7D8FA5",
+   "sidebar_selected": "#1A2D45",
+   "pill": "#222C38",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "paper": {
+   "dark": false,
+   "window": "#F3EEE4",
+   "surface": "#FFFCF6",
+   "border": "#E2D8C8",
+   "ink": "#2B241C",
+   "muted": "#776A59",
+   "lapis": "#8A3B1F",
+   "lapis_soft": "#F1E2D4",
+   "gold": "#A8792A",
+   "gilt": "#F3DFAE",
+   "sidebar": "#3A2A1E",
+   "sidebar_ink": "#F6EEE3",
+   "sidebar_muted": "#BCAA93",
+   "sidebar_selected": "#55402E",
+   "pill": "#EFE6D8",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "slate": {
+   "dark": false,
+   "window": "#F5F6F8",
+   "surface": "#FFFFFF",
+   "border": "#E2E5EA",
+   "ink": "#111827",
+   "muted": "#646B78",
+   "lapis": "#4338CA",
+   "lapis_soft": "#ECEDFE",
+   "gold": "#C2700A",
+   "gilt": "#FCE7C2",
+   "sidebar": "#FFFFFF",
+   "sidebar_ink": "#111827",
+   "sidebar_muted": "#646B78",
+   "sidebar_selected": "#ECEDFE",
+   "pill": "#F0F2F5",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "emerald": {
+   "dark": false,
+   "window": "#EFF5F2",
+   "surface": "#FFFFFF",
+   "border": "#D3E2DB",
+   "ink": "#13241D",
+   "muted": "#58706A",
+   "lapis": "#0F6E66",
+   "lapis_soft": "#DCF0EA",
+   "gold": "#B0741C",
+   "gilt": "#F6E1B2",
+   "sidebar": "#0B3B33",
+   "sidebar_ink": "#EAF6F2",
+   "sidebar_muted": "#93BCB1",
+   "sidebar_selected": "#14544A",
+   "pill": "#E7F1ED",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "midnight": {
+   "dark": true,
+   "window": "#0D1117",
+   "surface": "#161B22",
+   "border": "#2A313C",
+   "ink": "#E6EDF3",
+   "muted": "#8B949E",
+   "lapis": "#5CC8BC",
+   "lapis_soft": "#16302E",
+   "gold": "#E3B341",
+   "gilt": "#4A3A12",
+   "sidebar": "#090C10",
+   "sidebar_ink": "#E6EDF3",
+   "sidebar_muted": "#7D8590",
+   "sidebar_selected": "#18242C",
+   "pill": "#21262D",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  },
+  "contrast": {
+   "dark": true,
+   "window": "#000000",
+   "surface": "#0B0B0B",
+   "border": "#BDBDBD",
+   "ink": "#FFFFFF",
+   "muted": "#D4D4D4",
+   "lapis": "#FFD400",
+   "lapis_soft": "#2E2A00",
+   "gold": "#FFD400",
+   "gilt": "#5C4D00",
+   "sidebar": "#000000",
+   "sidebar_ink": "#FFFFFF",
+   "sidebar_muted": "#D4D4D4",
+   "sidebar_selected": "#262626",
+   "pill": "#1A1A1A",
+   "roundness": 1.6,
+   "room": 1.2,
+   "nav_signs": true
+  }
+ },
+ "rank_colors": {
+  "light": {
+   "1": "#A47E24",
+   "2": "#2E7D4F",
+   "3": "#2E7D4F",
+   "4": "#1D4777",
+   "5": "#1D4777",
+   "6": "#8A6D1F",
+   "7": "#8A6D1F",
+   "8": "#B4552D",
+   "9": "#B4552D",
+   "10": "#A33A3A",
+   "11": "#A33A3A",
+   "12": "#A33A3A"
+  },
+  "dark": {
+   "1": "#D6B25E",
+   "2": "#6FC08F",
+   "3": "#6FC08F",
+   "4": "#7FAEE0",
+   "5": "#7FAEE0",
+   "6": "#D9B866",
+   "7": "#D9B866",
+   "8": "#E08A64",
+   "9": "#E08A64",
+   "10": "#E07A7A",
+   "11": "#E07A7A",
+   "12": "#E07A7A"
+  }
+ },
+ "scripts": {
+  "arabic": {
+   "family": "Amiri",
+   "size": 20.0,
+   "line_height": 125
+  },
+  "latin": {
+   "family": "Amiri",
+   "size": 12.5,
+   "line_height": 115
+  },
+  "cyrillic": {
+   "family": "",
+   "size": 12.5,
+   "line_height": 120
+  },
+  "bengali": {
+   "family": "",
+   "size": 13.0,
+   "line_height": 130
+  },
+  "tamil": {
+   "family": "",
+   "size": 13.0,
+   "line_height": 130
+  }
+ },
+ "script_of_language": {
+  "arabic": "arabic",
+  "urdu": "arabic",
+  "persian": "arabic",
+  "farsi": "arabic",
+  "russian": "cyrillic",
+  "bengali": "bengali",
+  "tamil": "tamil"
+ },
+ "compilers": {
+  "bukhari": {
+   "arabic": "البخاري",
+   "tr": "Buhârî",
+   "en": "al-Bukhari"
+  },
+  "adab": {
+   "arabic": "البخاري",
+   "tr": "Buhârî",
+   "en": "al-Bukhari"
+  },
+  "muslim": {
+   "arabic": "مسلم",
+   "tr": "Müslim b. Haccâc",
+   "en": "Muslim"
+  },
+  "abudawud": {
+   "arabic": "أبو داود",
+   "tr": "Ebû Dâvûd es-Sicistânî",
+   "en": "Abu Dawud"
+  },
+  "tirmidhi": {
+   "arabic": "الترمذي",
+   "tr": "Tirmizî",
+   "en": "al-Tirmidhi"
+  },
+  "shamail": {
+   "arabic": "الترمذي",
+   "tr": "Tirmizî",
+   "en": "al-Tirmidhi"
+  },
+  "nasai": {
+   "arabic": "النسائي",
+   "tr": "Nesâî",
+   "en": "al-Nasa'i"
+  },
+  "ibnmajah": {
+   "arabic": "ابن ماجه",
+   "tr": "İbn Mâce",
+   "en": "Ibn Maja"
+  },
+  "malik": {
+   "arabic": "مالك",
+   "tr": "Mâlik b. Enes",
+   "en": "Malik"
+  },
+  "ahmad": {
+   "arabic": "أحمد بن حنبل",
+   "tr": "Ahmed b. Hanbel",
+   "en": "Ahmad b. Hanbal"
+  },
+  "darimi": {
+   "arabic": "الدارمي",
+   "tr": "Dârimî",
+   "en": "al-Darimi"
+  },
+  "nawawi": {
+   "arabic": "النووي",
+   "tr": "Nevevî",
+   "en": "al-Nawawi"
+  },
+  "riyad": {
+   "arabic": "النووي",
+   "tr": "Nevevî",
+   "en": "al-Nawawi"
+  },
+  "dehlawi": {
+   "arabic": "الدهلوي",
+   "tr": "Şah Veliyyullah ed-Dihlevî",
+   "en": "Shah Waliullah al-Dihlawi"
+  },
+  "mishkat": {
+   "arabic": "الخطيب التبريزي",
+   "tr": "Hatîb et-Tebrîzî",
+   "en": "al-Khatib al-Tabrizi"
+  },
+  "bulugh": {
+   "arabic": "ابن حجر",
+   "tr": "İbn Hacer el-Askalânî",
+   "en": "Ibn Hajar al-'Asqalani"
+  },
+  "kafi": {
+   "arabic": "الكليني",
+   "tr": "Küleynî",
+   "en": "al-Kulayni"
+  },
+  "uyun": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "amali-saduq": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "khisal": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "tawhid": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "maani": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "thawab": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "sifat-shia": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "fadail-shia": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "faqih": {
+   "arabic": "الصدوق",
+   "tr": "Şeyh Sadûk",
+   "en": "al-Shaykh al-Saduq"
+  },
+  "amali-mufid": {
+   "arabic": "المفيد",
+   "tr": "Şeyh Müfîd",
+   "en": "al-Shaykh al-Mufid"
+  },
+  "kamil-ziyarat": {
+   "arabic": "ابن قولويه",
+   "tr": "İbn Kulaveyh",
+   "en": "Ibn Qulawayh"
+  },
+  "ghayba-numani": {
+   "arabic": "النعماني",
+   "tr": "Nu'mânî",
+   "en": "al-Nu'mani"
+  },
+  "ghayba-tusi": {
+   "arabic": "الطوسي",
+   "tr": "Şeyh Tûsî",
+   "en": "al-Shaykh al-Tusi"
+  },
+  "tahdhib": {
+   "arabic": "الطوسي",
+   "tr": "Şeyh Tûsî",
+   "en": "al-Shaykh al-Tusi"
+  },
+  "istibsar": {
+   "arabic": "الطوسي",
+   "tr": "Şeyh Tûsî",
+   "en": "al-Shaykh al-Tusi"
+  },
+  "mumin": {
+   "arabic": "الحسين بن سعيد",
+   "tr": "Hüseyin b. Saîd el-Ahvâzî",
+   "en": "al-Husayn b. Sa'id al-Ahwazi"
+  },
+  "zuhd": {
+   "arabic": "الحسين بن سعيد",
+   "tr": "Hüseyin b. Saîd el-Ahvâzî",
+   "en": "al-Husayn b. Sa'id al-Ahwazi"
+  },
+  "mujam-mutabara": {
+   "arabic": "المحسني",
+   "tr": "Âsıf Muhsinî",
+   "en": "Asif al-Muhsini"
+  }
+ },
+ "masum_ar": {
+  "prophet": "رسول الله ﷺ",
+  "fatima": "فاطمة الزهراء عليها السلام",
+  "ali": "أمير المؤمنين علي بن أبي طالب عليه السلام",
+  "hasan": "الحسن بن علي المجتبى عليه السلام",
+  "husayn": "الحسين بن علي عليه السلام",
+  "sajjad": "علي بن الحسين زين العابدين عليه السلام",
+  "baqir": "محمد بن علي الباقر عليه السلام",
+  "sadiq": "جعفر بن محمد الصادق عليه السلام",
+  "kazim": "موسى بن جعفر الكاظم عليه السلام",
+  "rida": "علي بن موسى الرضا عليه السلام",
+  "jawad": "محمد بن علي الجواد عليه السلام",
+  "hadi": "علي بن محمد الهادي عليه السلام",
+  "askari": "الحسن بن علي العسكري عليه السلام",
+  "mahdi": "محمد بن الحسن المهدي عليه السلام",
+  "abu_al_hasan": "أبو الحسن عليه السلام",
+  "imam": "الإمام عليه السلام",
+  "mudmar": "مضمر",
+  "one_of_two": "أحدهما عليهما السلام"
+ },
+ "quraysh": [
+  "ali",
+  "askari",
+  "baqir",
+  "fatima",
+  "hadi",
+  "hasan",
+  "husayn",
+  "jawad",
+  "kazim",
+  "mahdi",
+  "muhammad",
+  "rida",
+  "sadiq",
+  "sajjad"
+ ],
+ "catalog_languages": {
+  "ara": "Arabic",
+  "tur": "Turkish",
+  "eng": "English",
+  "urd": "Urdu",
+  "ind": "Indonesian",
+  "ben": "Bengali",
+  "fra": "French",
+  "rus": "Russian",
+  "tam": "Tamil"
+ },
+ "grade_terms": {
+  "en": {
+   "4": "sahih (صحيح): A hadith with an unbroken chain of trustworthy narrators of sound memory, free of irregularity (shudhudh) and hidden defect ('illa).",
+   "3": "hasan (حسن): Like a sahih hadith, except that a narrator's memory is somewhat less precise.",
+   "2": "da'if (ضعيف): A hadith that lacks one or more of the conditions of hasan.",
+   "1": "da'if (ضعيف): A hadith that lacks one or more of the conditions of hasan.",
+   "0": "mawdu' (موضوع): A fabricated report falsely attributed to the Prophet."
+  },
+  "tr": {
+   "4": "sahîh (صحيح): Senedi kesintisiz, ravileri adil ve zabtı tam, şâz ve illetten uzak hadis.",
+   "3": "hasen (حسن): Sahih gibi, ancak bir ravisinin zabtı tam derecede olmayan hadis.",
+   "2": "zayıf (ضعيف): Hasen hadisin şartlarından birini ya da birkaçını taşımayan hadis.",
+   "1": "zayıf (ضعيف): Hasen hadisin şartlarından birini ya da birkaçını taşımayan hadis.",
+   "0": "mevzû (موضوع): Peygambere yalan olarak isnat edilmiş, uydurma rivayet."
+  },
+  "ar": {
+   "4": "صحيح (صحيح): ما اتصل سنده بنقل العدل الضابط عن مثله إلى منتهاه، من غير شذوذ ولا علة.",
+   "3": "حسن (حسن): كالصحيح إلا أن أحد رواته أخفّ ضبطًا.",
+   "2": "ضعيف (ضعيف): ما فقد شرطًا أو أكثر من شروط الحسن.",
+   "1": "ضعيف (ضعيف): ما فقد شرطًا أو أكثر من شروط الحسن.",
+   "0": "موضوع (موضوع): المختلق المكذوب المنسوب إلى النبي ﷺ."
+  }
+ },
  "text_scale": [
   0.8,
   1.6,

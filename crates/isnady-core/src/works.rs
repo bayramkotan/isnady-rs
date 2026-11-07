@@ -711,6 +711,28 @@ pub fn chapter_named(
     Ok(row.and_then(|id| node(conn, id, lang)))
 }
 
+/// Every hadith in these chapters and in the chapters under them (`works.hadith_under`; search in a chapter).
+pub fn hadith_under(
+    conn: &Connection,
+    node_ids: &[i64],
+) -> rusqlite::Result<std::collections::HashSet<i64>> {
+    if node_ids.is_empty() {
+        return Ok(Default::default());
+    }
+    let marks = vec!["?"; node_ids.len()].join(",");
+    let sql = format!(
+        "WITH RECURSIVE sub(id) AS (
+            SELECT id FROM work_nodes WHERE id IN ({marks})
+            UNION SELECT w.id FROM work_nodes w JOIN sub ON w.parent_id = sub.id)
+         SELECT w.hadith_id FROM work_nodes w JOIN sub ON sub.id = w.id WHERE w.hadith_id IS NOT NULL"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt.query_map(rusqlite::params_from_iter(node_ids.iter()), |r| {
+        r.get::<_, i64>(0)
+    })?;
+    rows.collect()
+}
+
 pub struct ChapterHadith {
     pub hadith_id: i64,
     pub number: String,

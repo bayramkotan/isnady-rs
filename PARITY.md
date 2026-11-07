@@ -16,9 +16,10 @@ Python `iy` does on the same data.
 | `iy datadir PATH` (move) | ⏳ | |
 | `iy sources` | ✅ | |
 | `iy search WORDS` | ✅ | all · any · phrase · `--whole-words` · `--book` · `--language` · `--limit` · `--offset` · `--width` · `--all-texts` · wildcards (`?` `*`) · near spellings · the recent searches list |
-| `iy search --grade …`, `--every-grader`, `--no-sahihayn` | ⏳ | |
-| `iy search --chapter BOOK:CHAPTER` | ⏳ | |
-| `iy search --mode meaning`, `--in narrators/scholars`, `--recent`, `--clear-recent` | ⏳ | |
+| `iy search --grade …`, `--every-grader`, `--no-sahihayn` | ✅ | the Sunni and the Imami scales, the two Sahihs as sahih, "N found by the words in all" |
+| `iy search --chapter BOOK:CHAPTER` | ✅ | by number or the start of the title, the chapters under it too |
+| `iy search --recent`, `--clear-recent`, `iy search` with no words | ✅ | |
+| `iy search --mode meaning`, `--in narrators/scholars` | ⏳ | |
 | `iy chain BOOK`, `iy chain BOOK NUMBER` | ✅ | `--raw`, `--lang`. Every link with its term, the narrator Ibn Hajar's Taqrib or al-Najashi identifies (tabaqa, year of death, the first verdict), tahwil meetings, groups and unnamed narrators of road B, whom the chain reaches, and the chain in words in Turkish and English. About 30 ms where `iy` takes seconds. |
 | `iy chain BOOK --chapter CH` | ✅ | the hadith of a chapter with how far each chain was read |
 | reading the chains, identifying the narrators (`iy isnads`) | ⏳ | the chain reader (isnady-isnad-15) and the narrator matcher (isnady-narrators-17) stay with the Python isnady for now: `iy-rs chain` shows what it stored, and asks for one `iy chain` after books are imported |
@@ -36,7 +37,7 @@ Python `iy` does on the same data.
 |---|---|
 | The window itself: `isnady-rs` (Tauri 2) | ✅ the sidebar of the Python window in its order, its themes (system, light, dark, paper, slate, emerald, midnight, contrast, garden, sky, starry), the interface in English, Turkish and Arabic (right to left) from the same catalogs, Amiri for the Arabic. The pages are drawn by the system's web view, so Arabic renders exactly. |
 | The menu bar and the sidebar | ✅ File, Edit, View, Tools, Help with every item, separator, shortcut and letter of the Python window; Back and Forward; the sections in the order chosen with their signs; the Interface and Content buttons; the footer. Working: Open Data Folder, Profiles (switching), Quit, Find, Copy, Back, Forward, the sections, Interface Language, Content Languages, Theme, Reading Text Size, Full Screen, Search Tips, Keyboard Shortcuts, Licences, the links, About. ⏳ (each says so and where it is in the Python window): Data Sources, Export, Import, Preferences, Choose with previews, the Tools menu, Check for Updates, Check Installation, Log, New/Rename/Delete/Export/Import a profile |
-| Search | ✅ all, any, phrase, whole words, one book, paging; the matches marked in every text, the texts in the order of the languages chosen, "View chain" |
+| Search | ✅ as the Python page draws it: ⌂, what is searched (Hadith; Narrators and Scholars say they are not here yet), the words, Match, Whole words only, the books (Sunni, Shia, other; ticked), the grades (Sunni and Imami scales, every grader agrees, the two Sahihs), the languages (and those the data repository has more of), the chapter chosen, the count and time, the welcome with its examples and the recent searches, nothing found (and why), 25 more at a time. Each hadith as its card: ☆ bookmark (the same bookmarks.json), In its book, View chain, Also narrated in, Verses it names, the chain right to left with every narrator, his verdict and the words in Turkish and English under each name, the grades, the texts in the content languages (the others folded), the right-click menus. ⏳ (each says so): Export, By meaning, Narrators and Scholars, Language settings |
 | Isnad Chains | ✅ a book and a number, previous, next, random; every chain link by link as the Python page draws it: the term, the name as written and in the rijal work, its reading, the critic's verdict with Ibn Hajar's rank (or al-Najashi's category), tabaqa, year of death, tahwil meetings, al-Kulayni's groups, whom it reaches, raised and cut chains, and the chain in words in Turkish and English. The contents picker of a book: ⏳ |
 | Books | ✅ the shelf (Sunni, Shia, all; by kind), a book's contents, a chapter to read (hadith with their texts and View chain, rijal entries, the sira's sections), previous and next chapter, where you left each book. Markers, search in a chapter, PDF: ⏳ |
 | Narrators | ✅ the famous ones group by group (Sunni, Shia, all), the search as you type, a narrator with his names, every verdict (Ibn Hajar's rank, al-Najashi's category), tabaqa, death, books, teachers and students (open them), the compilers and his hadith (View chain). Genealogy, filters by tabaqa/rank/book: ⏳ |
@@ -48,7 +49,11 @@ Python `iy` does on the same data.
 |---|---|---|
 | `isnady.data.paths` | ✅ `paths.rs` | |
 | `isnady.core.normalize` | ✅ `normalize.rs` | same rules, `NORMALIZER_VERSION` 1: the search index the Python isnady builds is read as it is |
-| `isnady.core.search` | ✅ `search.rs` | except the grades and chapters filters |
+| `isnady.core.search` | ✅ `search.rs` | the grades and chapters filters too (`grades.rs`, `works::hadith_under`) |
+| `isnady.core.grades` | ✅ `grades.rs` | |
+| `isnady.core.bookmarks` | ✅ `bookmarks.rs` (is it marked, mark, unmark) | folders: with the Bookmarks page |
+| `isnady.core.quran` (marks_in, cites, sura names) | ✅ `quran.rs` | reading the Qur'an: with the Qur'an in Books |
+| `isnady.core.takhrij.related` | ✅ `takhrij.rs` | |
 | `isnady.core.books` (order, active books) | ✅ `books.rs` | |
 | `isnady.config` (settings, state), `isnady.core.profiles` | ✅ `config.rs` (reading, the recent searches) | |
 | `isnady.data.db` | ✅ reading schema 8 (`db.rs`) | creating and upgrading stay with the Python isnady |

@@ -62,42 +62,116 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
 
-// ------------------------------------------------------------------ themes (gui/theme.py)
+// ------------------------------------------------------------------ the look (gui/theme.py)
+// Every token of every theme comes from the Python isnady (data/window.json): its colours, its typefaces, how round
+// its corners are (roundness) and how much room its buttons have (room) — applied as theme.stylesheet applies them.
 
-const THEMES = {
-  light: { window: "#EEF1F5", surface: "#FFFFFF", border: "#D9DFE7", ink: "#18212C", muted: "#5B6878", lapis: "#1D4777", "lapis-soft": "#E3EBF5", gold: "#A47E24", gilt: "#F2E2B3", sidebar: "#14304F", "sidebar-ink": "#F1F4F8", "sidebar-muted": "#9DB0C6", "sidebar-selected": "#22466F", pill: "#EDF1F6", dark: false },
-  dark: { window: "#10151C", surface: "#18202A", border: "#2A3542", ink: "#E4E9EF", muted: "#8E9BAA", lapis: "#7FAEE0", "lapis-soft": "#1F2C3B", gold: "#D6B25E", gilt: "#4B3C17", sidebar: "#0B1522", "sidebar-ink": "#E4E9EF", "sidebar-muted": "#7D8FA5", "sidebar-selected": "#1A2D45", pill: "#222C38", dark: true },
-  paper: { window: "#F3EEE4", surface: "#FFFCF6", border: "#E2D8C8", ink: "#2B241C", muted: "#776A59", lapis: "#8A3B1F", "lapis-soft": "#F1E2D4", gold: "#A8792A", gilt: "#F3DFAE", sidebar: "#3A2A1E", "sidebar-ink": "#F6EEE3", "sidebar-muted": "#BCAA93", "sidebar-selected": "#55402E", pill: "#EFE6D8", dark: false },
-  slate: { window: "#F5F6F8", surface: "#FFFFFF", border: "#E2E5EA", ink: "#111827", muted: "#646B78", lapis: "#4338CA", "lapis-soft": "#ECEDFE", gold: "#C2700A", gilt: "#FCE7C2", sidebar: "#FFFFFF", "sidebar-ink": "#111827", "sidebar-muted": "#646B78", "sidebar-selected": "#ECEDFE", pill: "#F0F2F5", dark: false },
-  emerald: { window: "#EFF5F2", surface: "#FFFFFF", border: "#D3E2DB", ink: "#13241D", muted: "#58706A", lapis: "#0F6E66", "lapis-soft": "#DCF0EA", gold: "#B0741C", gilt: "#F6E1B2", sidebar: "#0B3B33", "sidebar-ink": "#EAF6F2", "sidebar-muted": "#93BCB1", "sidebar-selected": "#14544A", pill: "#E7F1ED", dark: false },
-  midnight: { window: "#0D1117", surface: "#161B22", border: "#2A313C", ink: "#E6EDF3", muted: "#8B949E", lapis: "#5CC8BC", "lapis-soft": "#16302E", gold: "#E3B341", gilt: "#4A3A12", sidebar: "#090C10", "sidebar-ink": "#E6EDF3", "sidebar-muted": "#7D8590", "sidebar-selected": "#18242C", pill: "#21262D", dark: true },
-  contrast: { window: "#000000", surface: "#0B0B0B", border: "#BDBDBD", ink: "#FFFFFF", muted: "#D4D4D4", lapis: "#FFD400", "lapis-soft": "#2E2A00", gold: "#FFD400", gilt: "#5C4D00", sidebar: "#000000", "sidebar-ink": "#FFFFFF", "sidebar-muted": "#D4D4D4", "sidebar-selected": "#262626", pill: "#1A1A1A", dark: true },
-  garden: { window: "#FFF7F2", surface: "#FFFFFF", border: "#F3DCD3", ink: "#2E2433", muted: "#7B6E80", lapis: "#D6457A", "lapis-soft": "#FDE6EE", gold: "#E79A2E", gilt: "#FFE6B3", sidebar: "#FFEFF3", "sidebar-ink": "#3B2A3F", "sidebar-muted": "#8C7590", "sidebar-selected": "#FFD9E5", pill: "#FBEDE6", dark: false },
-  sky: { window: "#EEF5FF", surface: "#FFFFFF", border: "#D6E4F7", ink: "#1C2B44", muted: "#5F7190", lapis: "#2F74D9", "lapis-soft": "#DDEBFF", gold: "#F29F2E", gilt: "#FFE9B8", sidebar: "#2F6CCB", "sidebar-ink": "#FFFFFF", "sidebar-muted": "#D4E4FF", "sidebar-selected": "#4A86E3", pill: "#E8F0FC", dark: false },
-  starry: { window: "#1A1730", surface: "#25213F", border: "#3A3460", ink: "#F1EEFF", muted: "#B1A9D6", lapis: "#A493FF", "lapis-soft": "#342D5E", gold: "#FFC76B", gilt: "#5C4720", sidebar: "#131027", "sidebar-ink": "#F1EEFF", "sidebar-muted": "#9D95C4", "sidebar-selected": "#2C2652", pill: "#2E2950", dark: true },
-};
-const RANK_COLORS = {
-  light: { 1: "#A47E24", 2: "#2E7D4F", 3: "#2E7D4F", 4: "#1D4777", 5: "#1D4777", 6: "#8A6D1F", 7: "#8A6D1F", 8: "#B4552D", 9: "#B4552D", 10: "#A33A3A", 11: "#A33A3A", 12: "#A33A3A" },
-  dark: { 1: "#D6B25E", 2: "#6FC08F", 3: "#6FC08F", 4: "#7FAEE0", 5: "#7FAEE0", 6: "#D9B866", 7: "#D9B866", 8: "#E08A64", 9: "#E08A64", 10: "#E07A7A", 11: "#E07A7A", 12: "#E07A7A" },
-};
 let DARK = false;
+let TOKENS = {};
 
 // "Follow system": Sky by day, Starry Night by night (theme.apply, UI-FRESH)
 function resolvedTheme(name) {
   const key = (name || "system").toLowerCase();
-  if (key in THEMES) return key;
+  if (WIN.tokens && key in WIN.tokens) return key;
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "starry" : "sky";
 }
 
+// Python's round(): halves to the even number
+function pyRound(x) {
+  const f = Math.floor(x);
+  if (Math.abs(x - f - 0.5) < 1e-9) return f % 2 === 0 ? f : f + 1;
+  return Math.round(x);
+}
+
+// the system's interface font, as Qt takes it (Fusion): Segoe UI 9 pt on Windows, the desktop's on Linux
+function systemFont() {
+  const ua = navigator.userAgent;
+  if (ua.includes("Windows")) return ['"Segoe UI"', 9];
+  if (ua.includes("Mac")) return ["-apple-system", 13];
+  return ['"Noto Sans", "Cantarell", "DejaVu Sans", sans-serif', 10];
+}
+
 function applyTheme(name) {
-  const tokens = THEMES[resolvedTheme(name)];
-  DARK = tokens.dark;
-  for (const [k, v] of Object.entries(tokens)) {
-    if (k !== "dark") document.documentElement.style.setProperty("--" + k, v);
+  const key = resolvedTheme(name);
+  const tk = Object.assign({ ui_family: "", heading_family: "", roundness: 1, room: 1, nav_signs: false, latin_family: "" },
+    (WIN.tokens || {})[key] || {});
+  TOKENS = tk;
+  DARK = !!tk.dark;
+  const root = document.documentElement.style;
+  for (const k of ["window", "surface", "border", "ink", "muted", "lapis", "lapis_soft", "gold", "gilt", "sidebar",
+    "sidebar_ink", "sidebar_muted", "sidebar_selected", "pill"]) {
+    if (tk[k]) root.setProperty("--" + k.replace(/_/g, "-"), tk[k]);
   }
-  document.documentElement.style.setProperty("--mark", tokens.gilt);
-  document.documentElement.style.setProperty("--on-lapis", tokens.dark ? tokens.window : "#FFFFFF");
-  document.documentElement.style.setProperty("--mark-ink", tokens.ink);
+  root.setProperty("--mark", tk.gilt);
+  root.setProperty("--mark-ink", tk.ink);
+  root.setProperty("--on-lapis", tk.dark ? tk.window : tk.surface);
+  // corners × roundness (a radius over 12 px stays), paddings × room (theme.stylesheet)
+  for (const r of [4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 17]) {
+    root.setProperty(`--r${r}`, (r > 12 ? r : Math.max(0, Math.min(pyRound(r * tk.roundness), 12))) + "px");
+  }
+  for (let p = 0; p <= 30; p++) root.setProperty(`--p${p}`, pyRound(p * tk.room) + "px");
+  // the interface's typeface: the user's own, else the theme's, else the system's (+0.5 pt with a theme's face)
+  const [sysFamily, sysSize] = systemFont();
+  const family = (APP.settings && APP.settings["ui.family"]) || tk.ui_family;
+  const size = (APP.settings && Number(APP.settings["ui.size"])) || (family ? sysSize + 0.5 : sysSize);
+  root.setProperty("--ui", family ? `"${family}", ${sysFamily}, "Amiri"` : `${sysFamily}, "Amiri"`);
+  root.setProperty("--ui-size", size + "pt");
+  root.setProperty("--heading", `"${tk.heading_family || "Amiri"}", "Amiri"`);
+  root.setProperty("--arabic-family", scriptOf("arabic").family);
+  root.setProperty("--arabic-size", scriptOf("arabic").size + "pt");
+}
+
+// the reader's typeface of one script (theme.script_font): family, size in points, colour and line height
+function scriptOf(script) {
+  const scripts = WIN.scripts || {};
+  const key = script in scripts ? script : "latin";
+  const base = scripts[key] || { family: "Amiri", size: 12.5, line_height: 115 };
+  const set = (APP.settings && APP.settings.text && APP.settings.text[key]) || {};
+  let family = set.family !== undefined ? set.family : base.family;
+  if (key === "latin" && TOKENS.latin_family && family === base.family) family = TOKENS.latin_family;
+  return {
+    family: family ? `"${family}", "Amiri", var(--ui)` : "var(--ui)",
+    size: Number(set.size) || base.size,
+    line_height: Number(set.line_height) || base.line_height,
+    color: set.color || "var(--ink)",
+  };
+}
+
+// tooltips as Qt draws them (QToolTip): the theme's surface, ink and border, after a moment on the thing
+const TIP = { el: null, timer: null, target: null };
+
+function wireTooltips() {
+  TIP.el = document.createElement("div");
+  TIP.el.className = "tooltip";
+  TIP.el.hidden = true;
+  document.body.appendChild(TIP.el);
+  const hide = () => { clearTimeout(TIP.timer); TIP.el.hidden = true; TIP.target = null; };
+  document.addEventListener("mouseover", (e) => {
+    let el = e.target.closest("[data-tip], [title]");
+    if (el && el.hasAttribute("title")) {
+      el.dataset.tip = el.getAttribute("title");
+      el.removeAttribute("title");
+    }
+    if (el === TIP.target) return;
+    hide();
+    if (!el || !el.dataset.tip) return;
+    TIP.target = el;
+    TIP.timer = setTimeout(() => {
+      if (TIP.target !== el || !document.contains(el)) return;
+      TIP.el.textContent = el.dataset.tip;
+      TIP.el.hidden = false;
+      const w = TIP.el.offsetWidth, h = TIP.el.offsetHeight;
+      let x = TIP.x + 12, y = TIP.y + 20;
+      if (x + w > innerWidth - 4) x = Math.max(4, innerWidth - w - 4);
+      if (y + h > innerHeight - 4) y = Math.max(4, TIP.y - h - 6);
+      TIP.el.style.left = x + "px";
+      TIP.el.style.top = y + "px";
+    }, 700);
+  });
+  document.addEventListener("mousemove", (e) => { TIP.x = e.clientX; TIP.y = e.clientY; });
+  document.addEventListener("mousedown", hide, true);
+  document.addEventListener("wheel", hide, true);
+  document.addEventListener("keydown", hide, true);
 }
 
 // ------------------------------------------------------------------ the pages (the sidebar and menus: frame.js)
@@ -119,7 +193,6 @@ function show(key) {
     $("later-title").textContent = t(sectionLabel(key));
     $("later-text").textContent = t("LATER");
   }
-  if (key === "search") $("q").focus();
   if (key === "chains" && !CHAIN_SHOWN) showChain();
   if (!HISTORY.opening) record(["section", key]);
 }
@@ -128,58 +201,10 @@ let CHAIN_SHOWN = true;
 
 // ------------------------------------------------------------------ Search
 
-let SEARCH = { offset: 0, limit: 20, results: [] };
-
-function highlighted(text, spans) {
-  const chars = Array.from(text);
-  let out = "", last = 0;
-  for (const [s, e] of spans) {
-    out += esc(chars.slice(last, s).join("")) + "<mark>" + esc(chars.slice(s, e).join("")) + "</mark>";
-    last = e;
-  }
-  return out + esc(chars.slice(last).join(""));
-}
-
-function resultCard(r) {
-  const grades = (r.grades || []).map(([g, v]) => `<span class="grade">${esc(g)}: ${esc(v)}</span>`).join(" ");
-  const texts = r.texts.map((x) => `
-      <div class="text ${x.rtl || x.language === "Arabic" ? "ar" : ""} ${x.matched ? "" : "dim"}">
-        <div class="lang">${esc(t(x.language))}</div>
-        <p>${highlighted(x.text, x.spans || [])}</p>
-      </div>`).join("");
-  return `<div class="card">
-      <div class="card-head"><h3>${esc(r.name)}</h3><span class="num">#${esc(r.number)}</span>${grades}
-        <span class="grow"></span>
-        <button class="quiet" data-book="${esc(r.key)}" data-number="${esc(r.number)}">${esc(t("View chain"))}</button>
-      </div>${texts}</div>`;
-}
-
-async function runSearch(more) {
-  const text = $("q").value.trim();
-  if (!text) return;
-  if (!more) { SEARCH.offset = 0; $("results").innerHTML = ""; }
-  $("search-status").textContent = "…";
-  try {
-    const book = $("search-book").value;
-    const page = await invoke("find", {
-      text, mode: $("mode").value, wholeWords: $("whole").checked, books: book ? [book] : [],
-      offset: SEARCH.offset, limit: SEARCH.limit,
-    });
-    $("search-status").textContent = `${page.total.toLocaleString("en-US")} · ${page.elapsed_ms} ms`;
-    $("spellings").textContent = (page.spellings || []).map(([w, alts]) => `${w} → ${alts.slice(0, 4).join(", ")}`).join("; ");
-    $("results").insertAdjacentHTML("beforeend", page.results.map(resultCard).join(""));
-    SEARCH.offset += page.results.length;
-    $("more").hidden = SEARCH.offset >= page.total;
-    $("more").textContent = `${t("Next")} ${SEARCH.limit} (${SEARCH.offset} / ${page.total.toLocaleString("en-US")})`;
-  } catch (e) {
-    $("search-status").textContent = String(e);
-  }
-}
-
 // ------------------------------------------------------------------ Isnad Chains
 
 function rankColor(rank) {
-  return (DARK ? RANK_COLORS.dark : RANK_COLORS.light)[rank] || "var(--muted)";
+  return (WIN.rank_colors[DARK ? "dark" : "light"] || {})[rank] || "var(--muted)";
 }
 
 function linkCard(l) {
@@ -487,20 +512,17 @@ async function start() {
   APP = s;
   document.documentElement.lang = s.ui_language;
   document.documentElement.dir = s.rtl ? "rtl" : "ltr";
+  WIN = s.window;
   applyTheme(s.theme);
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTheme(THEME_MODE); buildNav(); });
   buildFrame(s);
-
-  $("q").placeholder = t("Search the hadith: a word or phrase in Arabic, Turkish or English (? an unknown letter, * any letters)");
-  $("go").textContent = t("Search");
-  for (const [v, label] of [["all", "All words"], ["any", "Any word"], ["phrase", "Exact phrase"]]) {
-    $("mode").insertAdjacentHTML("beforeend", `<option value="${v}">${esc(t(label))}</option>`);
-  }
-  $("whole-label").textContent = t("Whole words only");
-  $("search-book").insertAdjacentHTML("beforeend", `<option value="">${esc(t("All books"))}</option>`);
+  wireTooltips();
+  try { await document.fonts.ready; } catch (_) { /* the fonts load later: the lines are measured then */ }
+  buildSearchPage();
+  await fillSearchFilters();
+  showStart();
   for (const b of s.books) {
     const opt = `<option value="${esc(b.key)}">${esc(b.name)} (${b.count.toLocaleString("en-US")})</option>`;
-    $("search-book").insertAdjacentHTML("beforeend", opt);
     $("chain-book").insertAdjacentHTML("beforeend", opt);
   }
   $("book-label").textContent = t("Book");
@@ -509,10 +531,6 @@ async function start() {
   $("random").textContent = t("Random hadith");
   $("prev").textContent = "‹ " + t("Previous");
   $("next").textContent = t("Next") + " ›";
-  $("more").onclick = () => runSearch(true);
-
-  $("go").onclick = () => runSearch(false);
-  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(false); });
   $("n-roads").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-road]");
     if (!b) return;
@@ -546,10 +564,6 @@ async function start() {
   $("reader").addEventListener("click", (e) => {
     const ch = e.target.closest("button[data-chapter]");
     if (ch) { readChapter(BOOKS.key, Number(ch.dataset.chapter)); return; }
-    const b = e.target.closest("button[data-book]");
-    if (b) showChain(b.dataset.book, b.dataset.number);
-  });
-  $("results").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-book]");
     if (b) showChain(b.dataset.book, b.dataset.number);
   });

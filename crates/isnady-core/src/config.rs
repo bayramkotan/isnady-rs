@@ -160,6 +160,13 @@ pub fn set(key: &str, value: Value) -> Result<(), String> {
     Ok(())
 }
 
+/// A setting as stored in settings.json, None when it is not set (the default holds).
+pub fn get(key: &str) -> Option<Value> {
+    read_json(&profile_folder().join(SETTINGS_FILE))
+        .get(key)
+        .cloned()
+}
+
 /// A number setting (view.text_scale), its default when unset.
 pub fn get_f64(key: &str, default: f64) -> f64 {
     let data = read_json(&profile_folder().join(SETTINGS_FILE));

@@ -228,7 +228,7 @@ def window() -> str:
     and how much of each is translated, the keyboard shortcuts and the search tips."""
     _import()
     from isnady import config
-    from isnady.core import i18n, learn
+    from isnady.core import catalog, genealogy, i18n, learn, scholars, traditions
 
     main_window = _Source("isnady.gui.main_window")
     theme = _Source("isnady.gui.theme")
@@ -241,6 +241,22 @@ def window() -> str:
         "signs": theme.value("NAV_SIGNS"),
         "nav_signs": {k: bool(v[2].get("nav_signs", False)) for k, v in themes.items()},
         "themes": [[k, v[0]] for k, v in themes.items()],
+        # every token of every theme (colours, typefaces, how round, how roomy): the window draws them as Python does
+        "tokens": {k: v[2] for k, v in themes.items()},
+        "rank_colors": theme.value("RANK_COLORS"),
+        # the reader's typeface of each script by default (config.SCRIPTS): family, size in points, line height %
+        "scripts": {k: {"family": v[2], "size": v[3], "line_height": v[4]} for k, v in config.SCRIPTS.items()},
+        "script_of_language": dict(config.SCRIPT_OF_LANGUAGE),
+        # the compiler of each book, drawn at the head of its chains (isnad.compiler_of)
+        "compilers": {key: {"arabic": sc.get("known_ar") or sc.get("arabic", ""), "tr": sc["tr"].split(" (")[0],
+                            "en": sc["name"]}
+                      for sc in scholars.SCHOLARS for key in sc.get("compiler_of", [])},
+        # whom a chain reaches, in Arabic, and whether his life is in the tree of Quraysh (chain_widgets.end_node)
+        "masum_ar": {k: m.name_ar for k, m in traditions.MASUM.items()},
+        "quraysh": sorted(k for k in list(traditions.MASUM) + ["muhammad"] if k in genealogy.written("quraysh").nodes),
+        "catalog_languages": dict(catalog.LANGUAGE_NAMES),
+        # the glossary's words for a grade's group, on the hover of a grade (learn.for_group), in each of its languages
+        "grade_terms": {lang: {str(g): learn.for_group(g, lang) for g in learn.GROUP_TERM} for lang in learn.LANGUAGES},
         "text_scale": [theme.value("TEXT_SCALE_MIN"), theme.value("TEXT_SCALE_MAX"), theme.value("TEXT_SCALE_STEP")],
         "languages": [[code, own, english, rtl, round(i18n.coverage(code), 4)]
                       for code, (own, english, rtl) in i18n.LANGUAGES.items()],

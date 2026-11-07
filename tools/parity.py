@@ -36,6 +36,19 @@ CASES = [
     ["search", "النياتت", "--limit", "2"],                      # not found as typed: its near spellings
     ["search", "«قَالَ: لا يُؤْمِنُ»", "--mode", "phrase", "--limit", "2"],
     ["search", "zzzqqq"],
+    # the search by grade and in a chapter (RS-WIN2, GR-FLT, SRCH-SEC1); the recent searches (S4)
+    ["search", "الصلاة", "--grade", "sahih", "--limit", "3"],
+    ["search", "صلاة", "--grade", "daif", "--grade", "hasan", "--every-grader", "--limit", "3"],
+    ["search", "الصلاة", "--grade", "sahih", "--no-sahihayn", "--limit", "2"],
+    ["search", "الصلاة", "--grade", "sahih", "--book", "bukhari", "--limit", "2"],
+    ["search", "الله", "--grade", "imami-sahih", "--grade", "muwaththaq", "--limit", "2"],
+    ["search", "niyet", "--grade", "ungraded", "--limit", "2"],
+    ["search", "النيات", "--grade", "fabricated"],
+    ["search", "الصلاة", "--chapter", "riyad:3", "--limit", "3"],
+    ["search", "قال", "--chapter", "bukhari:1", "--grade", "sahih", "--limit", "2"],
+    ["search", "الصلاة", "--chapter", "riyad:nosuch"],
+    ["search", "--recent"],
+    ["search"],
     # the chains (RS2): read by the Python isnady, shown by both; road A with Ibn Hajar's Taqrib, road B with al-Najashi
     ["chain", "nawawi"],
     ["chain", "nawawi", "1"],

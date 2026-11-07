@@ -144,3 +144,59 @@ pub fn language_rank(language: &str, chosen: &[String]) -> (u8, usize, String) {
     }
     (2, 0, language.to_string())
 }
+
+/// The languages the imported books have in the data repository's catalog but not on this computer
+/// (`search_page._more_languages`): the catalog the Python isnady saved (repos/<repository>.json), its entries and
+/// its library, each book's languages by their names (`catalog.LANGUAGE_NAMES`, given here).
+pub fn more_languages(
+    conn: &Connection,
+    imported: &[String],
+    names: &std::collections::HashMap<String, String>,
+) -> Vec<String> {
+    let repo = config::get_str("sources.repository", "");
+    let repo = if repo.is_empty() {
+        "isnady".to_string()
+    } else {
+        repo
+    };
+    let file = crate::paths::data_dir()
+        .join("repos")
+        .join(format!("{repo}.json"));
+    let Some(cat) = std::fs::read_to_string(file)
+        .ok()
+        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+    else {
+        return vec![];
+    };
+    let keys: HashSet<String> = conn
+        .prepare("SELECT key FROM collections")
+        .and_then(|mut s| s.query_map([], |r| r.get::<_, String>(0))?.collect())
+        .unwrap_or_default();
+    let mut out: Vec<String> = vec![];
+    let entries = cat["entries"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .chain(cat["library"].as_array().into_iter().flatten());
+    for e in entries {
+        let Some(book) = e.get("book").and_then(|b| b.as_str()) else {
+            continue;
+        };
+        if !keys.contains(book) {
+            continue;
+        }
+        for code in e
+            .get("languages")
+            .and_then(|l| l.as_array())
+            .into_iter()
+            .flatten()
+        {
+            let Some(code) = code.as_str() else { continue };
+            let name = names.get(code).cloned().unwrap_or_else(|| code.to_string());
+            if !imported.contains(&name) && !out.contains(&name) {
+                out.push(name);
+            }
+        }
+    }
+    out
+}

@@ -5,6 +5,33 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The Search page as the Python window has it (RS-WIN2; Bayram: "iy ile iy-rs birbirinin aynısı olacak! Temalardan
+  ayarlardan ... arayüzden ... hepsi aynı olacak").** The page is built again from gui/search_page.py, widgets.py and
+  chain_widgets.py, piece by piece, and compared with the Python window side by side: ⌂ back to the start (Alt+Home);
+  what is searched (Hadith, Narrators, Scholars — the last two say they come next); the words with their clear
+  button; Match (all words, any word, exact phrase, by meaning); Whole words only; the books, ticked by tradition
+  (Sunni, Shia, other) with All, Sunni, Shia, None; the grades in the Sunni and the Imami scales with "every grader
+  agrees" and "count al-Bukhari's and Muslim's hadith as sahih"; the languages, and those the data repository has
+  more of; a chapter chosen; the count and time with the grades' and the chapter's share; Export these results. The
+  welcome: the verse, the examples, the recent searches and Clear. Nothing found says why (other spellings, the
+  grades, the chapter). Each hadith as its card: the book in the interface's language, ☆ (the same bookmarks.json as
+  Python), Export, In its book, View chain; Also narrated in (takhrij) and Verses it names; the chain right to left,
+  the compiler at its head, each narrator with his verdict, tabaqa and death on the hover and the words in Turkish and
+  English under him, whom it reaches; the grades (with the glossary's words), "In the Sahihayn: sahih"; the texts in
+  the content languages with the matches gilded, the others folded; the right-click menus of a card, a text and a
+  name. 25 more at a time; the cards come a few at a time so the window never stops.
+- **The look of every theme from the Python isnady.** data/window.json now carries every token of every theme
+  (colours, typefaces, roundness, room), the reader's typefaces of each script, the rank colours, the compilers,
+  whom a chain reaches in Arabic and the catalog's language names; the window draws corners and room as
+  theme.stylesheet scales them, sizes in points as Qt does, the interface's typeface as Qt takes it, each text's line
+  height as a share of its typeface's own, and Qt-like tooltips. The typefaces of the friendlier themes (Nunito,
+  Lexend, Baloo 2, Noto Naskh Arabic) are bundled as Python bundles them (SIL OFL).
+- **`iy-rs search` filters (GR-FLT, SRCH-SEC1, S4):** `--grade` (sahih, hasan, daif, very-weak, fabricated, ungraded;
+  imami-sahih, imami-hasan, muwaththaq, imami-daif, imami-ungraded), `--every-grader`, `--no-sahihayn`, `--chapter
+  BOOK:CHAPTER`, `--recent`, `--clear-recent`, `iy-rs search` with no words; `--in` and `--tradition` taken. New in the
+  core: `grades.rs`, `bookmarks.rs`, `quran.rs`, `takhrij.rs`, `works::hadith_under`, `books::more_languages`,
+  `search::recent_items`/`clear_recent`, `config::get`. 12 more parity cases.
+
 - **The frame of the window, as the Python window has it (RS-WIN1; Bayram, 2026-11-04: "iy-rs de neden iy deki gibi
   menu yok? … iy ile iy-rs birbirinin aynısı olacak! Temalardan ayarlardan ... arayüzden, prosedürlerden … hepsi aynı
   olacak").** The menu bar: File, Edit, View, Tools and Help with every item of the Python window, in its order, with

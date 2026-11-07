@@ -2,6 +2,17 @@
 
 @font-face { font-family: "Amiri"; src: url("fonts/Amiri-Regular.ttf"); font-weight: 400; }
 @font-face { font-family: "Amiri"; src: url("fonts/Amiri-Bold.ttf"); font-weight: 700; }
+/* the typefaces of the friendlier themes (UI-FRESH): bundled as the Python isnady bundles them (SIL OFL) */
+@font-face { font-family: "Nunito"; src: url("fonts/Nunito-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Nunito"; src: url("fonts/Nunito-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Nunito"; src: url("fonts/Nunito-ExtraBold.ttf"); font-weight: 700 900; }
+@font-face { font-family: "Nunito ExtraBold"; src: url("fonts/Nunito-ExtraBold.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Lexend"; src: url("fonts/Lexend-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Lexend"; src: url("fonts/Lexend-SemiBold.ttf"); font-weight: 600 700; }
+@font-face { font-family: "Baloo 2"; src: url("fonts/Baloo2-Medium.ttf"); font-weight: 400 500; }
+@font-face { font-family: "Baloo 2"; src: url("fonts/Baloo2-Bold.ttf"); font-weight: 600 800; }
+@font-face { font-family: "Noto Naskh Arabic"; src: url("fonts/NotoNaskhArabic-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Noto Naskh Arabic"; src: url("fonts/NotoNaskhArabic-Bold.ttf"); font-weight: 700; }
 
 :root {
   --window: #EEF1F5; --surface: #FFFFFF; --border: #D9DFE7; --ink: #18212C; --muted: #5B6878;
@@ -9,6 +20,10 @@
   --sidebar: #14304F; --sidebar-ink: #F1F4F8; --sidebar-muted: #9DB0C6; --sidebar-selected: #22466F;
   --pill: #EDF1F6; --on-lapis: #FFFFFF; --mark: #F2E2B3; --mark-ink: #18212C;
   --ui: system-ui, -apple-system, "Segoe UI", "Inter", "Noto Sans", Roboto, "Amiri", sans-serif;
+  --ui-size: 9pt;
+  --heading: "Amiri";
+  --arabic-family: "Amiri";
+  --arabic-size: 20pt;
   --arabic: "Amiri", "Noto Naskh Arabic", serif;
   --radius: 10px;
   --scale: 1;      /* View → Reading Text Size (view.text_scale): the reading texts only, as in the Python window */
@@ -18,7 +33,7 @@
 html, body { height: 100%; margin: 0; }
 body {
   display: flex; flex-direction: column; background: var(--window); color: var(--ink);
-  font-family: var(--ui); font-size: 14px; line-height: 1.45; overflow: hidden;
+  font-family: var(--ui); font-size: var(--ui-size); line-height: 1.3; overflow: hidden;
 }
 #frame { flex: 1; display: flex; min-height: 0; }
 [hidden] { display: none !important; }
@@ -30,16 +45,16 @@ select { padding-inline-end: 28px; background-image: linear-gradient(45deg, tran
 /* ------------------------------------------------------------ the menu bar and its menus (QMenuBar, QMenu) */
 #menubar {
   flex: none; display: flex; align-items: center; gap: 2px; background: var(--window); color: var(--ink);
-  border-bottom: 1px solid var(--border); padding: 2px 6px; font-size: 13px; user-select: none; -webkit-user-select: none;
+  border-bottom: 1px solid var(--border); padding: var(--p2) var(--p6); user-select: none; -webkit-user-select: none;
 }
-#menubar button { background: transparent; border: 0; padding: 6px 12px; border-radius: 8px; cursor: default; }
+#menubar button { background: transparent; border: 0; padding: var(--p5) var(--p10); border-radius: var(--r5); cursor: default; }
 #menubar button:hover, #menubar button.open { background: var(--lapis-soft); }
 .menu {
   position: fixed; z-index: 50; min-width: 180px; background: var(--surface); color: var(--ink);
-  border: 1px solid var(--border); padding: 6px 0; font-size: 13px; box-shadow: 0 6px 22px rgba(0, 0, 0, .18);
+  border: 1px solid var(--border); padding: var(--p6) 0; box-shadow: 0 6px 22px rgba(0, 0, 0, .18);
   user-select: none; -webkit-user-select: none; max-height: calc(100vh - 8px); overflow-y: auto;
 }
-.menu .mi { display: flex; align-items: center; padding: 7px 14px 7px 8px; white-space: nowrap; cursor: default; }
+.menu .mi { display: flex; align-items: center; padding: var(--p6) var(--p14) var(--p6) var(--p8); white-space: nowrap; cursor: default; }
 .menu .mi.on { background: var(--lapis-soft); }
 .menu .mi.disabled { color: var(--muted); }
 .menu .mi .ind { width: 18px; flex: none; text-align: center; font-size: 11px; color: var(--lapis); }
@@ -56,20 +71,20 @@ select { padding-inline-end: 28px; background-image: linear-gradient(45deg, tran
   display: flex; flex-direction: column; padding: 26px 0 16px; overflow: hidden;
 }
 .brand { padding: 0 26px 14px; }
-.brand-latin { font-family: Georgia, "Times New Roman", serif; font-size: 34px; font-weight: 700; letter-spacing: .5px; line-height: 1.2; }
-.brand-arabic { font-family: var(--arabic); color: var(--gold); font-size: 22px; margin-top: 2px; text-align: left; direction: rtl; unicode-bidi: plaintext; }
+.brand-latin { font-family: var(--heading); font-size: 26pt; font-weight: 700; line-height: 1.25; }
+.brand-arabic { font-family: var(--heading); color: var(--gold); font-size: 17pt; text-align: left; direction: rtl; unicode-bidi: plaintext; }
 .side-button {
-  background: transparent; color: var(--sidebar-ink); border: 1px solid var(--sidebar-selected); border-radius: 12px;
-  padding: 6px 12px; text-align: start; font-size: 12px; cursor: pointer;
+  background: transparent; color: var(--sidebar-ink); border: 1px solid var(--sidebar-selected); border-radius: var(--r8);
+  padding: var(--p5) var(--p10); text-align: start; font-size: 9pt; cursor: pointer;
 }
 .side-button:hover:not(:disabled) { background: var(--sidebar-selected); }
-.side-button:disabled { opacity: .45; cursor: default; }
+.side-button:disabled { cursor: default; }
 .history { padding: 0 22px 12px; display: block; }
 .history .side-button { width: 44px; text-align: center; margin-inline-end: 6px; padding: 5px 0; }
 #nav { display: block; flex: 1; overflow-y: auto; }
 #nav button {
   text-align: start; background: none; border: 0; border-inline-start: 3px solid transparent;
-  color: var(--sidebar-muted); padding: 0 16px; border-radius: 12px; cursor: pointer; font-size: 14px;
+  color: var(--sidebar-muted); padding: 0 var(--p16); border-radius: var(--r8); cursor: pointer; font-size: 10.5pt;
   display: block; width: calc(100% - 24px); margin: 2px 12px; height: 38px; line-height: 1.2;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -79,8 +94,9 @@ select { padding-inline-end: 28px; background-image: linear-gradient(45deg, tran
 #nav button.on { background: var(--sidebar-selected); color: var(--sidebar-ink); border-inline-start-color: var(--gold); }
 #nav button.later { opacity: .8; }
 .langs { padding: 8px 18px 6px; display: block; }
-.langs .side-button { display: block; width: 100%; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
-#footer { padding: 0 26px; color: var(--sidebar-muted); font-size: 11px; white-space: pre-line; }
+.langs .side-button { display: block; width: 100%; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: pre; position: relative; padding-inline-end: 22px; }
+.langs .side-button::after { content: "▾"; position: absolute; inset-inline-end: 10px; top: 50%; transform: translateY(-50%); font-size: 8pt; opacity: .85; }
+#footer { padding: 0 26px; color: var(--sidebar-muted); font-size: 8.5pt; white-space: pre-line; }
 
 /* ------------------------------------------------------------ dialogs (InfoDialog) */
 .dialog-back { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .28); display: flex; align-items: center; justify-content: center; }
@@ -98,6 +114,8 @@ select { padding-inline-end: 28px; background-image: linear-gradient(45deg, tran
 
 /* ------------------------------------------------------------ pages */
 #main { flex: 1; overflow-y: auto; padding: 26px 36px 40px; }
+#main:has(> .search-page:not([hidden])) { padding: 0; overflow: hidden; }
+.page.search-page { max-width: none; margin: 0; }
 .page { max-width: 1180px; margin: 0 auto; }
 .bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
 .bar .grow { flex: 1; }
@@ -226,3 +244,182 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
   margin: 3px 4px 3px 0; font-size: 13px; cursor: pointer; }
 .chip .ar { font-family: var(--arabic); font-size: 16px; }
 h3.sec { margin: 18px 0 6px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+/* ------------------------------------------------------------ tooltips (QToolTip) */
+.tooltip {
+  position: fixed; z-index: 90; max-width: 560px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); padding: var(--p4) var(--p6); white-space: pre-wrap; pointer-events: none;
+  font-family: var(--ui); font-size: var(--ui-size); box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+}
+body.busy, body.busy * { cursor: progress !important; }
+
+/* ------------------------------------------------------------ the Search page (gui/search_page.py, theme._sheet) */
+.search-page { display: flex; flex-direction: column; height: 100%; padding: 28px 28px 12px 36px; gap: 12px; }
+.search-page:not([hidden]) { display: flex !important; }
+.s-top { display: flex; align-items: center; gap: 10px; }
+.s-top .home {
+  font-size: 17pt; padding: 0 10px; height: 40px; line-height: 1; background: var(--surface); color: var(--lapis);
+  border: 1px solid var(--border); border-radius: var(--r8); cursor: pointer;
+}
+.s-top .home:hover { border-color: var(--lapis); }
+button.combo {
+  display: inline-flex; align-items: center; gap: 8px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: var(--r7); padding: var(--p5) var(--p10); min-height: 30px;
+  cursor: pointer; white-space: nowrap;
+}
+button.combo:hover { border-color: var(--lapis); }
+button.combo .sizer { display: inline-grid; text-align: start; }
+button.combo .sizer > span { grid-area: 1 / 1; }
+button.combo .sizer > .off { visibility: hidden; }
+button.combo .chev { width: 12px; height: 12px; margin-inline-start: 6px; display: inline-block;
+  background: currentColor; -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>") center / contain no-repeat; opacity: .75; }
+button.combo.kind {
+  background: var(--lapis-soft); color: var(--lapis); border-color: var(--lapis-soft); border-radius: var(--r10);
+  padding: var(--p10) var(--p14); font-size: 11pt; font-weight: 600; min-height: 0; height: 48px; gap: 30px;
+}
+button.combo.kind:hover { border-color: var(--lapis); }
+.s-field { flex: 1; position: relative; display: flex; }
+.s-field input {
+  flex: 1; min-width: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: var(--r10); padding: var(--p10) calc(var(--p14) + 26px) var(--p10) var(--p14); font-size: 12.5pt; outline: none;
+  height: 50px; text-overflow: ellipsis;
+}
+.s-field input:focus { border: 2px solid var(--lapis); padding: var(--p9) calc(var(--p13) + 26px) var(--p9) var(--p13); }
+.s-field input::placeholder { color: var(--muted); opacity: .85; }
+.s-field .clear {
+  position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px;
+  border-radius: 50%; border: 0; background: var(--muted); color: var(--surface); font-size: 10px; line-height: 18px;
+  padding: 0; cursor: pointer; opacity: .8;
+}
+button.primary, .search-page button.primary {
+  background: var(--lapis); color: var(--on-lapis); border: none; border-radius: var(--r10);
+  padding: var(--p10) var(--p22); font-weight: 600; font-size: 11pt; cursor: pointer;
+}
+button.primary:hover { background: var(--gold); }
+button.primary.small { font-size: inherit; }
+/* one row, as Qt lays it: when the window is narrow the boxes give up their width, the summary keeps its own */
+.s-filters { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-height: 32px; min-width: 0; }
+.s-filters .row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; flex-shrink: 1; }
+.s-filters .row > * { flex-shrink: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+.s-filters .row > .flabel, .s-filters .row > .gap { flex-shrink: 0; }
+#s-summary, #s-export { flex-shrink: 0; white-space: nowrap; }
+.s-filters .gap { width: 2px; }
+.flabel, #s-summary { color: var(--muted); }
+button.picker {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
+  padding: var(--p5) var(--p12); min-height: 30px; text-align: start; font-weight: normal; cursor: pointer;
+  white-space: pre;
+}
+button.picker:hover { border-color: var(--lapis); }
+button.picker.active { background: var(--lapis-soft); border-color: var(--lapis); color: var(--lapis); }
+label.check { display: inline-flex; align-items: center; gap: 7px; color: var(--ink); cursor: pointer; }
+label.check input { position: absolute; opacity: 0; width: 0; height: 0; }
+label.check .box {
+  width: 16px; height: 16px; flex: none; border: 1px solid var(--border); border-radius: var(--r4); background: var(--surface);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+label.check:hover .box { border-color: var(--lapis); }
+label.check input:checked + .box { background: var(--lapis); border-color: var(--lapis); }
+label.check input:checked + .box::after {
+  content: ""; width: 9px; height: 5px; border: solid var(--on-lapis); border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg);
+}
+label.check input:indeterminate + .box::after { content: ""; width: 8px; height: 2px; background: var(--lapis); }
+label.check input:disabled ~ * , label.check:has(input:disabled) { color: var(--muted); }
+button.qlink {
+  background: transparent; color: var(--lapis); border: none; padding: var(--p2) var(--p4); font-weight: 600; cursor: pointer;
+}
+button.qlink:hover { color: var(--gold); }
+button.quiet {
+  background: var(--surface); color: var(--lapis); border: 1px solid var(--border); border-radius: var(--r8);
+  padding: var(--p7) var(--p16); cursor: pointer;
+}
+button.quiet:hover { border-color: var(--lapis); }
+.s-body { flex: 1; overflow-y: auto; padding: 4px 8px 24px 0; display: flex; flex-direction: column; gap: 14px; }
+.s-body::-webkit-scrollbar, #main::-webkit-scrollbar, .menu::-webkit-scrollbar { width: 11px; }
+.s-body::-webkit-scrollbar-thumb, #main::-webkit-scrollbar-thumb, .menu::-webkit-scrollbar-thumb {
+  background: var(--border); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; min-height: 36px;
+}
+.s-body::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+
+/* the welcome (_show_start) and the notices */
+.hero { padding: 40px 8px 8px; display: flex; flex-direction: column; gap: 10px; }
+.hero-arabic { font-family: var(--arabic-family); font-size: 26pt; color: var(--gold); direction: rtl; text-align: left; unicode-bidi: plaintext; }
+.hero-title { font-family: var(--heading); font-size: 30pt; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.hero-title.small { font-size: 20pt; }
+.lead { color: var(--muted); font-size: 11pt; white-space: pre-wrap; }
+.lead.narrow { max-width: 640px; }
+.lead code { font-size: 10pt; }
+.examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+button.example {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r17);
+  padding: 0 16px; min-height: 34px; font-family: var(--heading); font-size: 13pt; cursor: pointer;
+}
+button.example.small { font-size: 12pt; }
+button.example:hover { border-color: var(--gold); color: var(--gold); }
+.recent-head { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.ftitle { color: var(--muted); font-size: 8.5pt; font-weight: 600; letter-spacing: .3px; }
+.recent { display: flex; flex-wrap: wrap; gap: 6px; max-width: 900px; }
+
+/* a hadith (ResultCard) */
+.hcard {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 20px 26px;
+  display: flex; flex-direction: column; gap: 10px; flex: none;
+}
+.hcard-head { display: flex; align-items: baseline; gap: 0; }
+.hcard-head .grow, .s-filters .grow { flex: 1; }
+.hcard-title { font-family: var(--heading); font-weight: 700; font-size: calc(15pt * var(--scale)); color: var(--ink); margin-inline-end: 8px; }
+.hcard-number { color: var(--muted); }
+.hcard-head .qlink { margin-inline-start: 14px; }
+.hcard-head .qlink:first-of-type { margin-inline-start: 6px; }
+button.star { background: transparent; border: none; color: var(--muted); font-size: 20px; padding: 0 4px; cursor: pointer; line-height: 1; align-self: center; }
+button.star.on { color: var(--gold); }
+.caption { color: var(--muted); font-size: 8.5pt; }
+.caption.right { text-align: right; }
+.caption.wrap a { color: var(--lapis); text-decoration: none; cursor: pointer; }
+.caption.wrap a.probably { font-style: italic; }
+.chain-count { color: var(--lapis); font-weight: 700; }
+.space6 { height: 6px; margin-top: -10px; }
+.space4 { height: 4px; margin-top: -10px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+/* QLabel#Pill: its radius (7 × roundness) is more than half its height, so Qt draws it square */
+.pill { background: var(--pill); color: var(--ink); border: 1px solid var(--pill); border-radius: 0; padding: var(--p2) var(--p10); font-size: 8.5pt; }
+.tb { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tb.rtl { text-align: right; }
+.tb .gilt { background: var(--gilt); }
+.translation { border-left: 3px solid var(--gold); padding: 2px 0 2px 16px; }
+.hcard .row { display: flex; align-items: center; }
+.hcard .gap18 { width: 18px; }
+.folded { display: flex; flex-direction: column; gap: 10px; }
+.s-body .more-row { text-align: center; margin: 0; }
+
+/* the chain under the title (ChainStrip): right to left, each name with its words below it */
+.strip { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-start; }
+.strip .col { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; }
+.strip .pair { display: inline-flex; align-items: flex-start; gap: 4px; }
+.strip .schip, .strip .arrow { font-family: var(--arabic-family); font-size: calc(var(--arabic-size) * 0.625 * var(--scale)); line-height: var(--arabic-line, 1.8); }
+.strip .schip { display: inline-block; background: var(--lapis-soft); color: var(--ink); border: 1px solid var(--lapis-soft); border-radius: var(--r8); padding: var(--p1) var(--p9); white-space: nowrap; }
+.strip .schip.prophet { background: var(--gilt); border-color: var(--gold); }
+.strip .schip.compiler { background: transparent; border-color: var(--lapis); }
+.strip .schip.unknown { background: transparent; color: var(--muted); border: 1px dashed var(--border); }
+.strip .schip.click { cursor: pointer; }
+.strip .arrow { color: var(--muted); padding: 0 1px; }
+.strip .word { color: var(--muted); font-size: 8.5pt; text-align: center; font-family: var(--ui); }
+
+/* a QComboBox's list, and the pickers' lists (Card popups) */
+.menu.combo-list { padding: 0; min-width: 120px; }
+.menu.combo-list .mi { padding: var(--p5) var(--p10); }
+.menu.combo-list .mi .lb { padding: 0; }
+.menu.picker-pop {
+  padding: 10px; border-radius: var(--r14); display: flex; flex-direction: column; gap: 8px; user-select: none;
+  max-height: calc(100vh - 16px);
+}
+.picker-pop .ptree { min-width: 420px; max-height: 460px; overflow-y: auto; border: 1px solid var(--border); padding: 4px 6px; background: var(--surface); }
+.picker-pop .ptree.grades { min-width: 380px; max-height: 300px; }
+.picker-pop .pgroup > .head { font-weight: 700; padding: 3px 0; }
+.picker-pop .pkids { display: flex; flex-direction: column; padding-inline-start: 22px; }
+.picker-pop .pkids label { padding: 3px 0; }
+.picker-pop .row { display: flex; align-items: center; gap: 6px; }
+.picker-pop .grow { flex: 1; }
+.picker-pop .caption { max-width: 400px; white-space: normal; }
+.picker-pop .langs-list { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
+.picker-pop button.qlink { text-align: start; }

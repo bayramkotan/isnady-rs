@@ -25,6 +25,14 @@ pub struct SearchQuery {
     pub whole_words: bool,
     pub collections: Vec<String>,
     pub languages: Vec<String>,
+    /// grade codes (grades::filter_codes); empty = every grade
+    pub grades: Vec<String>,
+    /// with grades: each grade the hadith was given among those chosen
+    pub every_grader: bool,
+    /// with grades: al-Bukhari's and Muslim's own hadith count as sahih
+    pub sahihayn: bool,
+    /// chapter ids (work_nodes): only the hadith in them and in the chapters under them
+    pub chapters: Vec<i64>,
     pub limit: usize,
     pub offset: usize,
 }
@@ -37,6 +45,10 @@ impl SearchQuery {
             whole_words: false,
             collections: vec![],
             languages: vec![],
+            grades: vec![],
+            every_grader: false,
+            sahihayn: true,
+            chapters: vec![],
             limit: 25,
             offset: 0,
         }
@@ -74,6 +86,8 @@ pub struct SearchPage {
     /// a word as typed → the spellings found for it (wildcards, near spellings), in the order found
     pub spellings: Vec<(String, Vec<String>)>,
     pub hadith_ids: Vec<i64>,
+    /// with grades or chapters chosen: how many the words found in all (GR-FLT); else the total
+    pub before_grades: usize,
 }
 
 #[derive(Debug)]
@@ -516,6 +530,7 @@ pub fn search(conn: &Connection, query: &SearchQuery) -> Result<SearchPage, Sear
             elapsed_ms: 0,
             spellings: vec![],
             hadith_ids: vec![],
+            before_grades: 0,
         });
     }
     if !index_ready(conn) {
@@ -525,7 +540,8 @@ pub fn search(conn: &Connection, query: &SearchQuery) -> Result<SearchPage, Sear
     let (mut current, spellings) = spell(&vocab, &typed, &query.mode, "");
     let mut page = search_terms(conn, query, &current, used_index, started, spellings)?;
     for near in ["unknown", "all"] {
-        if page.total > 0 {
+        if page.total > 0 || page.before_grades > 0 {
+            // found, only not of the grades chosen: no other spellings
             break;
         }
         let (near_terms, near_spellings) = spell(&vocab, &typed, &query.mode, near);
@@ -630,8 +646,11 @@ fn search_terms(
     let rows = stmt.query_map(params_from_iter(params.iter()), |r| {
         Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
     })?;
+    // the exact check, in the hadith's order; the grades and the chapter chosen (GR-FLT, SRCH-SEC1)
+    let allowed = grade_filter(conn, query)?;
     let mut hadith_ids = vec![];
     let mut seen = HashSet::new();
+    let mut before = 0;
     for row in rows {
         let (hid, norm) = row?;
         if seen.contains(&hid) {
@@ -639,7 +658,10 @@ fn search_terms(
         }
         if text_matches(&norm, terms, &query.mode, query.whole_words) {
             seen.insert(hid);
-            hadith_ids.push(hid);
+            before += 1;
+            if allowed.as_ref().map_or(true, |a| a.contains(&hid)) {
+                hadith_ids.push(hid);
+            }
         }
     }
     let total = hadith_ids.len();
@@ -680,7 +702,32 @@ fn search_terms(
         elapsed_ms: started.elapsed().as_millis(),
         spellings: kept,
         hadith_ids,
+        before_grades: if allowed.is_some() { before } else { total },
     })
+}
+
+/// The hadith the grades and the chapters chosen allow, or None when neither was chosen (`search.grade_filter`).
+pub fn grade_filter(
+    conn: &Connection,
+    query: &SearchQuery,
+) -> rusqlite::Result<Option<HashSet<i64>>> {
+    let mut allowed: Option<HashSet<i64>> = None;
+    if !query.grades.is_empty() {
+        allowed = Some(crate::grades::allowed_ids(
+            conn,
+            &query.grades,
+            query.every_grader,
+            query.sahihayn,
+        )?);
+    }
+    if !query.chapters.is_empty() {
+        let inside = crate::works::hadith_under(conn, &query.chapters)?;
+        allowed = Some(match allowed {
+            None => inside,
+            Some(a) => a.intersection(&inside).copied().collect(),
+        });
+    }
+    Ok(allowed)
 }
 
 /// A hadith with its texts (the words found marked) and its grades.
@@ -815,6 +862,35 @@ pub fn add_recent(text: &str, kind: &str) {
     }
     kept.truncate(RECENT_LIMIT);
     crate::config::state_set(RECENT_KEY, Value::Array(kept));
+}
+
+/// The recent searches, the newest first: (text, kind) (`recent.items`).
+pub fn recent_items() -> Vec<(String, String)> {
+    let raw = crate::config::state_get(RECENT_KEY)
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default();
+    raw.iter()
+        .filter_map(|r| {
+            let text = r.get("text")?.as_str()?.trim().to_string();
+            if text.is_empty() {
+                return None;
+            }
+            let kind = r
+                .get("kind")
+                .and_then(|k| k.as_str())
+                .filter(|k| ["hadith", "narrators", "scholars"].contains(k))
+                .unwrap_or("hadith");
+            Some((text, kind.to_string()))
+        })
+        .take(RECENT_LIMIT)
+        .collect()
+}
+
+/// Forget every recent search; how many there were (`recent.clear`).
+pub fn clear_recent() -> usize {
+    let n = recent_items().len();
+    crate::config::state_set(RECENT_KEY, serde_json::Value::Array(vec![]));
+    n
 }
 
 #[cfg(test)]

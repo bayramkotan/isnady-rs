@@ -3,7 +3,9 @@
 //! the Python `iy`; PARITY.md lists them.
 
 use clap::{Parser, Subcommand};
-use isnady_core::{db, isnad, narrators, paths, people, py, readmarks, search, works, VERSION};
+use isnady_core::{
+    db, grades, isnad, narrators, paths, people, py, readmarks, search, works, VERSION,
+};
 use std::collections::HashMap;
 use std::process::ExitCode;
 
@@ -135,11 +137,33 @@ struct SearchArgs {
     /// Also show texts that did not match
     #[arg(long)]
     all_texts: bool,
-    /// (not ported yet: the grades filter — use iy search --grade)
-    #[arg(long = "grade")]
+    /// The last 20 searches, the newest first (the same list as the app)
+    #[arg(long)]
+    recent: bool,
+    /// Forget the recent searches
+    #[arg(long)]
+    clear_recent: bool,
+    /// What to search: hadith text (default), narrators of both traditions by name, or scholars
+    #[arg(long = "in", default_value = "hadith", value_parser = ["hadith", "narrators", "scholars"])]
+    kind: String,
+    /// With --in narrators: only the Sunni (Taqrib) or the Shia (al-Najashi) narrators
+    #[arg(long, value_parser = ["sunni", "shia"])]
+    tradition: Option<String>,
+    /// Only hadith of this grade (repeatable: --grade sahih --grade hasan). Sunni books: sahih, hasan, daif,
+    /// very-weak, fabricated, ungraded. Shia books, in their own scale: imami-sahih, imami-hasan, muwaththaq,
+    /// imami-daif, imami-ungraded. A hadith passes when one of its graders gave a grade chosen
+    #[arg(long = "grade", value_name = "GRADE", value_parser = clap::builder::PossibleValuesParser::new(grades::filter_codes()))]
     grade: Vec<String>,
-    /// (not ported yet: the chapters filter — use iy search --chapter)
-    #[arg(long = "chapter")]
+    /// With --grade: only when every grade the hadith was given is among those chosen
+    #[arg(long)]
+    every_grader: bool,
+    /// With --grade sahih: leave out the hadith of al-Bukhari and Muslim, which no grader grades (by default they
+    /// count as sahih: by their compiler's condition and the community's acceptance of the two books)
+    #[arg(long)]
+    no_sahihayn: bool,
+    /// Only in this chapter of a book and the chapters under it, by its number or the start of its title:
+    /// --chapter bukhari:3, --chapter "bukhari:Knowledge" (repeatable)
+    #[arg(long = "chapter", value_name = "BOOK:CHAPTER")]
     chapter: Vec<String>,
 }
 
@@ -249,25 +273,65 @@ fn sources() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn search_cmd(a: SearchArgs) -> ExitCode {
-    if !a.grade.is_empty() {
-        return not_yet("The grades filter (--grade)", "iy search --grade sahih ...");
+/// --chapter BOOK:CHAPTER → (book, chapter), or None after saying which was not found (`cli._chapters`).
+fn chapters_given(conn: &db::Connection, given: &[String]) -> Option<Vec<(String, works::Node)>> {
+    let mut out = vec![];
+    for item in given {
+        let (book, label) = item.split_once(':').unwrap_or((item.as_str(), ""));
+        let found = if label.trim().is_empty() {
+            None
+        } else {
+            works::chapter_named(conn, book.trim(), label.trim(), "en")
+                .ok()
+                .flatten()
+        };
+        match found {
+            Some(node) => out.push((book.trim().to_string(), node)),
+            None => {
+                eprintln!("No chapter '{label}' in '{book}'. See: iy book {book}");
+                return None;
+            }
+        }
     }
-    if !a.chapter.is_empty() {
+    Some(out)
+}
+
+fn search_cmd(a: SearchArgs) -> ExitCode {
+    if a.clear_recent {
+        println!("Forgot {} recent searches.", search::clear_recent());
+        return ExitCode::SUCCESS;
+    }
+    if a.recent || a.words.is_empty() {
+        let rows = search::recent_items();
+        if rows.is_empty() {
+            if a.recent {
+                println!("No recent searches.");
+                return ExitCode::SUCCESS;
+            }
+            println!("Give the words to search: iy search niyet");
+            return ExitCode::from(2);
+        }
+        for (i, (text, kind)) in rows.iter().enumerate() {
+            let in_kind = if kind == "hadith" {
+                String::new()
+            } else {
+                format!("   (in {kind})")
+            };
+            println!("{:>3}. {text}{in_kind}", i + 1);
+        }
+        return ExitCode::SUCCESS;
+    }
+    let text = a.words.join(" ");
+    search::add_recent(&text, &a.kind);
+    if a.kind != "hadith" {
         return not_yet(
-            "The chapters filter (--chapter)",
-            "iy search --chapter BOOK:CHAPTER ...",
+            &format!("Searching the {}", a.kind),
+            &format!("iy search --in {} ...", a.kind),
         );
     }
     if a.mode == "meaning" {
         return not_yet("Search by meaning", "iy search --mode meaning ...");
     }
-    if a.words.is_empty() {
-        eprintln!("Give the words to search: iy-rs search niyet");
-        return ExitCode::from(2);
-    }
-    let text = a.words.join(" ");
-    search::add_recent(&text, "hadith");
     let conn = match open() {
         Ok(c) => c,
         Err(code) => return code,
@@ -279,6 +343,19 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
     q.languages = a.language.clone();
     q.limit = a.limit;
     q.offset = a.offset;
+    q.grades = a.grade.clone();
+    q.every_grader = a.every_grader;
+    q.sahihayn = !a.no_sahihayn;
+    let Some(chapters) = chapters_given(&conn, &a.chapter) else {
+        return ExitCode::from(1);
+    };
+    q.chapters = chapters.iter().map(|(_, n)| n.id).collect();
+    if !chapters.is_empty() && q.collections.is_empty() {
+        let mut keys: Vec<String> = chapters.iter().map(|(b, _)| b.clone()).collect();
+        keys.sort();
+        keys.dedup();
+        q.collections = keys;
+    }
     let page = match search::search(&conn, &q) {
         Ok(p) => p,
         Err(e) => {
@@ -296,6 +373,22 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
             " (no FTS5 index available; slower scan)"
         }
     );
+    for (book, c) in &chapters {
+        let label = c
+            .label
+            .as_deref()
+            .filter(|l| !l.is_empty())
+            .map(|l| format!("{l}. "))
+            .unwrap_or_default();
+        println!("in: {book} › {label}{}", c.title);
+    }
+    if !q.grades.is_empty() {
+        println!(
+            "grades: {} — {} found by the words in all",
+            grades::describe_choice(&q.grades, q.every_grader, &|s| s.to_string()),
+            page.before_grades
+        );
+    }
     if !page.spellings.is_empty() {
         let text: Vec<String> = page
             .spellings
@@ -316,6 +409,14 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
         if !r.grades.is_empty() {
             let g: Vec<String> = r.grades.iter().map(|(g, v)| format!("{g}: {v}")).collect();
             println!("  grades: {}", g.join("; "));
+        } else if !q.grades.is_empty()
+            && q.sahihayn
+            && ["bukhari", "muslim"].contains(&r.collection_key.as_str())
+        {
+            println!(
+                "  sahih: in the Sahihayn — by the compiler's condition and the community's acceptance, not a \
+                 grader's grade"
+            );
         }
         for t in &r.texts {
             if !t.matched && !a.all_texts {
