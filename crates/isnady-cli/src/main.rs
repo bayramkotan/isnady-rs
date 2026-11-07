@@ -4,8 +4,8 @@
 
 use clap::{Parser, Subcommand};
 use isnady_core::{
-    db, grades, i18n, isnad, narrators, paths, people, py, readmarks, scholars, search, tables,
-    works, VERSION,
+    db, grades, i18n, isnad, lives, narrators, paths, people, py, readmarks, scholars, search,
+    tables, works, VERSION,
 };
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -43,6 +43,27 @@ enum Command {
     Book(BookArgs),
     /// Look up a narrator: verdict, rank, tabaqa, death, books
     Narrator(NarratorArgs),
+    /// The life of a Companion, a narrator or a scholar, in English, Turkish or Arabic
+    Life(LifeArgs),
+}
+
+#[derive(clap::Args)]
+struct LifeArgs {
+    /// Any part of the name, in Arabic or Latin letters
+    #[arg(required = true)]
+    name: Vec<String>,
+    /// The language (default: the interface language)
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// Look only among the narrators of one tradition
+    #[arg(long, value_parser = ["sunni", "shia"])]
+    tradition: Option<String>,
+    /// How many people to show
+    #[arg(long, default_value_t = 1)]
+    limit: usize,
+    /// Also print his entry in the classical work the life is summarised from (al-Dhahabi's Siyar)
+    #[arg(long)]
+    source: bool,
 }
 
 #[derive(clap::Args)]
@@ -180,7 +201,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs narrator NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -201,7 +222,110 @@ fn main() -> ExitCode {
         Some(Command::Chain(a)) => chain_cmd(a),
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
+        Some(Command::Life(a)) => life_cmd(a),
     }
+}
+
+/// iy-rs life NAME: the life of a Companion, a narrator or a scholar (BIO2), as `iy life` prints it.
+fn life_cmd(a: LifeArgs) -> ExitCode {
+    let ui = i18n::ui_language();
+    let lang = a.lang.clone().unwrap_or_else(|| ui.clone());
+    let langs = narrators::Langs {
+        reading: &ui,
+        words: &lang,
+    };
+    let text = a.name.join(" ");
+    let mut found: Vec<(lives::Life, bool)> = lives::find(&text)
+        .into_iter()
+        .map(|w| (lives::view(w, &lang), true))
+        .collect();
+    if found.is_empty() {
+        let conn = match open() {
+            Ok(c) => c,
+            Err(code) => return code,
+        };
+        let rows = match narrators::find(&conn, &text, a.tradition.as_deref(), langs) {
+            Ok((rows, _)) => rows,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        };
+        for r in rows.iter().take(a.limit) {
+            if let (Some(info), written) = lives::life(&conn, r.id, langs) {
+                found.push((info, written));
+            }
+        }
+    }
+    if found.is_empty() {
+        eprintln!("No one named '{text}' found.");
+        return ExitCode::from(1);
+    }
+    let width = 100;
+    for (info, written) in found.iter().take(a.limit) {
+        println!(
+            "\n{}  —  {}{}",
+            info.title,
+            info.kind,
+            if *written { "" } else { "  (from the data)" }
+        );
+        for (label, value) in &info.facts {
+            println!(
+                "{}",
+                py::fill_with(value, width, &format!("  {label}: "), "    ")
+            );
+        }
+        for paragraph in &info.paragraphs {
+            println!();
+            println!("{}", py::fill(paragraph, width, "  "));
+        }
+        if !info.sources.is_empty() {
+            println!();
+            println!(
+                "{}",
+                py::fill_with(
+                    &info.sources.join("; "),
+                    width,
+                    &format!("  {}: ", i18n::t(&lang, "Sources", &[])),
+                    "    "
+                )
+            );
+        }
+        for r in &info.read {
+            match (&r.url, &r.book) {
+                (Some(url), _) => println!("  → {}: {url}", r.text),
+                (None, book) => println!(
+                    "  → {} (iy book {})",
+                    r.text,
+                    book.as_deref().unwrap_or("None")
+                ),
+            }
+        }
+        for e in &info.entries {
+            println!(
+                "\n  {}: {}, {}",
+                i18n::t(&lang, "In the source", &[]),
+                e.title,
+                e.place
+            );
+            if a.source {
+                if !lives::available(&e.work) {
+                    not_yet(
+                        &format!("Downloading {}", e.title),
+                        &format!("iy life {text} --source (once; then iy-rs reads it too)"),
+                    );
+                    continue;
+                }
+                if let Some((heading, body)) = lives::entry(&e.work, e.volume, e.number) {
+                    println!("  {heading}\n");
+                    println!("{body}");
+                }
+            } else {
+                println!("  (iy life ... --source prints it in the author's own words)");
+            }
+        }
+    }
+    ExitCode::SUCCESS
 }
 
 fn version() -> ExitCode {

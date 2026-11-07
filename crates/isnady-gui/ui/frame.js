@@ -132,7 +132,7 @@ async function openBookPlace(key, chapter) {
 async function openNarratorPlace(id) {
   NARR.id = id;
   show("narrators");
-  await openNarrator(id);
+  await selectNarrator(id);
 }
 
 // ------------------------------------------------------------------ menus (QMenuBar, QMenu)

@@ -214,6 +214,14 @@ function comboPopup(button, items, current, pick) {
     row.classList.add("on");
   };
   document.body.appendChild(el);
+  // a QComboBox shows ten of its items at a time, the others under a scroll bar (maxVisibleItems)
+  const rows = el.querySelectorAll(".mi");
+  if (rows.length > 10) {
+    const cs = getComputedStyle(el);
+    const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    el.style.maxHeight = (rows[10].offsetTop - rows[0].offsetTop + pad) + "px";
+    el.style.overflowY = "auto";
+  }
   placeMenu(el, { x: isRtl() ? r.right : r.left, y: r.bottom + 2, top: r.top, flipUp: true, alignEnd: isRtl() });
   MENU.stack.push({ el, items: [], index: -1, item: null });
 }
@@ -802,11 +810,10 @@ function scholarCard(s) {
 
 // a narrator opened on the Narrators page, in his own tradition (open_person)
 async function openPerson(id, road) {
-  NARR.road = road === "shia" ? "shia" : "sunni";
   NARR.id = id;
-  if (NARR.loaded) await loadNarrators();
   show("narrators");
-  await openNarrator(id);
+  await selectNarrator(id, road === "shia" ? "shia" : "sunni");
+  record(["narrator", id]);
 }
 
 // ------------------------------------------------------------------ a hadith (ResultCard)

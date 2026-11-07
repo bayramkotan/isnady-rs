@@ -76,6 +76,11 @@ pub fn opt(v: Option<i64>) -> String {
 /// `textwrap.fill(text, width, initial_indent=indent, subsequent_indent=indent)` with Python's defaults
 /// (break_long_words, break_on_hyphens, drop_whitespace).
 pub fn fill(text: &str, width: usize, indent: &str) -> String {
+    fill_with(text, width, indent, indent)
+}
+
+/// `textwrap.fill(text, width, initial_indent=first, subsequent_indent=rest)`.
+pub fn fill_with(text: &str, width: usize, first: &str, rest: &str) -> String {
     use std::sync::OnceLock;
     static SEP: OnceLock<fancy_regex::Regex> = OnceLock::new();
     // Python's TextWrapper.wordsep_re, word for word
@@ -105,6 +110,7 @@ pub fn fill(text: &str, width: usize, indent: &str) -> String {
     while !chunks.is_empty() {
         let mut cur: Vec<String> = Vec::new();
         let mut cur_len = 0usize;
+        let indent = if lines.is_empty() { first } else { rest };
         let w = width.saturating_sub(width_of(indent));
         if chunks.last().is_some_and(|c| c.trim().is_empty()) && !lines.is_empty() {
             chunks.pop();
@@ -160,5 +166,9 @@ mod tests {
         assert!(!isalpha('\u{0307}'));
         assert!(isalpha('ş'));
         assert_eq!(fill("aaa bbb ccc", 9, "  "), "  aaa bbb\n  ccc");
+        assert_eq!(
+            fill_with("aaa bbb ccc", 10, "  x: ", "    "),
+            "  x: aaa\n    bbb\n    ccc"
+        );
     }
 }

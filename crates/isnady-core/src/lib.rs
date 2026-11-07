@@ -12,6 +12,7 @@ pub mod difflib;
 pub mod grades;
 pub mod i18n;
 pub mod isnad;
+pub mod lives;
 pub mod name_parts;
 pub mod names;
 pub mod narrators;

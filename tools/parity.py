@@ -67,6 +67,17 @@ CASES = [
     ["search", "--in", "scholars", "Sünen"],
     ["search", "--in", "scholars", "Albnai"],
     ["search", "--in", "scholars", "qqqq"],
+    # the lives (BIO2, RS-WIN3a): written for isnady, or read from the data; in English, Turkish, Arabic
+    ["life", "Abu Hurayra"],
+    ["life", "Ebu Hureyre", "--lang", "tr"],
+    ["life", "muhammad"],
+    ["life", "أبو بكر", "--lang", "ar"],
+    ["life", "Bayram"],
+    ["life", "Bayram", "--lang", "tr"],
+    ["life", "Abu Bakr", "--limit", "3"],
+    ["life", "Zurara", "--tradition", "shia", "--lang", "tr"],
+    ["life", "Aisha", "--limit", "2"],
+    ["life", "qqqzzz"],
     # the chains (RS2): read by the Python isnady, shown by both; road A with Ibn Hajar's Taqrib, road B with al-Najashi
     ["chain", "nawawi"],
     ["chain", "nawawi", "1"],

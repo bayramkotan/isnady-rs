@@ -88,6 +88,7 @@ pub struct Famous {
 #[derive(Deserialize)]
 pub struct NarratorTables {
     pub book_marks: HashMap<String, String>,
+    pub collection_marks: HashMap<String, Vec<String>>,
     pub madhhabs: HashMap<String, String>,
     pub famous: Famous,
 }

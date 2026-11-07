@@ -5,6 +5,26 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The Narrators page as the Python window has it (RS-WIN3a).** Built again from gui/narrators_page.py, name_card.py
+  and life_card.py and compared with the Python window side by side. Left: All / Sunni / Shia, the overview of each
+  road (how many narrators from which works, how many names of its chains are identified), the search as you type with
+  the famous ones by any spelling first, ★ Famous Companions (Famous narrators on road B) group by group, the filters
+  under their titles — generation, Ibn Hajar's rank or the Imami assessment, the six books by Ibn Hajar's marks —
+  coloured when chosen, Clear filters, the list 200 at a time and the next ones at its end, its right-click menu (Open,
+  his family, his line of learning, his entry in the rijal work, the bookmark, Copy). Right: the name card (the name he
+  is known by and its Arabic, his full name, how he is known, the parts of his name and what they mean, ☆), the
+  Genealogies links, his life — written for isnady, or read from the rijal work and the chains — with its facts, its
+  teachers and students looked for among the narrators, the classical entry in its author's words when the work is
+  downloaded, the sources; what the critics say (the entry as the critic wrote it, every verdict with its rank and the
+  glossary on the hover, tabaqa, death, how each road judges, Open his entry in the book, Ibn Hajar's marks opening
+  their books), teachers and students in the imported chains with the compilers, and the hadith he is in, each opening
+  its chain. A narrator opened from Search or a chain is shown in his own tradition. A drop-down shows ten items at a
+  time, as Qt does.
+- **`iy-rs life NAME`** (`--lang`, `--tradition`, `--limit`, `--source`), word for word as `iy life`. New in the core:
+  `lives.rs` (the written lives, carried in data/lives.json by gen_tables; the lives read from the data; the classical
+  entries; al-Dhahabi's huffaz), `narrators::browse_by` (the page's filters), `overview`, `name_view`,
+  `py::fill_with`. 10 more parity cases (102 in all).
+
 - **Search → Narrators and Scholars, as the Python window has them (RS-WIN2b, S3).** The drop-down's Narrators finds
   the narrators of both traditions, or of one (Tradition), by any spelling of any part of the name — Arabic, English,
   Turkish — the closest first, as `narrators.find` orders them: a famous Companion by any spelling ("Ebubekir"), a

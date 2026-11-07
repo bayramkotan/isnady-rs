@@ -4501,6 +4501,37 @@
    "مد": "Abu Dawud, al-Marasil",
    "ي": "al-Bukhari, Raf' al-Yadayn"
   },
+  "collection_marks": {
+   "abudawud": [
+    "4",
+    "د",
+    "ع"
+   ],
+   "bukhari": [
+    "خ",
+    "خت",
+    "ع"
+   ],
+   "ibnmajah": [
+    "4",
+    "ع",
+    "ق"
+   ],
+   "muslim": [
+    "ع",
+    "م"
+   ],
+   "nasai": [
+    "4",
+    "س",
+    "ع"
+   ],
+   "tirmidhi": [
+    "4",
+    "ت",
+    "ع"
+   ]
+  },
   "famous": {
    "groups": [
     [

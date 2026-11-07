@@ -6,8 +6,8 @@
 
 use isnady_core::narrators::Person;
 use isnady_core::{
-    bookmarks, books, config, db, i18n, isnad, names, narrators, paths, people, quran, readmarks,
-    scholars, search, tables, works, VERSION,
+    bookmarks, books, config, db, i18n, isnad, lives, names, narrators, paths, people, py, quran,
+    readmarks, scholars, search, tables, works, VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -983,141 +983,287 @@ fn read_chapter(
     })
 }
 
-fn ui_reading_lang() -> &'static str {
-    if i18n::ui_language() == "tr" {
-        "tr"
-    } else {
-        "en"
+/// The languages the Narrators page reads in: names and words in the interface's.
+fn page_langs(lang: &str) -> narrators::Langs<'_> {
+    narrators::Langs {
+        reading: lang,
+        words: lang,
     }
 }
 
-fn person_row(conn: &db::Connection, pid: i64, titles: &HashMap<i64, String>) -> Option<Value> {
-    let p = narrators::describe(conn, pid)?;
-    let v = p.verdicts.first();
-    let n: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM isnad_links WHERE person_id = ?",
-            [pid],
-            |r| r.get(0),
-        )
-        .unwrap_or(0);
-    let reading = if p.known_arabic.is_empty() {
-        String::new()
-    } else {
-        isnad::name_reading(&p.known_arabic, ui_reading_lang()).0
-    };
-    Some(json!({
-        "id": pid, "title": titles.get(&pid), "arabic": p.display_name, "reading": reading,
-        "tabaqa": p.tabaqa, "death": p.death_year_ah, "in_chains": n,
-        "rank": v.and_then(|v| v.rank), "shia": v.map(|v| v.rank_scheme.as_deref() == Some("shia")),
-    }))
+/// The page's filters as the window sends them: a generation, a rank (-1: no judgment), a book.
+fn filters_of(tabaqa: Option<i64>, rank: Option<i64>, book: Option<String>) -> narrators::Filters {
+    narrators::Filters {
+        tabaqa,
+        rank,
+        book: book.filter(|b| !b.is_empty()),
+    }
 }
 
-/// The famous ones, group by group, as the Narrators page opens.
+/// Narrators: the overview at the top of the list (narrators_page.refresh): per tradition shown, how many narrators
+/// from which works, how many names of its chains are identified.
 #[tauri::command]
-fn famous(state: tauri::State<Data>, tradition: String) -> Result<Value, String> {
+fn narrators_overview(state: tauri::State<Data>, tradition: String) -> Result<Value, String> {
+    with_db(&state, |conn| {
+        let roads: Vec<&str> = if tradition.is_empty() {
+            vec!["sunni", "shia"]
+        } else {
+            vec![tradition.as_str()]
+        };
+        let mut out = Vec::new();
+        for road in roads {
+            let (persons, links, identified, works) =
+                narrators::overview(conn, road).map_err(err)?;
+            out.push(
+                json!({"road": road, "persons": persons, "links": links, "identified": identified,
+                            "works": works}),
+            );
+        }
+        Ok(json!({"roads": out}))
+    })
+}
+
+/// Narrators: the list (narrators_page._populate / _near_end): the narrators of a tradition (or both) with the
+/// filters, most often in the chains first, or the words typed with the famous ones named any way people write them
+/// first; offset > 0: the next ones (NR-B1).
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+fn narrators_list(
+    state: tauri::State<Data>,
+    text: String,
+    tradition: String,
+    tabaqa: Option<i64>,
+    rank: Option<i64>,
+    book: Option<String>,
+    offset: usize,
+    limit: usize,
+) -> Result<Value, String> {
     let lang = i18n::ui_language();
     with_db(&state, |conn| {
+        let langs = page_langs(&lang);
+        let road = Some(tradition.as_str()).filter(|t| !t.is_empty());
+        let filters = filters_of(tabaqa, rank, book);
+        let (mut rows, mut total) = narrators::browse_by(
+            conn, &text, &filters, road, None, None, limit, offset, langs,
+        )
+        .map_err(err)?;
+        if offset == 0 && !text.trim().is_empty() {
+            let first = people::famous_ids(conn, &people::famous_named(&text, road));
+            if !first.is_empty() {
+                let (mut ahead, _n) = narrators::browse_by(
+                    conn,
+                    "",
+                    &filters,
+                    road,
+                    Some(&first),
+                    None,
+                    first.len(),
+                    0,
+                    langs,
+                )
+                .map_err(err)?;
+                let place: HashMap<i64, usize> =
+                    first.iter().enumerate().map(|(i, p)| (*p, i)).collect();
+                ahead.sort_by_key(|r| place.get(&r.id).copied().unwrap_or(first.len()));
+                let listed: std::collections::HashSet<i64> = rows.iter().map(|r| r.id).collect();
+                total += ahead.iter().filter(|r| !listed.contains(&r.id)).count();
+                let known: std::collections::HashSet<i64> = ahead.iter().map(|r| r.id).collect();
+                rows.retain(|r| !known.contains(&r.id));
+                ahead.extend(rows);
+                rows = ahead;
+            }
+        }
         let titles = people::famous_titles(conn, &lang);
-        let road = if tradition == "all" {
-            None
-        } else {
-            Some(tradition.as_str())
-        };
-        let groups: Vec<Value> = people::famous_groups(road)
-            .into_iter()
-            .map(|g| {
-                let ids = people::famous_ids(conn, &g.keys);
-                json!({"id": g.id, "title": g.title, "tradition": g.tradition,
-                       "people": ids.iter().filter_map(|pid| person_row(conn, *pid, &titles)).collect::<Vec<_>>()})
-            })
-            .filter(|g| g["people"].as_array().is_some_and(|a| !a.is_empty()))
-            .collect();
+        for r in rows.iter_mut() {
+            r.famous = titles.get(&r.id).cloned();
+        }
+        Ok(json!({"rows": rows, "total": total}))
+    })
+}
+
+/// Narrators: the famous ones of the tradition shown, group by group (narrators_page._show_famous, FS1).
+#[tauri::command]
+fn narrators_famous(state: tauri::State<Data>, tradition: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let langs = page_langs(&lang);
+        let titles = people::famous_titles(conn, &lang);
+        let road = Some(tradition.as_str()).filter(|t| !t.is_empty());
+        let mut groups = Vec::new();
+        for g in people::famous_groups(road) {
+            let ids = people::famous_ids(conn, &g.keys);
+            if ids.is_empty() {
+                continue;
+            }
+            let (mut rows, _n) = narrators::browse_by(
+                conn,
+                "",
+                &narrators::Filters::default(),
+                Some(g.tradition.as_str()),
+                Some(&ids),
+                None,
+                ids.len(),
+                0,
+                langs,
+            )
+            .map_err(err)?;
+            let place: HashMap<i64, usize> = ids.iter().enumerate().map(|(i, p)| (*p, i)).collect();
+            rows.sort_by_key(|r| place.get(&r.id).copied().unwrap_or(ids.len()));
+            for r in rows.iter_mut() {
+                r.famous = titles.get(&r.id).cloned();
+            }
+            groups.push(json!({"title": g.title, "rows": rows}));
+        }
         Ok(json!({"groups": groups}))
     })
 }
 
-/// Narrators whose names contain the words typed (Arabic or Latin letters), the famous ones first.
+/// A narrator's names for the list's menu and the bookmark (bookmarks.narrator_ref): his key, the name he is
+/// known by (read, else Arabic), his Arabic, the entry's heading.
+fn narrator_ref(conn: &db::Connection, id: i64, lang: &str) -> Option<Value> {
+    let (key, name_ar, road): (String, String, Option<String>) = conn
+        .query_row(
+            "SELECT key, name_ar, tradition FROM persons WHERE id = ?",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .ok()?;
+    let (reading, arabic) = lives::reading(conn, id, &name_ar, page_langs(lang));
+    Some(
+        json!({"key": key, "title": if reading.is_empty() { arabic.clone() } else { reading.clone() },
+                "reading": reading, "arabic": arabic, "name_ar": name_ar,
+                "tradition": road.unwrap_or_else(|| "sunni".into()),
+                "marked": bookmarks::is_marked("narrator", &key)}),
+    )
+}
+
+/// Narrators: the names of one narrator, for the list's right-click menu.
 #[tauri::command]
-fn find_narrators(
-    state: tauri::State<Data>,
-    text: String,
-    tradition: String,
-) -> Result<Value, String> {
+fn narrator_names(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
     let lang = i18n::ui_language();
     with_db(&state, |conn| {
-        let road = if tradition == "all" {
-            None
-        } else {
-            Some(tradition.as_str())
-        };
-        let mut found: Vec<i64> = people::search_persons(conn, &text, 60)
-            .map_err(err)?
-            .into_iter()
-            .map(|f| f.0)
-            .collect();
-        let first = people::famous_ids(conn, &people::famous_named(&text, road));
-        if !first.is_empty() {
-            let mut merged = first.clone();
-            merged.extend(found.into_iter().filter(|f| !first.contains(f)));
-            found = merged;
-        }
-        if let Some(r) = road {
-            found.retain(|pid| {
-                conn.query_row(
-                    "SELECT COALESCE(tradition, 'sunni') FROM persons WHERE id = ?",
-                    [*pid],
-                    |x| x.get::<_, String>(0),
-                )
-                .map(|t| t == r)
-                .unwrap_or(true)
-            });
-        }
-        let titles = people::famous_titles(conn, &lang);
-        Ok(
-            json!({"people": found.iter().filter_map(|pid| person_row(conn, *pid, &titles)).collect::<Vec<_>>()}),
-        )
+        Ok(narrator_ref(conn, id, &lang).unwrap_or(Value::Null))
     })
 }
 
-/// One narrator: his names, every verdict, his generation, his books, his teachers and students, his hadith.
+/// Narrators: everything the right side shows of one narrator (narrators_page.show_person): his name laid out, his
+/// life, what the critics say, Ibn Hajar's marks, teachers and students, the hadith.
 #[tauri::command]
-fn narrator(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
+fn narrator_page(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
     let lang = i18n::ui_language();
     with_db(&state, |conn| {
+        let langs = page_langs(&lang);
         let Some(d) = people::describe(conn, id) else {
             return Ok(json!({"error": "no_person"}));
         };
-        let titles = people::famous_titles(conn, &lang);
+        let view = narrators::name_view(conn, id, &d.person.name_ar, langs);
+        let (life, written) = lives::life(conn, id, langs);
+        let own = lives::of_person(conn, id).and_then(|l| l["id"].as_str().map(String::from));
+        let have: Vec<String> = conn
+            .prepare("SELECT key FROM collections")
+            .and_then(|mut st| st.query_map([], |r| r.get::<_, String>(0))?.collect())
+            .unwrap_or_default();
+        let marks_of = &tables::get().narrators.collection_marks;
+        let marks: Vec<Value> = d
+            .marks
+            .iter()
+            .map(|(mark, meaning)| {
+                let books: Vec<&String> = marks_of
+                    .iter()
+                    .filter(|(_k, m)| m.contains(mark) && mark != "ع" && mark != "4")
+                    .map(|(k, _m)| k)
+                    .collect();
+                let book = (books.len() == 1 && have.contains(books[0])).then(|| books[0].clone());
+                json!({"mark": mark, "meaning": i18n::t(&lang, meaning, &[]), "book": book})
+            })
+            .collect();
         let rel = people::relations(conn, id, 12).map_err(err)?;
-        let (hadith, total) = people::hadiths_of(conn, id, 60, &lang).map_err(err)?;
-        let reading = if d.person.known_arabic.is_empty() {
-            String::new()
-        } else {
-            isnad::name_reading(&d.person.known_arabic, ui_reading_lang()).0
-        };
-        let rl = |v: &Vec<people::Related>| -> Vec<Value> {
+        let side = |v: &Vec<people::Related>| -> Vec<Value> {
             v.iter()
-                .map(|r| json!({"id": r.id, "name": r.name, "count": r.count}))
+                .map(|r| {
+                    let (reading, _ar) = lives::reading(conn, r.id, &r.name, langs);
+                    let short = if reading.is_empty() {
+                        let mut parts: Vec<&str> = py::words(&r.name).into_iter().take(5).collect();
+                        while parts
+                            .last()
+                            .is_some_and(|w| ["بن", "بنت", "ابن", "أبو", "أبي", "أم"].contains(w))
+                        {
+                            parts.pop();
+                        }
+                        parts.join(" ")
+                    } else {
+                        reading
+                    };
+                    json!({"id": r.id, "name": r.name, "short": short, "count": r.count})
+                })
                 .collect()
         };
+        let (hadith, total) = people::hadiths_of(conn, id, 60, &lang).map_err(err)?;
         Ok(json!({
-            "id": id, "title": titles.get(&id), "arabic": d.person.display_name, "known_arabic": d.person.known_arabic,
-            "reading": reading, "full_reading": names::latin(&d.person.display_name, ui_reading_lang(), 8),
-            "tradition": d.tradition, "source": d.source,
-            "tabaqa": d.person.tabaqa, "tabaqa_label": d.tabaqa_label, "death": d.person.death_year_ah,
-            "death_note": d.death_year_note, "other_names": d.other_names,
+            "id": id, "view": view, "ref": narrator_ref(conn, id, &lang),
+            "tradition": if d.tradition.is_empty() { "sunni".to_string() } else { d.tradition.clone() },
+            "source": d.source, "name_ar": d.person.name_ar, "display_name": d.person.display_name,
+            "tabaqa": d.person.tabaqa, "tabaqa_label": i18n::t(&lang, &d.tabaqa_label, &[]),
+            "death": d.person.death_year_ah, "death_note": d.death_year_note,
             "verdicts": d.verdicts.iter().map(|v| json!({
-                "critic": v.critic_name, "work": v.work, "phrase": v.phrase, "rank": v.rank,
-                "shia": v.rank_scheme.as_deref() == Some("shia"), "label": v.rank_label, "madhhab": v.madhhab_label,
+                "critic": i18n::t(&lang, &v.critic_name, &[]), "work": v.work, "phrase": v.phrase, "rank": v.rank,
+                "shia": v.rank_scheme.as_deref() == Some("shia"),
+                "label": if v.rank_label.is_empty() { String::new() } else { i18n::t(&lang, &v.rank_label, &[]) },
+                "madhhab": if v.madhhab_label.is_empty() { String::new() } else { i18n::t(&lang, &v.madhhab_label, &[]) },
             })).collect::<Vec<_>>(),
-            "marks": d.marks, "in_chains": d.in_chains,
-            "teachers": rl(&rel.teachers), "students": rl(&rel.students),
-            "compilers": rel.compilers.iter().map(|(b, k, n)| json!({"book": works::book_title(k, b, &lang), "count": n})).collect::<Vec<_>>(),
-            "hadith": hadith.iter().map(|h| json!({"key": h.key, "book": h.book, "number": h.number})).collect::<Vec<_>>(),
+            "marks": marks,
+            "life": life, "written": written,
+            "life_id": own,
+            "teachers": side(&rel.teachers), "students": side(&rel.students),
+            "compilers": rel.compilers.iter().map(|(b, _k, n)| json!({"book": b, "count": n})).collect::<Vec<_>>(),
+            "hadith": hadith.iter().map(|h| json!({"id": h.hadith_id, "key": h.key, "book": h.book, "number": h.number})).collect::<Vec<_>>(),
             "hadith_total": total,
         }))
     })
+}
+
+/// Narrators → "Open his entry in the book" (books_page.show_person): the rijal work and the chapter (in reading
+/// order) that hold his entry.
+#[tauri::command]
+fn person_place(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let chapter: Option<i64> = conn
+            .query_row(
+                "SELECT parent_id FROM work_nodes WHERE person_id = ? AND kind = 'entry' LIMIT 1",
+                [id],
+                |r| r.get(0),
+            )
+            .ok()
+            .flatten();
+        let Some(chapter) = chapter else {
+            return Ok(Value::Null);
+        };
+        let Some(node) = works::node(conn, chapter, &lang) else {
+            return Ok(Value::Null);
+        };
+        let work = works::list_works(conn, &lang)
+            .map_err(err)?
+            .into_iter()
+            .find(|w| w.id == node.work_id);
+        Ok(match work {
+            Some(w) => {
+                let order = works::reading_order(conn, w.id).map_err(err)?;
+                json!({"key": w.key, "index": order.iter().position(|c| *c == chapter).map(|i| i + 1)})
+            }
+            None => Value::Null,
+        })
+    })
+}
+
+/// Narrators: a classical work's entry under a life (SourceEntry): its heading and text when the work is
+/// downloaded, else whether it is and how big it is.
+#[tauri::command]
+fn source_entry(work: String, volume: i64, number: i64) -> Value {
+    match lives::entry(&work, volume, number) {
+        Some((heading, text)) => json!({"heading": heading, "text": text}),
+        None => json!({"available": lives::available(&work), "size_mb": lives::work_size(&work)}),
+    }
 }
 
 /// A number of the book chosen at random, of a hadith whose chain was read.
@@ -1138,9 +1284,13 @@ fn main() {
             shelf,
             contents,
             read_chapter,
-            famous,
-            find_narrators,
-            narrator,
+            narrators_overview,
+            narrators_list,
+            narrators_famous,
+            narrator_names,
+            narrator_page,
+            source_entry,
+            person_place,
             set_setting,
             profiles,
             use_profile,

@@ -104,6 +104,7 @@ def narrators_tables() -> dict:
 
     return {
         "book_marks": rijal.BOOK_MARKS,
+        "collection_marks": {k: sorted(v) for k, v in rijal.COLLECTION_MARKS.items()},
         "madhhabs": shia_rijal.MADHHAB_LABELS,
         "famous": {
             "people": [[p[0], p[1], p[2], p[3], p[4], tradition] for p, tradition in famous._all()],
@@ -268,6 +269,12 @@ def window() -> str:
         "catalog_languages": dict(catalog.LANGUAGE_NAMES),
         # the glossary's words for a grade's group, on the hover of a grade (learn.for_group), in each of its languages
         "grade_terms": {lang: {str(g): learn.for_group(g, lang) for g in learn.GROUP_TERM} for lang in learn.LANGUAGES},
+        # the Narrators page (gui/narrators_page.py): the glossary's words on the hover of a verdict, and the written
+        # trees a written life has its man in (genealogy.LIFE_NODES: "his place in the tree of Quraysh")
+        "narrator_terms": {lang: {k: learn.short(k, lang) for k in ("rank", "thiqa", "mamduh", "muwaththaq",
+                                                                     "daif_narrator", "imami")}
+                           for lang in learn.LANGUAGES},
+        "life_nodes": {k: v[0] for k, v in genealogy.LIFE_NODES.items()},
         "text_scale": [theme.value("TEXT_SCALE_MIN"), theme.value("TEXT_SCALE_MAX"), theme.value("TEXT_SCALE_STEP")],
         "languages": [[code, own, english, rtl, round(i18n.coverage(code), 4)]
                       for code, (own, english, rtl) in i18n.LANGUAGES.items()],
@@ -294,8 +301,37 @@ def window() -> str:
     return json.dumps(out, ensure_ascii=False, indent=1) + "\n"
 
 
+LIVES = os.path.join(HERE, "..", "crates", "isnady-core", "data", "lives.json")
+
+
+def lives() -> str:
+    """The lives written for isnady (core.lives, assets/lives/*.json, in their order), what their kinds, facts and
+    sources are called, which entry of a classical work each is summarised from (core.source_entries,
+    assets/sources/lives.json) and al-Dhahabi's huffaz by their Taqrib key (core.huffaz): what the life card and
+    `iy life` need."""
+    _import()
+    import json as _json
+    from importlib import resources
+
+    from isnady.core import huffaz, lives as core_lives, source_entries
+
+    table = _json.loads(resources.files("isnady.assets").joinpath("sources", "lives.json").read_text(encoding="utf-8"))
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "lives": list(core_lives.written()),
+        "kinds": core_lives.KINDS,
+        "facts": core_lives.FACTS,
+        "sources": core_lives.SOURCES,
+        "entries": table.get("works", {}),
+        "works": {k: {"title": v["title"], "size_mb": v["size_mb"]} for k, v in source_entries.WORKS.items()},
+        "huffaz_work": huffaz.WORK,
+        "huffaz": [[h["taqrib"], h["n"], h["tabaqa"]] for h in huffaz.index() if h["taqrib"]],
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0, sort_keys=True) + "\n"
+
+
 def outputs() -> dict:
-    files = {OUT: text(), BOOKS: books(), WINDOW: window()}
+    files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

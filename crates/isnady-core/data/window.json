@@ -656,6 +656,44 @@
    "0": "موضوع (موضوع): المختلق المكذوب المنسوب إلى النبي ﷺ."
   }
  },
+ "narrator_terms": {
+  "en": {
+   "rank": "rank (martaba) (مرتبة): One of Ibn Hajar's twelve degrees of narrators, from the Companions down to the accused liar.",
+   "thiqa": "thiqa (ثقة): Trustworthy: upright and precise — the narrator of sahih hadith.",
+   "mamduh": "mamduh (ممدوح): In Imami rijal: a narrator praised (jalil, wajh, 'ayn) but not called thiqa — his hadith are hasan.",
+   "muwaththaq": "muwaththaq (موثق): In Imami usage: a hadith whose narrators are trustworthy, one or more of them not Imami.",
+   "daif_narrator": "da'if (narrator) (ضعيف (راوٍ)): A narrator criticised for weak precision — his hadith need support.",
+   "imami": "Imami (إمامي): Of the Twelver Shia; in rijal, a narrator of that creed. Others: Waqifi, Fathi, Zaydi, 'ammi (Sunni)."
+  },
+  "tr": {
+   "rank": "mertebe (مرتبة): İbn Hacer'in, sahâbîlerden yalancılıkla itham edilene kadar on iki ravi derecesinden biri.",
+   "thiqa": "sika (ثقة): Güvenilir: adil ve zabtı tam ravi; sahih hadisin ravisi.",
+   "mamduh": "memdûh (ممدوح): İmâmî ricalde: övülmüş (celîl, vech, ayn) ama sika denmemiş ravi; hadisi hasendir.",
+   "muwaththaq": "muvessak (موثق): İmâmî kullanımda: ravileri güvenilir, bir ya da birkaçı İmâmî olmayan hadis.",
+   "daif_narrator": "zayıf (ravi) (ضعيف (راوٍ)): Zabtı zayıf diye tenkit edilmiş ravi; hadisi desteğe muhtaçtır.",
+   "imami": "İmâmî (إمامي): On iki imam Şîası; ricalde bu mezhepten ravi. Diğerleri: vâkıfî, fethî, zeydî, âmmî (Sünnî)."
+  },
+  "ar": {
+   "rank": "مرتبة (مرتبة): إحدى مراتب الرواة الاثنتي عشرة عند ابن حجر، من الصحابة إلى المتهم بالكذب.",
+   "thiqa": "ثقة (ثقة): ثقة: عدل ضابط، وهو راوي الحديث الصحيح.",
+   "mamduh": "ممدوح (ممدوح): في رجال الإمامية: راوٍ ممدوح (جليل، وجه، عين) لم يُنصّ على وثاقته، وحديثه حسن.",
+   "muwaththaq": "موثق (موثق): في اصطلاح الإمامية: ما كان رواته ثقات وفيهم واحد أو أكثر غير إمامي.",
+   "daif_narrator": "ضعيف (راوٍ) (ضعيف (راوٍ)): راوٍ جُرح بسوء الضبط، فحديثه يحتاج إلى ما يقويه.",
+   "imami": "إمامي (إمامي): من الشيعة الاثني عشرية؛ وفي الرجال: الراوي على هذا المذهب. وغيره: واقفي، فطحي، زيدي، عامي."
+  }
+ },
+ "life_nodes": {
+  "muhammad": "quraysh",
+  "abu-bakr": "quraysh",
+  "umar": "quraysh",
+  "uthman": "quraysh",
+  "ali": "quraysh",
+  "fatima": "quraysh",
+  "hasan-b-ali": "quraysh",
+  "husayn-b-ali": "quraysh",
+  "ibn-abbas": "quraysh",
+  "muawiya": "quraysh"
+ },
  "text_scale": [
   0.8,
   1.6,

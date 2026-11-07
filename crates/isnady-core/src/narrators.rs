@@ -430,6 +430,60 @@ pub struct Row {
     pub famous: Option<String>,
 }
 
+/// The name of a narrator laid out (`describe`'s name_view): the parts, the one he is known by.
+pub fn name_view(
+    conn: &Connection,
+    person_id: i64,
+    name_ar: &str,
+    langs: Langs,
+) -> name_parts::View {
+    let shown = display_name(name_ar);
+    let kunya: Option<String> = conn
+        .query_row("SELECT kunya FROM persons WHERE id = ?", [person_id], |r| {
+            r.get(0)
+        })
+        .optional()
+        .ok()
+        .flatten()
+        .flatten();
+    let parts = name_parts::parse(
+        &shown,
+        kunya.as_deref(),
+        &known_aliases(conn, person_id),
+        Some(name_ar),
+        None,
+    );
+    name_parts::present(&parts, langs.reading, langs.words)
+}
+
+/// The narrators of one tradition, and how many names in the chains of THAT tradition's books are identified
+/// (`narrators.overview`): (persons, links, identified, works).
+pub fn overview(
+    conn: &Connection,
+    tradition: &str,
+) -> rusqlite::Result<(i64, i64, i64, Vec<String>)> {
+    let persons: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM persons WHERE COALESCE(tradition, 'sunni') = ?",
+        [tradition],
+        |r| r.get(0),
+    )?;
+    let (links, identified): (Option<i64>, Option<i64>) = conn.query_row(
+        "SELECT COUNT(*), SUM(l.person_id IS NOT NULL) FROM isnad_links l JOIN isnads i ON i.id = l.isnad_id \
+         JOIN hadiths h ON h.id = i.hadith_id JOIN collections c ON c.id = h.collection_id \
+         WHERE COALESCE(c.tradition, 'sunni') = ?",
+        [tradition],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let mut st = conn.prepare(
+        "SELECT DISTINCT s.name FROM persons p JOIN sources s ON s.id = p.source_id \
+         WHERE COALESCE(p.tradition, 'sunni') = ? ORDER BY s.name",
+    )?;
+    let works = st
+        .query_map([tradition], |r| r.get::<_, String>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((persons, links.unwrap_or(0), identified.unwrap_or(0), works))
+}
+
 /// The languages a list is read in: names in `reading` (the interface's, `language.ui_language`), the interface's own
 /// words in `words` (`i18n.language`).
 #[derive(Debug, Clone, Copy)]
@@ -451,11 +505,47 @@ pub fn browse(
     offset: usize,
     langs: Langs,
 ) -> rusqlite::Result<(Vec<Row>, usize)> {
+    browse_by(
+        conn,
+        text,
+        &Filters::default(),
+        tradition,
+        only,
+        close,
+        limit,
+        offset,
+        langs,
+    )
+}
+
+/// The Narrators page's filters (`browse`'s tabaqa, rank, book): a generation, a rank (-1: no judgment), the
+/// narrators of one of the six books by Ibn Hajar's marks.
+#[derive(Debug, Clone, Default)]
+pub struct Filters {
+    pub tabaqa: Option<i64>,
+    pub rank: Option<i64>,
+    pub book: Option<String>,
+}
+
+/// browse with the page's filters.
+#[allow(clippy::too_many_arguments)]
+pub fn browse_by(
+    conn: &Connection,
+    text: &str,
+    filters: &Filters,
+    tradition: Option<&str>,
+    only: Option<&[i64]>,
+    close: Option<&mut std::collections::HashSet<i64>>,
+    limit: usize,
+    offset: usize,
+    langs: Langs,
+) -> rusqlite::Result<(Vec<Row>, usize)> {
+    use rusqlite::types::Value as Sql;
     let mut wheres: Vec<String> = Vec::new();
-    let mut args: Vec<String> = Vec::new();
+    let mut args: Vec<Sql> = Vec::new();
     if let Some(t) = tradition.filter(|t| !t.is_empty()) {
         wheres.push("COALESCE(p.tradition, 'sunni') = ?".into());
-        args.push(t.to_string());
+        args.push(Sql::Text(t.to_string()));
     }
     let mut ids: Vec<i64> = Vec::new();
     let searched = !text.trim().is_empty();
@@ -485,6 +575,29 @@ pub fn browse(
             "p.id IN ({})",
             if list.is_empty() { "NULL".into() } else { list }
         ));
+    }
+    if let Some(tb) = filters.tabaqa.filter(|x| *x != 0) {
+        wheres.push("p.tabaqa = ?".into());
+        args.push(Sql::Integer(tb));
+    }
+    match filters.rank {
+        Some(-1) => wheres.push("v.rank IS NULL".into()),
+        Some(r) if r != 0 => {
+            wheres.push("v.rank = ?".into());
+            args.push(Sql::Integer(r));
+        }
+        _ => {}
+    }
+    if let Some(marks) = filters
+        .book
+        .as_ref()
+        .and_then(|b| crate::tables::get().narrators.collection_marks.get(b))
+    {
+        wheres.push(format!(
+            "EXISTS (SELECT 1 FROM person_marks m WHERE m.person_id = p.id AND m.mark IN ({}))",
+            vec!["?"; marks.len()].join(",")
+        ));
+        args.extend(marks.iter().map(|m| Sql::Text(m.clone())));
     }
     let sql = format!(
         "SELECT p.id, p.name_ar, p.tabaqa, p.death_year_ah, v.phrase, v.rank, v.madhhab, \
