@@ -926,6 +926,11 @@ fn person_of(key: &str) -> Option<&'static [String; 6]> {
         .find(|p| p[0] == key)
 }
 
+/// A famous one by his key: [key, Turkish, English, Arabic, honour, tradition] (`famous.person`).
+pub fn famous_person(key: &str) -> Option<&'static [String; 6]> {
+    person_of(key)
+}
+
 /// The name to show for a famous one: "Abu Bakr al-Siddiq (RA)", "Hz. Ebû Bekir es-Sıddîk (r.a.)".
 pub fn famous_title(key: &str, language: &str) -> String {
     let Some(p) = person_of(key) else {

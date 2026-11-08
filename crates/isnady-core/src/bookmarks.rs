@@ -147,3 +147,38 @@ pub fn toggle(kind: &str, reference: &str, title: &str, subtitle: &str) -> std::
     save(folders, items)?;
     Ok(marked)
 }
+
+/// (reference, title, subtitle) of a chapter (`bookmarks.chapter_ref`): "bukhari:1", "Sahih al-Bukhari › 1. Revelation".
+pub fn chapter_ref(
+    conn: &rusqlite::Connection,
+    node_id: i64,
+    lang: &str,
+) -> Option<(String, String, String)> {
+    let node = crate::works::node(conn, node_id, lang)?;
+    let (key, title): (String, Option<String>) = conn
+        .query_row(
+            "SELECT key, title FROM works WHERE id = ?",
+            [node.work_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .ok()?;
+    let book = crate::works::book_title(&key, title.as_deref().unwrap_or(""), lang);
+    let label = node
+        .label
+        .as_deref()
+        .filter(|l| !l.is_empty())
+        .map(|l| format!("{l}. "))
+        .unwrap_or_default();
+    let reference = format!(
+        "{key}:{}",
+        node.label
+            .clone()
+            .filter(|l| !l.is_empty())
+            .unwrap_or_else(|| node_id.to_string())
+    );
+    Some((
+        reference,
+        format!("{book} › {label}{}", node.title),
+        String::new(),
+    ))
+}

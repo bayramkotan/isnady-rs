@@ -4,8 +4,8 @@
 
 use clap::{Parser, Subcommand};
 use isnady_core::{
-    db, grades, i18n, isnad, lives, narrators, paths, people, py, readmarks, scholars, search,
-    tables, works, VERSION,
+    db, grades, huffaz, i18n, isnad, lives, narrators, paths, people, py, readmarks, sahaba,
+    scholars, search, tables, works, VERSION,
 };
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -51,6 +51,44 @@ enum Command {
     Narrator(NarratorArgs),
     /// The life of a Companion, a narrator or a scholar, in English, Turkish or Arabic
     Life(LifeArgs),
+    /// The hadith scholars in the data: compilers, graders, critics, with measured statistics
+    Scholar(ScholarArgs),
+    /// The ten promised Paradise, the people of the cloak, the Mothers of the Believers; the Fourteen Infallibles on the
+    /// Shia road
+    Group(GroupArgs),
+}
+
+#[derive(clap::Args)]
+struct GroupArgs {
+    /// ten, kisa, mothers, masumin; none = the list
+    id: Option<String>,
+    /// The list: one road, or both
+    #[arg(long, default_value = "all", value_parser = ["sunni", "shia", "all"])]
+    tradition: String,
+    /// The language (default: the interface language)
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// Characters per line
+    #[arg(long, default_value_t = 100)]
+    width: usize,
+}
+
+#[derive(clap::Args)]
+struct ScholarArgs {
+    /// Part of a name, e.g. albani, bukhari; none = the list
+    name: Vec<String>,
+    /// The list: the Sunni scholars (default), the Shia ones, or all
+    #[arg(long, default_value = "sunni", value_parser = ["sunni", "shia", "all"])]
+    tradition: String,
+    /// al-Dhahabi's Tadhkirat al-Huffaz: 1,176 huffaz in 21 generations, tied to the Taqrib; with a NAME, one hafiz
+    #[arg(long)]
+    huffaz: bool,
+    /// With --huffaz: only generation N (1-21)
+    #[arg(long, value_name = "N")]
+    tabaqa: Option<i64>,
+    /// (not ported yet: al-Dhahabi's entry in his own words — use iy scholar --huffaz NAME --source)
+    #[arg(long)]
+    source: bool,
 }
 
 #[derive(clap::Args)]
@@ -207,7 +245,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs scholar, iy-rs group, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -230,6 +268,362 @@ fn main() -> ExitCode {
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
         Some(Command::Life(a)) => life_cmd(a),
+        Some(Command::Scholar(a)) => scholar_cmd(a),
+        Some(Command::Group(a)) => group_cmd(a),
+    }
+}
+
+/// iy-rs scholar --huffaz (HFZ1): al-Dhahabi's Tadhkirat al-Huffaz, generation by generation, tied to the Taqrib
+/// (`cli._huffaz`).
+fn huffaz_cmd(a: &ScholarArgs, conn: &rusqlite_conn::Connection) -> ExitCode {
+    let lang = i18n::ui_language();
+    let reading = |r: &huffaz::Hafiz| huffaz::reading(r, if lang == "tr" { "tr" } else { "en" });
+    let died = |r: &huffaz::Hafiz| {
+        let (y, whose) = huffaz::death_of(r);
+        let Some(y) = y else { return String::new() };
+        let note = if whose == "taqrib" {
+            " (Taqrib)".to_string()
+        } else {
+            match r.taqrib_death {
+                Some(o) if o != 0 && o != y => format!(" (Taqrib: {o})"),
+                _ => String::new(),
+            }
+        };
+        format!("d. {y}{note}")
+    };
+    let rows = huffaz::find(Some(conn), &a.name.join(" "), a.tabaqa);
+    if a.name.is_empty() {
+        println!("al-Dhahabi (d. 748 AH), Tadhkirat al-Huffaz: the masters of hadith, generation by generation");
+        for g in huffaz::generations(Some(conn)) {
+            if a.tabaqa.is_some_and(|t| t != g.tabaqa) {
+                continue;
+            }
+            let stated = g
+                .stated
+                .map(|n| format!(", al-Dhahabi: {n}"))
+                .unwrap_or_default();
+            let span = match (g.median, g.from, g.to) {
+                (Some(m), Some(f), Some(t)) if m != 0 => format!("d. {f}–{t} AH (median {m})"),
+                _ => String::new(),
+            };
+            println!(
+                "  generation {:2}: {:4} huffaz{stated}   {span}   in the Taqrib: {}",
+                g.tabaqa, g.count, g.in_taqrib
+            );
+        }
+        let centuries: Vec<String> = huffaz::by_century(Some(conn))
+            .iter()
+            .map(|(c, n)| format!("{c}: {n}"))
+            .collect();
+        println!("  died, by century AH: {}", centuries.join(", "));
+        if a.tabaqa.is_none() {
+            println!("\n(iy scholar --huffaz --tabaqa N lists one generation; iy scholar --huffaz NAME finds one man)");
+            return ExitCode::SUCCESS;
+        }
+    }
+    if rows.is_empty() {
+        eprintln!("No hafiz of that name in the Tadhkira.");
+        return ExitCode::from(1);
+    }
+    if !a.name.is_empty() && rows.len() == 1 {
+        let r = &rows[0];
+        println!("{}  {}", reading(r), r.entry.head);
+        println!(
+            "  Tadhkirat al-Huffaz no. {}, generation {}   {}",
+            r.entry.n,
+            r.entry.tabaqa,
+            died(r)
+        );
+        if !r.entry.rumuz.is_empty() {
+            let means: Vec<String> = huffaz::rumuz_text(&r.entry.rumuz)
+                .iter()
+                .map(|x| i18n::t(&lang, x, &[]))
+                .collect();
+            println!(
+                "  narrates in: {}   [{}]",
+                means.join("; "),
+                r.entry.rumuz.join(" ")
+            );
+        }
+        if let (Some(p), Some(name)) = (r.person, &r.taqrib_name) {
+            println!(
+                "  in the Taqrib: {} — in {} chain links here (iy narrator {p})",
+                narrators::display_name(name),
+                py::thousands(r.in_chains)
+            );
+        }
+        if a.source {
+            return not_yet(
+                "Al-Dhahabi's entry in his own words",
+                "iy scholar --huffaz NAME --source",
+            );
+        }
+        println!("  (--source prints al-Dhahabi's entry in his own words)");
+        return ExitCode::SUCCESS;
+    }
+    for r in &rows {
+        let read: String = reading(r).chars().take(34).collect();
+        println!(
+            "  {:5}  g{:<2}  {:22} {:34}  {}",
+            r.entry.n,
+            r.entry.tabaqa,
+            died(r),
+            read,
+            r.entry.name
+        );
+    }
+    println!("{} huffaz", rows.len());
+    ExitCode::SUCCESS
+}
+
+/// iy-rs group [ID] (AM1, EB1): the groups of the Companions and the Household, or one of them — its members and the
+/// hadith that name it (`cli.cmd_group`).
+fn group_cmd(a: GroupArgs) -> ExitCode {
+    let lang = a.lang.clone().unwrap_or_else(i18n::ui_language);
+    let road = (a.tradition != "all").then_some(a.tradition.as_str());
+    let Some(id) = &a.id else {
+        for g in sahaba::groups(road) {
+            println!(
+                "  {:10} {:6} {}",
+                g.id,
+                g.road,
+                sahaba::text(&g.title, &lang)
+            );
+        }
+        println!("\n(iy group ID shows one: its members and the hadith that name them)");
+        return ExitCode::SUCCESS;
+    };
+    let Some(group) = sahaba::find(id) else {
+        eprintln!("No group '{id}'. See: iy group --tradition all");
+        return ExitCode::from(1);
+    };
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    println!("{}   [{}]\n", sahaba::text(&group.title, &lang), group.road);
+    println!(
+        "{}\n",
+        py::fill(&sahaba::text(&group.lead, &lang), a.width, "")
+    );
+    let shia = group.road == "shia";
+    for m in sahaba::members(Some(&conn), group, &lang) {
+        println!("  {}  {}", m.name, m.arabic);
+        let mut facts: Vec<String> = vec![];
+        if !m.died.is_empty() {
+            facts.push(m.died.clone());
+        }
+        if shia {
+            facts.push(format!(
+                "{} chains end here in the Shia books",
+                py::thousands(m.ends.unwrap_or(0))
+            ));
+        } else if m.person.is_some() {
+            facts.push(format!(
+                "in {} chain links, of {} hadith",
+                py::thousands(m.links.unwrap_or(0)),
+                py::thousands(m.hadith.unwrap_or(0))
+            ));
+        }
+        if !facts.is_empty() {
+            println!("     {}", facts.join(" · "));
+        }
+    }
+    if shia {
+        let shared = sahaba::shared_ends(&conn);
+        if shared != 0 {
+            println!(
+                "\n  {} more chains end at an Imam not named or named by a shared kunya (Abu al-Hasan)",
+                py::thousands(shared)
+            );
+        }
+    }
+    let found = sahaba::hadith(&conn, group);
+    if !group.hadith.is_empty() {
+        let refs: Vec<String> = found.iter().map(|(b, n, _)| format!("{b} {n}")).collect();
+        let listed = if refs.is_empty() {
+            "none imported".to_string()
+        } else {
+            refs.join(", ")
+        };
+        let first = found
+            .first()
+            .map(|(b, n, _)| format!("   (iy chain {b} {n})"))
+            .unwrap_or_default();
+        println!("\nThe hadith that name them: {listed}{first}");
+    }
+    ExitCode::SUCCESS
+}
+
+fn pct(x: f64) -> String {
+    format!("{:.1}", 100.0 * x)
+}
+
+/// iy-rs scholar [NAME]: the hadith scholars in the data, or one of them with what the data measures of him
+/// (`cli.cmd_scholar`).
+fn scholar_cmd(a: ScholarArgs) -> ExitCode {
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    if a.huffaz || a.tabaqa.is_some_and(|t| t != 0) {
+        return huffaz_cmd(&a, &conn);
+    }
+    let people = scholars::present(&conn);
+    if a.name.is_empty() {
+        for (s, roles) in &people {
+            if a.tradition != "all" && scholars::tradition_of(s) != a.tradition {
+                continue;
+            }
+            println!(
+                "  {:13} {:38} {:6} {}",
+                s.id,
+                s.name,
+                scholars::tradition_of(s),
+                roles.join(", ")
+            );
+        }
+        return ExitCode::SUCCESS;
+    }
+    let want = a.name.join(" ").to_lowercase();
+    let Some((s, roles)) = people.iter().find(|(p, _)| {
+        format!("{} {} {}", p.id, p.name, p.full)
+            .to_lowercase()
+            .contains(&want)
+    }) else {
+        eprintln!("No such scholar in the imported data. See: iy scholar");
+        return ExitCode::from(1);
+    };
+    let lang = i18n::ui_language();
+    let run = || -> rusqlite_conn::Result<()> {
+        println!(
+            "{}  ({})  {}  [{}]\n  roles: {}; works: {}",
+            s.full,
+            s.arabic,
+            s.dates,
+            scholars::tradition_of(s),
+            roles.join(", "),
+            s.works.join("; ")
+        );
+        for st in scholars::compiler_stats(&conn, s)? {
+            println!(
+                "\n  {}: {} hadith, {} chains, {} of {} narrators identified",
+                st.book,
+                py::thousands(st.hadith),
+                py::thousands(st.chains),
+                py::thousands(st.identified),
+                py::thousands(st.links)
+            );
+            let teachers: Vec<String> = st
+                .teachers
+                .iter()
+                .take(6)
+                .map(|t| format!("{} ({})", t.name, t.count))
+                .collect();
+            println!("  teachers: {}", teachers.join("; "));
+            if !st.ends.is_empty() {
+                let ends: Vec<String> = st
+                    .ends
+                    .iter()
+                    .take(6)
+                    .map(|(_, label, n)| format!("{label} ({})", py::thousands(*n)))
+                    .collect();
+                println!("  his chains reach: {}", ends.join("; "));
+            }
+        }
+        if let Some(g) = scholars::grader_stats(&conn, s)? {
+            let dist: Vec<String> = g
+                .distribution
+                .iter()
+                .map(|(k, v)| format!("{k} {}", py::thousands(*v as i64)))
+                .collect();
+            println!(
+                "\n  grades: {} hadith — {}",
+                py::thousands(g.graded as i64),
+                dist.join(", ")
+            );
+            for (other, x) in &g.agreement {
+                let k = x
+                    .kappa
+                    .map(|k| format!("{k:.2}"))
+                    .unwrap_or_else(|| "-".into());
+                let flag = if x.agree >= 0.95 {
+                    "   (unusually high: possibly not independent in the source)"
+                } else {
+                    ""
+                };
+                println!(
+                    "  vs {other}: agree {}% of {}, kappa {k}, he lower {}% / higher {}%{flag}",
+                    pct(x.agree),
+                    py::thousands(x.common as i64),
+                    pct(x.lower),
+                    pct(x.higher)
+                );
+            }
+            if let (Some(st), Some(lo), Some(hi)) = (g.strictness, g.lower, g.higher) {
+                println!(
+                    "  strictness {st:+.2} by order: lower {}%, higher {}% of {} comparisons (negative = stricter)",
+                    pct(lo),
+                    pct(hi),
+                    py::thousands(g.compared as i64)
+                );
+            }
+        }
+        if let Some(cr) = scholars::critic_stats(&conn, s)? {
+            if cr.tradition == "shia" {
+                let ranks: Vec<String> = cr
+                    .ranks
+                    .iter()
+                    .map(|(_, label, n)| {
+                        let label = i18n::t(&lang, label, &[]);
+                        format!(
+                            "{} {}",
+                            label.split(" (").next().unwrap_or(""),
+                            py::thousands(*n as i64)
+                        )
+                    })
+                    .collect();
+                println!(
+                    "\n  verdicts on narrators: {} — in the Imami terms: {}, no judgment {}",
+                    py::thousands(cr.verdicts as i64),
+                    ranks.join(", "),
+                    py::thousands(cr.unranked as i64)
+                );
+                if !cr.creeds.is_empty() {
+                    let creeds: Vec<String> = cr
+                        .creeds
+                        .iter()
+                        .map(|(label, n)| {
+                            format!(
+                                "{} {}",
+                                i18n::t(&lang, label, &[]),
+                                py::thousands(*n as i64)
+                            )
+                        })
+                        .collect();
+                    println!("  creed, where stated: {}", creeds.join(", "));
+                }
+            } else {
+                let ranks: Vec<String> = cr
+                    .ranks
+                    .iter()
+                    .map(|(r, _, n)| format!("{r}:{n}"))
+                    .collect();
+                println!(
+                    "\n  verdicts on narrators: {} — {}",
+                    py::thousands(cr.verdicts as i64),
+                    ranks.join(", ")
+                );
+            }
+        }
+        Ok(())
+    };
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
     }
 }
 

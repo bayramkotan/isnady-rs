@@ -5,6 +5,47 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Three pages at once (Bayram: "bir sonraki evreye geç ama biraz çok yap. tek tek gitmeyelim").** Books, Hadith
+  Scholars and Companions and the Household, each built again from its Python page and compared with the Python window
+  side by side.
+- **Books as the Python window has it (RS-WIN3c).** From gui/books_page.py: the shelf (Sunni, Shia, all; by kind), a
+  book's contents as a tree, a chapter read in its own order — the hadith as Search draws them (every text, nothing
+  folded), the sira's sections, the lives of the tabaqat, the rijal entries, the cross-references — four at first and
+  more as you read; ⏮ ‹ › ⏭ through the chapters and their place typed in; the hadith number field (hadith_nav) going
+  to a hadith of the book; where you left each book (the same state.json); 🔖 Markers (put one where you are reading,
+  rename, remove, remove all, go to one, where you left each book, forget it); Search in this chapter; the right-click
+  menus of a book and of a chapter. A hadith, a person or a chapter opened from Search, Isnad Chains or Narrators opens
+  here at its place, and each is a place in Back and Forward. ⏳ (each says so): the Qur'an reader, the PDF, the
+  waiting and import rows of a book not imported. **Fixed (Python too):** the Books tree never set the Arabic font on
+  an Arabic chapter title (a doubled backslash in books_page.py).
+- **Hadith Scholars as the Python window has it (RS5).** From gui/scholars_page.py: All / Sunni / Shia / Huffaz; the
+  scholars by role (compilers, graders, critics) with their names in the interface language, the Arabic and the dates;
+  a scholar: the name card with ☆, his tradition's measure, his works, Open his books, Open him as a narrator, his life
+  (written for isnady, or read from his rijal entry), what a compiler, a grader and a critic is; his collection (hadith,
+  chains read, split, reaching the Prophet or a Ma'sum, identified; his teachers and the Companions — on road B whom his
+  chains reach — as bars that open the narrator); his grades (the groups, Sunni or Imami, his most frequent wordings,
+  the agreement with every other grader of his tradition with Cohen's kappa and the warning when it is too high,
+  strictness by order only); his verdicts on narrators (Ibn Hajar's twelve ranks, or the Imami terms and the creeds).
+  The Huffaz: al-Dhahabi's Tadhkirat al-Huffaz, 1,176 masters in 21 generations — the list by generation with a name
+  to look for and a generation to choose, the book at a glance (each generation's count and years, by century), a
+  hafiz (his number, generation, death and whose year it is, al-Mizzi's signs, his Taqrib entry with its verdict and
+  chain links, his entry in the Tadhkira to read). The right-click menus, Back and Forward; a scholar found by Search
+  opens here.
+- **`iy-rs scholar [NAME] [--tradition] [--huffaz] [--tabaqa N]`**, word for word as `iy scholar` (`--source`, the
+  Tadhkira's text, stays with the Python isnady). New in the core: `scholars::{present, grader_names, compiler_stats,
+  grader_stats, critic_stats, written_life}`, `huffaz.rs` (index, people, reading, generations, by_century, find),
+  `cache.rs` (a count kept while the database is unchanged, as core/cache.py), `grades::isnad_only`, `i18n::dates`;
+  gen_tables writes data/huffaz.json.
+- **Companions and the Household as the Python window has it (RS7).** From gui/companions_page.py: Sunni / Shia; the
+  ten promised Paradise, the people of the cloak, the Mothers of the Believers, the Fourteen Infallibles on the Shia
+  road; a group: what the sources say of it, its members two to a row (his death, his chain links and hadith — on the
+  Shia road the chains that end at him and those that end at an Imam not named —, the first lines of his life, Life
+  and narrations, In the family tree), the hadith that name it as Search draws them.
+- **`iy-rs group [ID] [--tradition] [--lang] [--width]`**, word for word as `iy group`. New in the core: `sahaba.rs`;
+  gen_tables writes data/sahaba.json (the groups, the boxes of the tree of Quraysh they need).
+- 26 more parity cases (132 in all). The texts' `{x:.1f}` and `{s:+.2f}` are now filled in the window as Python fills
+  them.
+
 - **The Isnad Chains page as the Python window has it (RS-WIN3b).** Built again from gui/isnad_page.py,
   chain_widgets.py (ChainNode), hadith_nav.py and chapter_picker.py and compared with the Python window side by side,
   hadith by hadith (one chain, four chains joined by tahwil, a tahwil meeting, a chain from the hadith before, a text

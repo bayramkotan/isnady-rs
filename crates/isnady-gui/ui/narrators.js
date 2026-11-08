@@ -338,9 +338,8 @@ function bookmarkAct(kind, reference, title, subtitle, marked) {
     () => invoke("toggle_bookmark", { kind, reference, title, subtitle: subtitle || "" }), "", { raw: true });
 }
 
-async function openInBookOf(id) {
-  const p = await invoke("person_place", { id });
-  if (p && p.key) await openBookPlace(p.key, p.index);
+function openInBookOf(id) {
+  return openPersonInBook(id);
 }
 
 // ------------------------------------------------------------------ the right side
@@ -437,9 +436,9 @@ function lifeCard(life, written) {
   return `<div class="ncard lifecard">${html}</div>`;
 }
 
-async function fillEntries(life) {
+async function fillEntries(life, root) {
   for (const [i, e] of life.entries.entries()) {
-    const box = document.querySelector(`#n-view .lc-entry[data-entry="${i}"] .lc-entry-body`);
+    const box = document.querySelector(`${root || "#n-view"} .lc-entry[data-entry="${i}"] .lc-entry-body`);
     if (!box) continue;
     const found = await invoke("source_entry", { work: e.work, volume: e.volume, number: e.number });
     if (!found.heading) {
@@ -622,7 +621,7 @@ function wireNarratorView() {
     const h = e.target.closest("button[data-book]");
     if (h) { showChain(h.dataset.book, h.dataset.number); return; }
     const m = e.target.closest(".n-mark.go");
-    if (m) { openBookPlace(m.dataset.key); return; }
+    if (m) { openBookAt(m.dataset.key); return; }
     if (e.target.closest("[data-tree]")) { show("genealogies"); return; }
     const name = e.target.closest("a[data-name]");
     if (name) {
@@ -635,7 +634,7 @@ function wireNarratorView() {
     }
     const read = e.target.closest("a[data-url], a[data-book]");
     if (read) {
-      if (read.dataset.book) openBookPlace(read.dataset.book);
+      if (read.dataset.book) openBookAt(read.dataset.book);
       else if (read.dataset.url) invoke("open_url", { url: read.dataset.url });
     }
   });

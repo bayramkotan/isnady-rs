@@ -206,6 +206,24 @@ pub fn find(text: &str) -> Option<Place> {
         .cloned()
 }
 
+/// A marker named anew (`readmarks.rename`).
+pub fn rename(mark_id: &str, name: &str) -> bool {
+    let joined = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    if joined.is_empty() {
+        return false;
+    }
+    let mut every = marks();
+    let Some(m) = every.iter_mut().find(|m| m.id.as_deref() == Some(mark_id)) else {
+        return false;
+    };
+    m.name = joined;
+    config::state_set(
+        NAMED,
+        Value::Array(every.iter().map(Place::to_json).collect()),
+    );
+    true
+}
+
 pub fn remove(mark_id: &str) -> bool {
     let every = marks();
     let kept: Vec<Value> = every

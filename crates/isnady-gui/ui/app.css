@@ -167,29 +167,6 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
 
 /* ------------------------------------------------------------ books */
 .page.wide { max-width: none; }
-.books { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
-.shelf { position: sticky; top: 0; max-height: calc(100vh - 70px); overflow-y: auto; padding-inline-end: 4px; }
-.roads { display: block; margin-bottom: 12px; }
-.roads button { margin-inline-end: 6px; margin-bottom: 6px; }
-.roads button.on { background: var(--lapis); color: var(--on-lapis); border-color: var(--lapis); }
-.kind-head { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; margin: 14px 4px 6px; }
-.work { display: block; width: 100%; text-align: start; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; }
-.work.on { border-color: var(--lapis); box-shadow: inset 3px 0 0 var(--gold); }
-.work .t { font-weight: 600; }
-.work .n { color: var(--muted); font-size: 12px; }
-.reader h1 { font-family: Georgia, serif; font-size: 30px; margin: 4px 0 6px; }
-.toc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-.toc button { display: block; width: 100%; text-align: start; background: none; border: 0; border-bottom: 1px solid var(--border);
-  padding: 9px 14px; cursor: pointer; }
-.toc button:last-child { border-bottom: 0; }
-.toc button:hover { background: var(--lapis-soft); }
-.toc .i { color: var(--muted); display: inline-block; min-width: 42px; }
-.toc .c { color: var(--muted); font-size: 12px; margin-inline-start: 6px; }
-.crumbs { color: var(--muted); margin: 4px 0 12px; }
-.crumbs b { color: var(--ink); }
-.entry p { margin: 6px 0; font-size: calc(15px * var(--scale)); }
-.entry.ar p, .entry .ar { font-family: var(--arabic); font-size: calc(22px * var(--scale)); direction: rtl; text-align: right; line-height: 1.9; }
 
 /* ------------------------------------------------------------ narrators */
 #nq { width: 100%; margin-bottom: 10px; }
@@ -540,6 +517,55 @@ button.nlink.wide { white-space: pre; }
 .n-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); column-gap: 14px; row-gap: 2px; }
 .n-gbook { grid-column: 1 / -1; }
 
+/* ------------------------------------------------------------------ Hadith Scholars (gui/scholars_page.py) */
+.sc-left { width: 400px; }
+.sc-note { line-height: normal; }
+.sc-filters { display: flex; gap: 6px; }
+.sc-filters[hidden] { display: none; }
+#sc-q {
+  flex: 1; min-width: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
+  padding: var(--p5) var(--p8); min-height: 0; font-size: inherit;
+}
+#sc-q:focus { outline: none; border-color: var(--lapis); }
+.sc-head { color: var(--muted); padding: 12px 4px 2px; }
+.nrow.sc-row { padding: 8px 10px; max-width: 340px; }
+.sc-name { font-family: var(--heading); font-weight: 700; font-size: calc(15pt * var(--scale)); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-fuller { color: var(--lapis); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-ar { text-align: right; white-space: nowrap; overflow: hidden; }
+.sc-gen { font-family: var(--heading); font-weight: 700; font-size: calc(12pt * var(--scale)); color: var(--gold); padding: 3px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.sc-hafiz { padding: 3px 4px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--ink); line-height: normal; }
+.sc-hafiz:hover, .sc-hafiz.on, .sc-gen:hover { background: var(--lapis-soft); }
+.sc-trow { display: flex; align-items: center; gap: 6px; }
+.sc-trow .lead { flex: 1; }
+.sc-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.sc-help { background: var(--lapis-soft); border-radius: 10px; padding: 10px 16px; display: flex; flex-direction: column; gap: 3px; line-height: normal; }
+.sc-help.small { padding: 8px 14px; gap: 4px; }
+.sc-help-title { color: var(--ink); font-weight: 700; }
+.sc-head-ar { text-align: right; }
+.sbar { display: flex; align-items: center; height: 26px; flex: none; }
+.sbar[data-person] { cursor: pointer; }
+.sb-label { width: 162px; flex: none; padding-inline-end: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.sb-label.ar { width: 160px; padding-inline-end: 10px; text-align: right; direction: rtl; }
+.sb-track { flex: 1; min-width: 10px; height: 14px; border-radius: 4px; background: var(--lapis-soft); position: relative; overflow: hidden; }
+.sb-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+.sb-num { width: 82px; flex: none; padding-inline-start: 8px; color: var(--muted); white-space: pre; }
+
+/* ------------------------------------------------------------------ Companions and the Household (gui/companions_page.py) */
+.cp-left { width: 340px; }
+.cp-row { min-height: 46px; box-sizing: border-box; display: flex; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--ink); line-height: normal; }
+.cp-row:hover, .cp-row.on { background: var(--lapis-soft); }
+.cp-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; }
+.cp-card-title { font-size: calc(15pt * var(--scale)); }
+.cp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.cp-member {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 3px; line-height: normal;
+}
+.cp-member:hover { border-color: var(--lapis); background: var(--lapis-soft); }
+.cp-member .lead { white-space: normal; }
+.cp-name { font-family: var(--heading); font-weight: 700; font-size: calc(14pt * var(--scale)); color: var(--ink); }
+.cp-ar { text-align: right; }
+
 /* ------------------------------------------------------------------ Isnad Chains (gui/isnad_page.py) */
 #main:has(> .chains-page:not([hidden])) { padding: 0; overflow: hidden; }
 .page.chains-page { max-width: none; margin: 0; height: 100%; padding: 28px 28px 12px 36px; box-sizing: border-box; }
@@ -643,3 +669,48 @@ button.pd-cancel {
   background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 2px; padding: 3px 10px; cursor: pointer;
 }
 button.pd-cancel .x { color: #B3261E; margin-inline-end: 4px; }
+
+/* ------------------------------------------------------------------ Books (gui/books_page.py) */
+#main:has(> .books-page:not([hidden])) { padding: 0; overflow: hidden; }
+.page.books-page { max-width: none; margin: 0; height: 100%; padding: 22px 24px; box-sizing: border-box; }
+.bp { display: flex; gap: 18px; height: 100%; min-height: 0; }
+.bp-left {
+  width: 400px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; min-height: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 16px 18px 14px;
+}
+.bp-works { min-height: 250px; max-height: 340px; flex: none; overflow-y: auto; overflow-x: hidden; }
+.bw-head { color: var(--muted); font-size: 8.5pt; font-weight: 600; letter-spacing: .3px; padding: 10px 10px 2px; white-space: nowrap; }
+.bw-head.gold, .bw .gold { color: var(--gold); }
+.bw { padding: 7px 10px; border-bottom: 1px solid var(--border); cursor: default; display: flex; flex-direction: column; gap: 1px; line-height: normal; }
+.bw:hover, .bw.on { background: var(--lapis-soft); }
+.bw .caption { white-space: nowrap; overflow: hidden; }
+.bw-title { font-family: var(--heading); font-size: 14pt; font-weight: 700; color: var(--ink); white-space: pre; overflow: hidden; }
+.bp-tree { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.bp-tree .pd-item { padding-top: 4px; padding-bottom: 4px; }
+.bp-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.bp-right[hidden] { display: none; }
+.bp-where-row { display: flex; align-items: center; gap: 6px; }
+.bp-where { flex: 1; min-width: 0; white-space: normal; line-height: normal; }
+.bp-where b { color: var(--ink); }
+button.quiet.tool { padding: var(--p3) var(--p6); white-space: pre; border-radius: var(--r4); }
+button.quiet.tool .tri { display: inline-block; width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent;
+  border-top: 4px solid currentColor; margin-inline-start: 2px; vertical-align: -6px; }
+input.bp-spin { width: 80px; padding: 4px 8px; }
+.bp-bar { display: flex; align-items: center; gap: 10px; }
+.bp-langs { display: flex; align-items: center; gap: 10px; }
+.bp-bar .grow { flex: 1; }
+.bp-find input { width: 280px; max-width: 280px; box-sizing: border-box; padding: 5px 8px; min-height: 0; }
+.bp-find input:focus { outline: none; border-color: var(--lapis); }
+.bp-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 4px 16px 0; display: flex; flex-direction: column; gap: 14px; }
+.bp-body > * { flex: none; }
+.bp-body::-webkit-scrollbar { width: 11px; }
+.bp-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; min-height: 36px; }
+.bp-center { text-align: center; }
+.bp-item { padding: 12px 20px; gap: 4px; }
+.bp-top { display: flex; align-items: center; gap: 6px; }
+.bp-top .grow { flex: 1; min-width: 0; }
+.bp-latin { color: var(--lapis); font-weight: 600; white-space: nowrap; }
+.hcard.focus, .c-card.focus { border: 2px solid var(--gold); }
+.dialog.ask { width: min(420px, calc(100vw - 32px)); gap: 10px; padding: 18px 20px 14px; }
+.ask-input { width: 100%; box-sizing: border-box; }
+.bp-item .tb { white-space: normal; }

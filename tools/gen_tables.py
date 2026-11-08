@@ -336,8 +336,56 @@ def lives() -> str:
     return _json.dumps(out, ensure_ascii=False, indent=0, sort_keys=True) + "\n"
 
 
+HUFFAZ = os.path.join(HERE, "..", "crates", "isnady-core", "data", "huffaz.json")
+
+
+def huffaz_index() -> str:
+    """al-Dhahabi's Tadhkirat al-Huffaz as isnady indexes it (core.huffaz: assets/scholars/huffaz.json), the sigla he
+    puts before a name and how many he says a generation holds: what the Hadith Scholars page and `iy scholar --huffaz`
+    need."""
+    _import()
+    import json as _json
+
+    from isnady.core import huffaz
+
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "work": huffaz.WORK,
+        "rumuz": [[k, v] for k, v in huffaz.RUMUZ.items()],
+        "stated": [[k, v] for k, v in huffaz.STATED.items()],
+        "huffaz": huffaz.index(),
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
+SAHABA = os.path.join(HERE, "..", "crates", "isnady-core", "data", "sahaba.json")
+
+
+def sahaba() -> str:
+    """Companions and the Household (core.sahaba): the groups as written for isnady, the chain ends that name no one
+    Imam, the boxes of the tree of Quraysh the Shia group is drawn from (names and notes, core.genealogy) and the box of
+    each written life in that tree (genealogy.LIFE_NODES): what the Companions page and `iy group` need."""
+    _import()
+    import json as _json
+
+    from isnady.core import genealogy, sahaba as core_sahaba
+
+    tree = genealogy.written("quraysh", "en")
+    wanted = {n for g in core_sahaba.GROUPS for n, _y in g.get("nodes", [])}
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "groups": core_sahaba.GROUPS,
+        "shared_kunyas": list(core_sahaba.SHARED_KUNYAS),
+        "quraysh": {k: {"names": tree.nodes[k].names, "note": tree.nodes[k].note}
+                    for k in sorted(wanted) if k in tree.nodes},
+        "life_nodes": {k: list(v) for k, v in genealogy.LIFE_NODES.items()},
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
 def outputs() -> dict:
-    files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives()}
+    files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives(), HUFFAZ: huffaz_index(),
+             SAHABA: sahaba()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

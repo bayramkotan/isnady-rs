@@ -6,10 +6,12 @@
 
 pub mod bookmarks;
 pub mod books;
+pub mod cache;
 pub mod config;
 pub mod db;
 pub mod difflib;
 pub mod grades;
+pub mod huffaz;
 pub mod i18n;
 pub mod isnad;
 pub mod lives;
@@ -22,6 +24,7 @@ pub mod people;
 pub mod py;
 pub mod quran;
 pub mod readmarks;
+pub mod sahaba;
 pub mod scholars;
 pub mod search;
 pub mod tables;

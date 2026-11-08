@@ -52,6 +52,13 @@ pub fn group(grade: &str) -> Option<i32> {
     }
 }
 
+/// A grade of the chain only ("sanad sahih"): not compared with a grade of the hadith (`grades.isnad_only`).
+pub fn isnad_only(grade: &str) -> bool {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"\b(isnaad|isnad|sanad)\b").unwrap())
+        .is_match(&grade.to_lowercase())
+}
+
 const IMAMI_WORDS: [(&str, i32); 8] = [
     ("صحيح", 4),
     ("حسن", 3),

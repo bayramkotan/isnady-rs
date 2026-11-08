@@ -670,6 +670,34 @@ pub fn reading_order(conn: &Connection, work_id: i64) -> rusqlite::Result<Vec<i6
     Ok(out)
 }
 
+/// Every text of a hadith, one after the other (what "Find in this chapter" looks in).
+pub fn texts_of(conn: &Connection, hadith_id: i64) -> String {
+    let run = || -> rusqlite::Result<Vec<Option<String>>> {
+        let mut st = conn.prepare("SELECT text FROM texts WHERE hadith_id = ?")?;
+        let rows = st.query_map(params![hadith_id], |r| r.get(0))?;
+        rows.collect()
+    };
+    run()
+        .unwrap_or_default()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The chapter of a rijal work that holds a narrator's entry (`works.chapter_of_person`).
+pub fn chapter_of_person(conn: &Connection, person_id: i64) -> Option<i64> {
+    conn.query_row(
+        "SELECT parent_id FROM work_nodes WHERE person_id = ? AND kind = 'entry' LIMIT 1",
+        params![person_id],
+        |r| r.get(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+    .flatten()
+}
+
 pub fn chapter_of_hadith(conn: &Connection, hadith_id: i64) -> Option<i64> {
     conn.query_row(
         "SELECT parent_id FROM work_nodes WHERE hadith_id = ? LIMIT 1",

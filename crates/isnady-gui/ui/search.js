@@ -784,7 +784,7 @@ function personCard(row) {
 // a scholar found by Search: who he is and what of his work is in this database (people_results.scholar_card)
 function scholarCard(s) {
   const P = WIN.people;
-  const open = () => show("scholars");        // the Hadith Scholars page comes with RS5
+  const open = () => openScholar(s.id);
   const menu = async () => {
     const marked = await invoke("is_bookmarked", { kind: "scholar", reference: s.id });
     return [act("Open in Hadith Scholars", open), SEP,
@@ -845,7 +845,7 @@ function card(r) {
       <span class="grow"></span>
       ${starHtml(r.bookmarked, "hadith", `${r.name} ${r.number}`)}
       <button class="qlink" data-act="export" data-tip="${esc(t("Write this hadith to a file: PDF, Word, Markdown, JSON, Excel …"))}">${esc(t("Export"))}</button>
-      <button class="qlink" data-act="book" data-tip="${esc(t("Read this hadith where it stands in its book, among the hadith of its chapter"))}">${esc(t("In its book"))}</button>
+      ${r.in_book ? "" : `<button class="qlink" data-act="book" data-tip="${esc(t("Read this hadith where it stands in its book, among the hadith of its chapter"))}">${esc(t("In its book"))}</button>`}
       <button class="qlink" data-act="chain" data-tip="${esc(t("Open this hadith's chain of transmission"))}">${esc(t("View chain"))}</button>
     </div>`;
   if (r.related.length) {
@@ -889,7 +889,7 @@ function card(r) {
   }
   el.innerHTML = html;
   el.querySelector('[data-act="chain"]').onclick = () => showChain(r.key, r.number);
-  el.querySelector('[data-act="book"]').onclick = () => openInBook(r.hadith_id);
+  if (!r.in_book) el.querySelector('[data-act="book"]').onclick = () => openInBook(r.hadith_id);
   el.querySelector('[data-act="export"]').onclick = later(["&File", "Export…"]);
   el.querySelector('[data-act="languages"]').onclick = later(["&Edit", "Preferences…"]);
   const fold = el.querySelector('[data-act="fold"]');
@@ -929,12 +929,6 @@ function wireStar(button, kind, reference, title, subtitle) {
   };
   draw(button.classList.contains("on"));
   button.onclick = async () => draw(await invoke("toggle_bookmark", { kind, reference, title, subtitle }));
-}
-
-async function openInBook(hadithId) {
-  const p = await invoke("hadith_place", { hadithId });
-  if (p.index) await openBookPlace(p.key, p.index);
-  else await openBookPlace(p.key);
 }
 
 // ---- the chain under the title (ChainStrip): right to left, each name with its words in each language below it
@@ -1087,7 +1081,7 @@ async function cardMenu(e, r, el) {
     SEP, act("Everything: reference, texts and grades", () => copyText(whole()))];
   const related = r.related.slice(0, 20).map((x) => act(`${x.book_name} ${x.number}` + (x.kind === "same" ? "" : "  ~"), () => showChain(x.book, x.number), "", { raw: true }));
   const verses = r.verses.map(([s, a, b]) => act(`${s}:${a}` + (b !== a ? `-${b}` : ""), later(["&View", "Books"]), "", { raw: true }));
-  const entries = [act("In its book", () => openInBook(r.hadith_id)), act("View chain", () => showChain(r.key, r.number))];
+  const entries = [...(r.in_book ? [] : [act("In its book", () => openInBook(r.hadith_id))]), act("View chain", () => showChain(r.key, r.number))];
   if (related.length) entries.push(act("Also narrated in", null, "", { submenu: () => related }));
   if (verses.length) entries.push(act("Verses it names", null, "", { submenu: () => verses }));
   entries.push(SEP,

@@ -82,3 +82,15 @@ pub fn t(code: &str, text: &str, values: &[(&str, String)]) -> String {
     }
     out
 }
+
+/// The abbreviations of a date written in English ("d. 279 AH (892 CE)") in a language (`i18n.dates`).
+pub fn dates(code: &str, text: &str) -> String {
+    static RE: std::sync::OnceLock<fancy_regex::Regex> = std::sync::OnceLock::new();
+    if text.is_empty() || code == "en" {
+        return text.to_string();
+    }
+    let re =
+        RE.get_or_init(|| fancy_regex::Regex::new(r"(?<![\w.])(d\.|c\.|AH|CE)(?![\w])").unwrap());
+    re.replace_all(text, |c: &fancy_regex::Captures| t(code, &c[1], &[]))
+        .into_owned()
+}

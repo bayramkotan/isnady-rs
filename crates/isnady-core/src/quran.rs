@@ -152,6 +152,20 @@ fn open() -> Option<Connection> {
     Connection::open_with_flags(p, OpenFlags::SQLITE_OPEN_READ_ONLY).ok()
 }
 
+/// How many translations are downloaded beside the Arabic (`quran.editions`).
+pub fn translations() -> usize {
+    open()
+        .and_then(|c| {
+            c.query_row(
+                "SELECT COUNT(*) FROM editions WHERE key != ?",
+                [ARABIC],
+                |r| r.get::<_, i64>(0),
+            )
+            .ok()
+        })
+        .unwrap_or(0) as usize
+}
+
 /// The Arabic text is downloaded (`quran.available`).
 pub fn available() -> bool {
     open()

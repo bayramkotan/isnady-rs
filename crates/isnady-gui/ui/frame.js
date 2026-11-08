@@ -13,9 +13,9 @@ let THEME_MODE = "system";          // view.theme
 let CONTENT = [];                   // view.content_languages ([] = all)
 let FOOTER = "";
 
-const READY = new Set(["search", "books", "narrators", "chains"]);
+const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
-const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", find: "search", tree: "genealogy" };
+const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions" };
 
 function sectionLabel(key) {
   const s = WIN.sections.find((x) => x[0] === key);
@@ -115,21 +115,17 @@ async function goHistory(step) {
     else if (entry[0] === "find") { show("search"); searchFor(entry[1], "narrators"); }
     else if (entry[0] === "tree") show("genealogy");
     else if (entry[0] === "narrator") await openNarratorPlace(entry[1]);
-    else if (entry[0] === "book") await openBookPlace(entry[1]);
-    else if (entry[0] === "chapter") await openBookPlace(entry[1], entry[2]);
+    else if (entry[0] === "book") await openBookAt(entry[1]);
+    else if (entry[0] === "chapter") await openChapterAt(entry[1]);
+    else if (entry[0] === "person_in_book") await openPersonInBook(entry[1]);
+    else if (entry[0] === "scholar") await openScholarAt(entry[1]);
+    else if (entry[0] === "group") await openGroupAt(entry[1]);
   } catch (_) {
     // a place that is gone (a book removed): stay where we are
   } finally {
     HISTORY.replaying = false;
   }
   updateHistoryButtons();
-}
-
-async function openBookPlace(key, chapter) {
-  BOOKS.key = key;
-  show("books");
-  if (!BOOKS.works.length) await loadShelf();
-  if (chapter) await readChapter(key, chapter); else await openBook(key);
 }
 
 async function openNarratorPlace(id) {
@@ -356,7 +352,7 @@ function copySelection() {
 // the page in view drawn again after the content languages changed
 function redrawPage() {
   if (CURRENT === "search" && SEARCH.results && SEARCH.results.length) runSearch(false);
-  else if (CURRENT === "books" && BOOKS.key && BOOKS.chapter && $("items")) readChapter(BOOKS.key, BOOKS.chapter);
+  else if (CURRENT === "books" && BK.work && BK.chapter) openWork(BK.work.key, BK.chapter);
 }
 
 // ---- drawing the menus

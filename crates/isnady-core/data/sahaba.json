@@ -1,0 +1,399 @@
+{
+"about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+"groups": [
+{
+"id": "ten",
+"road": "sunni",
+"title": {
+"en": "The ten promised Paradise",
+"tr": "Aşere-i Mübeşşere",
+"ar": "العشرة المبشرون بالجنة"
+},
+"lead": {
+"en": "Ten Companions whom the Prophet ﷺ named together, in one saying, as people of Paradise. 'Abd al-Rahman b. 'Awf narrates the list as it is best known (al-Tirmidhi); Sa'id b. Zayd narrates it too, counting the Prophet ﷺ among the ten and naming himself last (Abu Dawud) — so Abu 'Ubayda is in the first list and not in the second. Many other Companions were given the glad tidings of Paradise one by one; these are the ten named together.",
+"tr": "Resûlullah'ın ﷺ bir arada, tek bir sözde cennetlik olarak adlarını saydığı on sahâbî. Meşhur listeyi Abdurrahman b. Avf rivayet eder (Tirmizî); Saîd b. Zeyd de rivayet eder, onun rivayetinde Resûlullah ﷺ onların arasında sayılır ve onuncu olarak kendini söyler (Ebû Dâvûd) — bu yüzden Ebû Ubeyde ilk listede vardır, ikincisinde yoktur. Başka birçok sahâbî de tek tek cennetle müjdelenmiştir; bu on kişi bir arada sayılanlardır.",
+"ar": "عشرة من الصحابة سمّاهم النبي ﷺ معًا في حديث واحد من أهل الجنة. يروي القائمة المشهورة عبد الرحمن بن عوف (الترمذي)، ويرويها سعيد بن زيد فيعدّ النبيَّ ﷺ فيهم ويذكر نفسه عاشرًا (أبو داود)، فأبو عبيدة في الأولى دون الثانية. وبُشّر غيرهم كثير بالجنة فرادى، وهؤلاء العشرة هم الذين ذُكروا معًا."
+},
+"hadith": [
+[
+"tirmidhi",
+"3747"
+],
+[
+"abudawud",
+"4649"
+]
+],
+"lives": [
+"abu-bakr",
+"umar",
+"uthman",
+"ali",
+"talha",
+"zubayr",
+"abd-al-rahman-b-awf",
+"sad-b-abi-waqqas",
+"said-b-zayd",
+"abu-ubayda"
+]
+},
+{
+"id": "kisa",
+"road": "sunni",
+"title": {
+"en": "The Household: the people of the cloak",
+"tr": "Ehl-i Beyt: Âl-i Abâ (kisâ ehli)",
+"ar": "أهل البيت: أصحاب الكساء"
+},
+"lead": {
+"en": "When \"Allah only wishes to remove impurity from you, O people of the house, and to purify you thoroughly\" (al-Ahzab 33:33) was revealed, the Prophet ﷺ gathered 'Ali, Fatima, al-Hasan and al-Husayn under his cloak and said: \"O Allah, these are the people of my house\" ('A'isha, in Muslim; 'Umar b. Abi Salama, in al-Tirmidhi, where Umm Salama asks: \"And am I with them?\"). In the Sunni reading the verse, which stands among the verses addressed to the Prophet's wives (33:28–34), takes in his wives as well (the next group). Zayd b. Arqam, narrating the sermon at Ghadir Khumm — \"I leave among you two weighty things: the Book of Allah … and the people of my house\" — says that his wives are of his household, and that the household meant there are those to whom charity is forbidden: the families of 'Ali, 'Aqil, Ja'far and al-'Abbas (Muslim).",
+"tr": "\"Ey Ehl-i Beyt! Allah sizden ancak kiri gidermek ve sizi tertemiz kılmak istiyor\" (Ahzâb 33:33) âyeti inince Resûlullah ﷺ Ali, Fâtıma, Hasan ve Hüseyin'i abasının altına aldı ve \"Allahım, bunlar benim Ehl-i Beytimdir\" dedi (Hz. Âişe'den, Müslim; Ömer b. Ebî Seleme'den, Tirmizî — Ümmü Seleme orada \"Ben de onlarla mıyım?\" diye sorar). Sünnî okuyuşta Resûlullah'ın ﷺ hanımlarına hitap eden âyetlerin (33:28–34) arasında duran bu âyet hanımlarını da kapsar (sonraki grup). Zeyd b. Erkam, Gadîr-i Hum hutbesini — \"Size iki ağır emanet bırakıyorum: Allah'ın Kitabı … ve Ehl-i Beytim\" — rivayet ederken, hanımlarının da Ehl-i Beyt'ten olduğunu, orada kastedilen Ehl-i Beyt'in ise sadaka haram kılınanlar olduğunu söyler: Ali, Akîl, Ca'fer ve Abbas'ın aileleri (Müslim).",
+"ar": "لما نزلت ﴿إِنَّمَا يُرِيدُ اللَّهُ لِيُذْهِبَ عَنكُمُ الرِّجْسَ أَهْلَ الْبَيْتِ وَيُطَهِّرَكُمْ تَطْهِيرًا﴾ (الأحزاب 33) جمع النبي ﷺ عليًّا وفاطمة والحسن والحسين تحت كسائه وقال: «اللهم هؤلاء أهل بيتي» (عن عائشة في مسلم، وعن عمر بن أبي سلمة في الترمذي، وفيه سؤال أم سلمة: «وأنا معهم؟»). وفي قراءة أهل السنة تشمل الآيةُ — وهي بين الآيات المخاطِبة لأزواج النبي ﷺ (28–34) — أزواجَه أيضًا (المجموعة التالية). وزيد بن أرقم، وهو يروي خطبة غدير خم «إني تارك فيكم ثقلين: كتاب الله … وأهل بيتي»، يقول إن نساءه من أهل بيته، وإن أهل بيته المقصودين هنا من حُرم الصدقة: آل علي وآل عقيل وآل جعفر وآل العباس (مسلم)."
+},
+"hadith": [
+[
+"muslim",
+"6261"
+],
+[
+"tirmidhi",
+"3787"
+],
+[
+"muslim",
+"6225"
+]
+],
+"lives": [
+"ali",
+"fatima",
+"hasan-b-ali",
+"husayn-b-ali"
+]
+},
+{
+"id": "mothers",
+"road": "sunni",
+"title": {
+"en": "The Mothers of the Believers",
+"tr": "Ezvâc-ı Tâhirât — mü'minlerin anneleri",
+"ar": "أمهات المؤمنين"
+},
+"lead": {
+"en": "\"The Prophet is closer to the believers than their own selves, and his wives are their mothers\" (al-Ahzab 33:6); the verses that call them \"people of the house\" (33:28–34) are addressed to them. Khadija, the first of them, died before the Hijra. Below are those whose narrations are in the rijal work, with what the imported books hold of them — 'A'isha before all.",
+"tr": "\"Peygamber mü'minlere kendilerinden daha yakındır; hanımları da onların anneleridir\" (Ahzâb 33:6); onlara \"Ehl-i Beyt\" diye hitap eden âyetler (33:28–34) onlara yöneliktir. İlki Hz. Hatice, hicretten önce vefat etti. Aşağıda rical kitabında rivayeti olanlar, buraya aktarılan kitapların onlardan tuttuklarıyla — en başta Hz. Âişe.",
+"ar": "﴿النَّبِيُّ أَوْلَىٰ بِالْمُؤْمِنِينَ مِنْ أَنفُسِهِمْ وَأَزْوَاجُهُ أُمَّهَاتُهُمْ﴾ (الأحزاب 6)، والآيات التي تخاطبهن بأهل البيت (28–34) موجّهة إليهن. وأولاهن خديجة توفيت قبل الهجرة. وفيما يلي من لهن رواية في كتاب الرجال، مع ما في الكتب المستوردة عنهن — وعائشة أولاهن."
+},
+"hadith": [],
+"famous": "mothers"
+},
+{
+"id": "masumin",
+"road": "shia",
+"title": {
+"en": "The Household on the Shia road: the Fourteen Infallibles",
+"tr": "Ehl-i Beyt — Şiî (İmâmî) yol: On Dört Masum",
+"ar": "أهل البيت عند الإمامية: المعصومون الأربعة عشر"
+},
+"lead": {
+"en": "In the Imami reading the people of the house of 33:33 are the people of the cloak, and after them the Imams of their line, each named by the one before him; with the Prophet ﷺ and Fatima, fourteen held infallible (ma'sum). In al-Kafi (the Book of the Proof) Abu Basir asks Ja'far al-Sadiq about \"obey Allah, obey the Messenger and those in authority among you\" (al-Nisa' 4:59) and is told it was revealed about 'Ali, al-Hasan and al-Husayn. In the Shia books a chain ends at one of them: how many end at each is counted below from the books imported here. The years are those of al-Mufid's al-Irshad.",
+"tr": "İmâmî okuyuşta 33:33'ün Ehl-i Beyt'i kisâ ehlidir, onlardan sonra da her biri kendinden öncekinin adıyla bildirdiği soylarından gelen İmamlar; Resûlullah ﷺ ve Hz. Fâtıma ile birlikte masum sayılan on dört kişi. el-Kâfî'de (Kitâbü'l-Hucce) Ebû Basîr, Ca'fer es-Sâdık'a \"Allah'a itaat edin, Peygamber'e ve sizden olan emir sahiplerine itaat edin\" (Nisâ 4:59) âyetini sorar; Ali, Hasan ve Hüseyin hakkında indiği cevabını alır. Şiî kitaplarda sened onlardan birinde biter: her birinde kaç senedin bittiği aşağıda buraya aktarılan kitaplardan sayılmıştır. Yıllar Müfîd'in el-İrşâd'ındaki gibidir.",
+"ar": "في قراءة الإمامية أهل البيت في آية التطهير هم أصحاب الكساء، ومن بعدهم الأئمة من ذريتهم، ينصّ كل واحد على الذي بعده؛ ومع النبي ﷺ وفاطمة أربعة عشر معصومًا. وفي الكافي (كتاب الحجة) يسأل أبو بصير أبا عبد الله جعفرًا الصادق عن ﴿أَطِيعُوا اللَّهَ وَأَطِيعُوا الرَّسُولَ وَأُولِي الْأَمْرِ مِنكُمْ﴾ (النساء 59) فيجيبه أنها نزلت في علي والحسن والحسين. وفي كتب الشيعة ينتهي الإسناد إلى أحدهم، وعدد ما ينتهي إلى كل واحد محسوب أدناه من الكتب المستوردة هنا. والسنوات كما في الإرشاد للمفيد."
+},
+"hadith": [
+[
+"kafi",
+"1:754"
+]
+],
+"nodes": [
+[
+"muhammad",
+{
+"en": "d. 11 AH",
+"tr": "v. h. 11",
+"ar": "ت 11هـ"
+}
+],
+[
+"fatima",
+{
+"en": "d. 11 AH",
+"tr": "v. h. 11",
+"ar": "ت 11هـ"
+}
+],
+[
+"ali",
+{
+"en": "d. 40 AH",
+"tr": "v. h. 40",
+"ar": "ت 40هـ"
+}
+],
+[
+"hasan",
+{
+"en": "d. 50 AH",
+"tr": "v. h. 50",
+"ar": "ت 50هـ"
+}
+],
+[
+"husayn",
+{
+"en": "d. 61 AH",
+"tr": "v. h. 61",
+"ar": "ت 61هـ"
+}
+],
+[
+"sajjad",
+{
+"en": "d. 95 AH",
+"tr": "v. h. 95",
+"ar": "ت 95هـ"
+}
+],
+[
+"baqir",
+{
+"en": "d. 114 AH",
+"tr": "v. h. 114",
+"ar": "ت 114هـ"
+}
+],
+[
+"sadiq",
+{
+"en": "d. 148 AH",
+"tr": "v. h. 148",
+"ar": "ت 148هـ"
+}
+],
+[
+"kazim",
+{
+"en": "d. 183 AH",
+"tr": "v. h. 183",
+"ar": "ت 183هـ"
+}
+],
+[
+"rida",
+{
+"en": "d. 203 AH",
+"tr": "v. h. 203",
+"ar": "ت 203هـ"
+}
+],
+[
+"jawad",
+{
+"en": "d. 220 AH",
+"tr": "v. h. 220",
+"ar": "ت 220هـ"
+}
+],
+[
+"hadi",
+{
+"en": "d. 254 AH",
+"tr": "v. h. 254",
+"ar": "ت 254هـ"
+}
+],
+[
+"askari",
+{
+"en": "d. 260 AH",
+"tr": "v. h. 260",
+"ar": "ت 260هـ"
+}
+],
+[
+"mahdi",
+{
+"en": "b. 255 AH; in occultation since 260",
+"tr": "d. h. 255; 260'tan beri gaybette",
+"ar": "ولد 255هـ، وفي الغيبة منذ 260"
+}
+]
+]
+}
+],
+"shared_kunyas": [
+"abu_al_hasan",
+"imam",
+"one_of_two",
+"mudmar"
+],
+"quraysh": {
+"ali": {
+"names": {
+"en": "'Ali b. Abi Talib",
+"tr": "Hz. Ali",
+"ar": "علي بن أبي طالب"
+},
+"note": {
+"en": "The fourth caliph; the first Imam of the Shia. Married Fatima, the Prophet's daughter ﷺ.",
+"tr": "Dördüncü halife; Şîa'nın ilk İmamı. Peygamber'in ﷺ kızı Fâtıma ile evlendi."
+}
+},
+"askari": {
+"names": {
+"en": "al-Hasan al-'Askari",
+"tr": "Hasan el-Askerî",
+"ar": "الحسن العسكري"
+},
+"note": null
+},
+"baqir": {
+"names": {
+"en": "Muhammad al-Baqir",
+"tr": "Muhammed el-Bâkır",
+"ar": "محمد الباقر"
+},
+"note": null
+},
+"fatima": {
+"names": {
+"en": "Fatima al-Zahra'",
+"tr": "Hz. Fâtıma",
+"ar": "فاطمة الزهراء"
+},
+"note": null
+},
+"hadi": {
+"names": {
+"en": "'Ali al-Hadi",
+"tr": "Ali el-Hâdî",
+"ar": "علي الهادي"
+},
+"note": null
+},
+"hasan": {
+"names": {
+"en": "al-Hasan",
+"tr": "Hz. Hasan",
+"ar": "الحسن"
+},
+"note": {
+"en": "Son of 'Ali and Fatima.",
+"tr": "Ali ile Fâtıma'nın oğlu."
+}
+},
+"husayn": {
+"names": {
+"en": "al-Husayn",
+"tr": "Hz. Hüseyin",
+"ar": "الحسين"
+},
+"note": {
+"en": "Son of 'Ali and Fatima.",
+"tr": "Ali ile Fâtıma'nın oğlu."
+}
+},
+"jawad": {
+"names": {
+"en": "Muhammad al-Jawad",
+"tr": "Muhammed el-Cevâd",
+"ar": "محمد الجواد"
+},
+"note": null
+},
+"kazim": {
+"names": {
+"en": "Musa al-Kazim",
+"tr": "Mûsâ el-Kâzım",
+"ar": "موسى الكاظم"
+},
+"note": null
+},
+"mahdi": {
+"names": {
+"en": "Muhammad al-Mahdi",
+"tr": "Muhammed el-Mehdî",
+"ar": "محمد المهدي"
+},
+"note": {
+"en": "The twelfth Imam of the Twelver Shia, in occultation in their belief.",
+"tr": "On İki İmam Şîası'na göre on ikinci İmam; onların inancında gaybettedir."
+}
+},
+"muhammad": {
+"names": {
+"en": "Muhammad ﷺ",
+"tr": "Hz. Muhammed ﷺ",
+"ar": "محمد ﷺ"
+},
+"note": null
+},
+"rida": {
+"names": {
+"en": "'Ali al-Rida",
+"tr": "Ali er-Rızâ",
+"ar": "علي الرضا"
+},
+"note": null
+},
+"sadiq": {
+"names": {
+"en": "Ja'far al-Sadiq",
+"tr": "Ca'fer es-Sâdık",
+"ar": "جعفر الصادق"
+},
+"note": null
+},
+"sajjad": {
+"names": {
+"en": "'Ali Zayn al-'Abidin",
+"tr": "Ali Zeynelâbidîn",
+"ar": "علي زين العابدين"
+},
+"note": null
+}
+},
+"life_nodes": {
+"muhammad": [
+"quraysh",
+"muhammad"
+],
+"abu-bakr": [
+"quraysh",
+"abubakr"
+],
+"umar": [
+"quraysh",
+"umar"
+],
+"uthman": [
+"quraysh",
+"uthman"
+],
+"ali": [
+"quraysh",
+"ali"
+],
+"fatima": [
+"quraysh",
+"fatima"
+],
+"hasan-b-ali": [
+"quraysh",
+"hasan"
+],
+"husayn-b-ali": [
+"quraysh",
+"husayn"
+],
+"ibn-abbas": [
+"quraysh",
+"abdallah_ibnabbas"
+],
+"muawiya": [
+"quraysh",
+"muawiya"
+]
+}
+}

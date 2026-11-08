@@ -10,11 +10,15 @@ let APP = { catalog: {}, books: [], ui_language: "en" };
 
 // ------------------------------------------------------------------ the interface language
 
+// {n}, {n:,} (thousands), {x:.1f}, {s:+.2f} — the format specs the Python texts use
 function fill(text, values) {
-  return text.replace(/\{(\w+)(:,)?\}/g, (whole, key, comma) => {
+  return text.replace(/\{(\w+)(?::([+]?)(,|\.(\d)f))?\}/g, (whole, key, sign, spec, digits) => {
     if (!(key in values)) return whole;
     const v = values[key];
-    return comma && typeof v === "number" ? v.toLocaleString("en-US") : String(v);
+    if (typeof v !== "number" || !spec) return String(v);
+    if (spec === ",") return v.toLocaleString("en-US");
+    const s = v.toFixed(Number(digits));
+    return sign && v >= 0 ? "+" + s : s;
   });
 }
 
@@ -186,8 +190,12 @@ function show(key) {
   $("page-chains").hidden = key !== "chains";
   $("page-books").hidden = key !== "books";
   $("page-narrators").hidden = key !== "narrators";
+  $("page-scholars").hidden = key !== "scholars";
+  $("page-companions").hidden = key !== "companions";
   if (key === "narrators" && !NARR.loaded) loadNarrators();
-  if (key === "books" && !BOOKS.loaded) loadShelf();
+  if (key === "books") booksRefresh();
+  if (key === "scholars" && !HISTORY.opening) scholarsRefresh();
+  if (key === "companions" && !HISTORY.opening) companionsRefresh();
   $("page-later").hidden = ready;
   if (!ready) {
     $("later-title").textContent = t(sectionLabel(key));
@@ -203,92 +211,6 @@ function show(key) {
 
 function rankColor(rank) {
   return (WIN.rank_colors[DARK ? "dark" : "light"] || {})[rank] || "var(--muted)";
-}
-
-let BOOKS = { loaded: false, works: [], road: "sunni", key: null, chapter: 0, offset: 0, limit: 40 };
-const ARABIC_RE = /[\u0600-\u06FF]/;
-
-async function loadShelf() {
-  BOOKS.loaded = true;
-  const s = await invoke("shelf");
-  if (s.error === "not_ready") {
-    $("shelf").innerHTML = `<div class="notice">${esc(t("NOT_LAID_OUT"))}</div>`;
-    return;
-  }
-  BOOKS.works = s.works;
-  const roads = [["sunni", "Sunni"], ["shia", "Shia"], ["all", "All"]];
-  $("roads").innerHTML = roads.map(([k, l]) => `<button class="quiet ${BOOKS.road === k ? "on" : ""}" data-road="${k}">${esc(t(l))}</button>`).join("");
-  drawShelf();
-  if (!BOOKS.key && s.works.length) openBook(s.works[0].key, true);
-}
-
-function drawShelf() {
-  let html = "", last = "";
-  for (const w of BOOKS.works) {
-    if (BOOKS.road !== "all" && w.tradition !== BOOKS.road && w.kind !== "sira" && w.kind !== "tabaqat") continue;
-    const head = (BOOKS.road === "all" ? t(w.tradition === "shia" ? "Shia" : w.tradition === "sunni" ? "Sunni" : "Other") + " · " : "") + t(w.kind_label);
-    if (head !== last) { html += `<div class="kind-head">${esc(head)}</div>`; last = head; }
-    const count = w.kind === "hadith" || w.kind === "sahifa" ? t("{n:,} hadith", { n: w.leaves })
-      : w.kind === "rijal" ? t("{n:,} entries", { n: w.leaves }) : t("{n:,} sections", { n: w.leaves });
-    html += `<button class="work ${BOOKS.key === w.key ? "on" : ""}" data-key="${esc(w.key)}">
-      <div class="t">${esc(w.title)}</div><div class="n">${esc(count)} · ${esc(t("{n} chapters", { n: w.chapters }))}</div></button>`;
-  }
-  $("shelf").innerHTML = html;
-}
-
-async function openBook(key, quiet) {
-  BOOKS.key = key;
-  BOOKS.chapter = 0;
-  if (!quiet) record(["book", key]);
-  drawShelf();
-  const c = await invoke("contents", { key });
-  if (c.error) { $("reader").innerHTML = ""; return; }
-  const last = c.last ? `<div class="notice">${esc(t("You left off at {where}", { where: c.last.where }))}
-      <button class="primary" id="go-last" style="margin-inline-start:12px">${esc(t("Go where I left this book"))}</button></div>` : "";
-  $("reader").innerHTML = `<h1>${esc(c.title)}</h1><div class="crumbs">${esc(t("{n} chapters in this book", { n: c.chapters.length }))}</div>${last}
-    <div class="toc">${c.chapters.map((ch) => `<button data-chapter="${ch.index}"><span class="i">${ch.index}</span>${esc(ch.trail.join(" › "))}<span class="c">(${ch.count.toLocaleString("en-US")})</span></button>`).join("")}</div>`;
-  if (c.last) $("go-last").onclick = () => readChapter(key, c.last.index);
-  $("main").scrollTop = 0;
-}
-
-function itemHtml(it) {
-  if (it.kind === "hadith") {
-    return resultCard({ key: it.key, name: "", number: it.number, grades: it.grades,
-      texts: it.texts.map((x) => Object.assign({ spans: [], matched: true }, x)) });
-  }
-  const head = [it.label ? "#" + it.label : "", it.title || ""].filter(Boolean).join(" ");
-  const paras = (it.text || "").split("\n\n").filter((p) => p.trim());
-  const ar = ARABIC_RE.test(it.text || it.title || "");
-  return `<div class="card entry ${ar ? "ar" : ""}">${head ? `<div class="card-head"><h3 ${ar ? 'class="ar"' : ""}>${esc(head)}</h3></div>` : ""}
-    ${paras.map((p) => `<p>${esc(p.split(/\s+/).join(" "))}</p>`).join("")}</div>`;
-}
-
-async function readChapter(key, index, more) {
-  if (!more) { BOOKS.offset = 0; record(["chapter", key, index]); }
-  BOOKS.chapter = index;
-  const d = await invoke("read_chapter", { key, index, offset: BOOKS.offset, limit: BOOKS.limit });
-  if (d.error) return;
-  const nav = `<div class="bar">
-      <button class="quiet" id="toc-back">☰ ${esc(t("Contents"))}</button>
-      <span class="grow"></span>
-      <span class="muted">${esc(t("chapter {position} of {count}", { position: d.index, count: d.count }))}</span>
-      <button class="quiet" id="ch-prev" ${d.index <= 1 ? "disabled" : ""}>‹ ${esc(t("Previous chapter"))}</button>
-      <button class="quiet" id="ch-next" ${d.index >= d.count ? "disabled" : ""}>${esc(t("Next chapter"))} ›</button></div>`;
-  const body = d.items.map(itemHtml).join("");
-  if (!more) {
-    $("reader").innerHTML = nav + `<div class="crumbs"><b>${esc(d.trail[0])}</b> › ${esc(d.trail.slice(1).join(" › "))} · ${esc(t("{total:,} in this chapter", { total: d.total }))}</div><div id="items">${body}</div>
-      <div class="more-row"><button class="quiet" id="ch-more"></button></div>`;
-    $("toc-back").onclick = () => openBook(key);
-    $("ch-prev").onclick = () => readChapter(key, d.index - 1);
-    $("ch-next").onclick = () => readChapter(key, d.index + 1);
-    $("ch-more").onclick = () => readChapter(key, d.index, true);
-    $("main").scrollTop = 0;
-  } else {
-    $("items").insertAdjacentHTML("beforeend", body);
-  }
-  BOOKS.offset += d.items.length;
-  $("ch-more").hidden = BOOKS.offset >= d.total;
-  $("ch-more").textContent = `${t("Next")} ${BOOKS.limit} (${BOOKS.offset} / ${d.total.toLocaleString("en-US")})`;
 }
 
 // ------------------------------------------------------------------ start
@@ -315,38 +237,27 @@ async function start() {
   wireNarratorView();
   chainsBuild();
   $("c-body").addEventListener("click", chainsClick);
-  $("roads").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-road]");
-    if (!b) return;
-    BOOKS.road = b.dataset.road;
-    for (const x of $("roads").children) x.classList.toggle("on", x === b);
-    drawShelf();
-  });
-  $("shelf").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-key]");
-    if (b) openBook(b.dataset.key);
-  });
-  $("reader").addEventListener("click", (e) => {
-    const ch = e.target.closest("button[data-chapter]");
-    if (ch) { readChapter(BOOKS.key, Number(ch.dataset.chapter)); return; }
-    const b = e.target.closest("button[data-book]");
-    if (b) showChain(b.dataset.book, b.dataset.number);
-  });
   const open = s.open || "";
   if (open.startsWith("chain:")) {
     const [, book, ...num] = open.split(":");
     showChain(book, num.join(":"));
   } else if (open.startsWith("book:")) {
-    const [, key, n] = open.split(":");
-    show("books");
-    await loadShelf();
-    await openBook(key);
-    if (n) await readChapter(key, Number(n));
+    await openBookAt(open.slice(5));
+  } else if (open.startsWith("inbook:")) {
+    const [, book, ...num] = open.split(":");
+    const d = await invoke("hadith_by_number", { book, number: num.join(":") });
+    if (d.id) await openInBook(d.id);
+  } else if (open.startsWith("person:")) {
+    await openPersonInBook(Number(open.slice(7)));
   } else if (open.startsWith("narrator:")) {
     show("narrators");
     await loadNarrators();
     const q = open.slice(9);
     if (/^\d+$/.test(q)) await openNarrator(Number(q)); else { $("nq").value = q; await listNarrators(); }
+  } else if (open.startsWith("group:")) {
+    await openGroup(open.slice(6));
+  } else if (open.startsWith("scholar:")) {
+    await openScholar(open.slice(8));
   } else if (open.startsWith("search:")) {
     $("q").value = open.slice(7);
     show("search");
