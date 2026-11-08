@@ -441,7 +441,9 @@
  "death_rule": "5",
  "isnad": {
   "borrowed": "the chain of the hadith before it (\"from him\" / \"with this chain\")",
+  "continued": "no chain of its own: the text goes on from the hadith before it",
   "cut": "… (read as far as here)",
+  "direct": "no chain: the compiler gives the words without the narrators between",
   "end": "from {name}",
   "honour": "\\s*(?:رضي الله|عليه السلام|عليها السلام|عليهما السلام|صلي الله عليه)",
   "kin": {
@@ -581,6 +583,9 @@
    "sadiq": "İmam Ca'fer b. Muhammed es-Sâdık",
    "sajjad": "İmam Ali b. Hüseyin Zeynelâbidîn"
   },
+  "no_chain": "no chain: the book cites the text without one",
+  "no_term": "does not start with a transmission term",
+  "note": "the compiler's own words: no narration",
   "raised": "raised (رفعه): the rest of the chain is not named",
   "templates": {
    "'an": "from {name}",
@@ -604,6 +609,29 @@
    "su'ila": "{name} was asked",
    "wajadtu": "I found it in the writing of {name}",
    "za'ama": "{name} stated"
+  },
+  "term_why": {
+   "'an": "Does not say how it was received ('an'ana). Counted as connected when the two narrators could have met and the narrator is not known for concealing a gap (tadlis).",
+   "akhbarana": "Many critics used it for a text read back to the teacher ('ard); others as haddathana.",
+   "akhbarani": "As akhbarana, received alone.",
+   "anba'ana": "Later scholars often used it for transmission by permission (ijaza).",
+   "anba'ani": "As anba'ana, received alone.",
+   "anna": "Treated by most critics like 'an (mu'anna).",
+   "balagha": "The narrator says only that it reached him from that man: who brought it to him is not named (a balagh).",
+   "bare": "The compiler names his teacher without a term, as al-Kulayni does: it is his own transmission from that teacher.",
+   "haddathana": "The teacher recited it to a group that included the narrator: heard directly.",
+   "haddathani": "The teacher recited it to the narrator alone: heard directly.",
+   "kataba": "The teacher wrote it to the narrator (mukataba): accepted by most critics, though not heard.",
+   "qala": "Cited without saying how it was received (ta'liq): the compiler or a narrator quotes him, as al-Bukhari does after a tahwil (\"وقال ابن وهب\").",
+   "qara'tu 'ala": "The narrator read the text back to the teacher ('ard).",
+   "quri'a 'ala": "The text was read back to the teacher while the narrator listened.",
+   "sa'ala": "The narrator asked him and heard the answer from him: heard directly.",
+   "sa'altu": "The narrator asked him and heard the answer from him: heard directly.",
+   "sami'a": "Reports that the narrator heard it directly.",
+   "sami'tu": "States direct hearing explicitly.",
+   "su'ila": "He was asked, and the narrator reports his answer; how the narrator received it is not said.",
+   "wajadtu": "The narrator found it in the teacher's writing (wijada), without hearing it from him: a weaker way of receiving.",
+   "za'ama": "Reports a statement; says nothing about how it was received."
   },
   "terms": {
    "'an": [

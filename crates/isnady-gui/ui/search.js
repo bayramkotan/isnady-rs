@@ -1046,11 +1046,12 @@ function wireStrip(el) {
 }
 
 // a name of a chain not identified, looked for among the narrators (find_narrator)
+// a name of a chain isnady could not tell (several narrators bear it): the narrators of that name, on Search
 function findNarrator(name) {
-  NARR.id = null;
-  show("narrators");
-  $("nq").value = name;
-  listNarrators();
+  place(["find", name], () => {
+    show("search");
+    searchFor(name, "narrators");
+  });
 }
 
 function copyText(text) {

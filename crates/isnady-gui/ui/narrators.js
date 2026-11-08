@@ -362,7 +362,7 @@ function squareBoxes(root, selector) {
   }
 }
 
-function card(title, body) {
+function nCard(title, body) {
   return `<div class="ncard">${title ? `<div class="ncard-title">${esc(title)}</div>` : ""}${body}</div>`;
 }
 
@@ -510,7 +510,7 @@ function critics(d) {
     html += `<div class="caption">${esc(t("Where his hadith appear (Ibn Hajar's marks)"))}</div><div class="n-marks">` +
       d.marks.map((m) => `<span dir="auto" class="n-mark${m.book ? " go" : ""}"${m.book ? ` data-key="${esc(m.book)}"` : ""} data-tip="${esc(t("Ibn Hajar's mark {mark}: {meaning}", { mark: m.mark, meaning: m.meaning }) + (m.book ? "\n\n" + t("Click to open this book.") : ""))}">${esc(m.mark)}  ${esc(m.meaning)}</span>`).join("") + `</div>`;
   }
-  return card(t("What the critics say"), html);
+  return nCard(t("What the critics say"), html);
 }
 
 function relationsCard(d) {
@@ -527,7 +527,7 @@ function relationsCard(d) {
   if (d.compilers.length) {
     html += `<div class="lead">${t("<b>Compilers who narrate from him directly:</b> {parts}", { parts: d.compilers.map((c) => `${esc(c.book)} (${c.count.toLocaleString("en-US")})`).join(" · ") })}</div>`;
   }
-  return card(t("Teachers and students in the imported chains"), html);
+  return nCard(t("Teachers and students in the imported chains"), html);
 }
 
 function hadithCard(d) {
@@ -547,7 +547,7 @@ function hadithCard(d) {
   } else {
     html += `<div class="caption">${esc(t("Not identified in any imported chain yet."))}</div>`;
   }
-  return card(t("In the chains of {total:,} hadith", { total: d.hadith_total }), html);
+  return nCard(t("In the chains of {total:,} hadith", { total: d.hadith_total }), html);
 }
 
 async function openNarrator(id, quiet) {

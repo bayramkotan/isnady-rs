@@ -18,10 +18,12 @@ grades, chapters, paging, wildcards, near spellings, the recent searches; the na
 scholars by name), `iy-rs chain` (every link, its narrator and his
 grade, whom the chain reaches, the chain in Turkish and English), `iy-rs book` (the shelf, a book's chapters, a
 chapter, your places and markers in each book), `iy-rs narrator` (by any spelling, his verdicts, teachers, students
-and hadith), `iy-rs life` (the life of a Companion, a narrator or a scholar), `iy-rs sources`, `iy-rs datadir` and `iy-rs -V`.
+and hadith), `iy-rs life` (the life of a Companion, a narrator or a scholar), `iy-rs isnads` (how far the chains of
+every book were read), `iy-rs sources`, `iy-rs datadir` and `iy-rs -V`.
 A search takes about 60 ms, a chain about 30 ms. **The window, `isnady-rs`,** has begun: the menus and the sidebar of the Python window, its Search page as it
 is (filters, cards, chains, bookmarks, the narrators and the scholars), its Narrators page as it is (the list, the
-filters, the name card, the life, the critics, teachers and students), and Books and Isnad Chains, in English, Turkish or Arabic, in every theme of the Python window; the other pages come
+filters, the name card, the life, the critics, teachers and students), its Isnad Chains page as it is (the numbers of a
+book, its contents, the overview, every chain node by node), and Books, in English, Turkish or Arabic, in every theme of the Python window; the other pages come
 one at a time. Each of these prints what `iy` prints, word for word; `tools/parity.py` checks it on
 every push and before every release. Everything else below is still done by the Python isnady, on the same data. The
 ported parts are listed in [PARITY.md](PARITY.md), and more are ported with every release.

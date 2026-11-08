@@ -719,75 +719,207 @@ fn hadith_place(state: tauri::State<Data>, hadith_id: i64) -> Result<Value, Stri
     })
 }
 
-fn person_json(p: &Person, lang: &str) -> Value {
-    let t = tables::get();
-    let v = p.verdicts.first();
-    let reading = if p.known_arabic.is_empty() {
-        String::new()
-    } else {
-        isnad::name_reading(&p.known_arabic, lang).0
-    };
-    let full = names::latin(&p.display_name, lang, 8).unwrap_or_default();
-    json!({
-        "id": p.id,
-        "arabic": p.display_name,
-        "known_arabic": p.known_arabic,
-        "reading": reading,
-        "full_reading": full,
-        "tabaqa": p.tabaqa,
-        "tabaqa_label": p.tabaqa.and_then(|n| t.rijal.tabaqat.get(&n.to_string()).cloned()),
-        "death": p.death_year_ah,
-        "verdict": v.map(|v| json!({
-            "critic": v.critic_name,
-            "phrase": v.phrase,
-            "rank": v.rank,
-            "shia": v.rank_scheme.as_deref() == Some("shia"),
-            "label": if v.rank_scheme.as_deref() == Some("shia") {
-                v.rank_label.clone()
-            } else {
-                v.rank.and_then(|r| t.rijal.ranks.get(&r.to_string()).cloned()).unwrap_or_default()
-            },
-        })),
+// ------------------------------------------------------------------ Isnad Chains (gui/isnad_page.py)
+
+/// The overview of the page: per book, the chains read, split, reaching the Prophet (or a Ma'sum), narrators per chain,
+/// identified, and why the rest were kept whole (isnad_page._show_overview, _stats_card).
+#[tauri::command]
+fn chains_overview(state: tauri::State<Data>) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        if !isnad::isnads_ready(conn) {
+            return Ok(json!({"books": [], "not_read": true}));
+        }
+        let known = isnad::known_by_book(conn).map_err(err)?;
+        let stats = isnad::book_stats(conn).map_err(err)?;
+        let books: Vec<Value> = stats
+            .iter()
+            .map(|b| {
+                let k = known.get(&b.key);
+                json!({
+                    "key": b.key, "name": works::book_title(&b.key, &b.stored_name, &lang),
+                    "tradition": b.tradition, "chains": b.chains, "split": b.split, "marfu": b.marfu,
+                    "links": b.links, "problems": b.problems,
+                    "known": k.filter(|k| k.2 != 0).map(|k| json!([k.0, k.1, k.2])),
+                })
+            })
+            .collect();
+        Ok(json!({"books": books}))
     })
 }
 
-/// One hadith's chains, as the Isnad Chains page draws them.
+/// The numbers of a book (HadithNavigator.set_book): first, last and how many; None for a book without hadith.
 #[tauri::command]
-fn chain(state: tauri::State<Data>, book: String, number: String) -> Result<Value, String> {
-    let lang = if i18n::ui_language() == "tr" {
-        "tr"
-    } else {
-        "en"
-    };
+fn book_numbers(state: tauri::State<Data>, book: String) -> Result<Value, String> {
     with_db(&state, |conn| {
-        let rng = isnad::number_range(conn, &book).map_err(err)?;
-        let Some(rng) = rng else {
-            return Ok(json!({"error": "no_book"}));
-        };
-        let number = if number.trim().is_empty() {
-            rng.first.clone()
-        } else {
-            number.trim().to_string()
-        };
-        let base = json!({
-            "book": book, "number": number,
-            "first": rng.first, "last": rng.last, "count": rng.count,
-            "prev": isnad::step_number(conn, &book, &number, -1),
-            "next": isnad::step_number(conn, &book, &number, 1),
-        });
-        if !isnad::isnads_ready(conn) || !narrators::links_ready(conn) {
-            let mut o = base;
-            o["error"] = json!("not_read");
-            return Ok(o);
+        Ok(match isnad::number_range(conn, &book).map_err(err)? {
+            Some(r) => json!({"first": r.first, "last": r.last, "count": r.count}),
+            None => Value::Null,
+        })
+    })
+}
+
+/// The book's numbers that begin with what is typed (the number field's completer).
+#[tauri::command]
+fn numbers_starting(
+    state: tauri::State<Data>,
+    book: String,
+    prefix: String,
+) -> Result<Vec<String>, String> {
+    with_db(&state, |conn| {
+        Ok(isnad::numbers_starting(conn, &book, &prefix, 12))
+    })
+}
+
+/// Where a number stands among the book's hadith: [place, count], or None.
+#[tauri::command]
+fn number_place(
+    state: tauri::State<Data>,
+    book: String,
+    number: String,
+) -> Result<Option<(i64, i64)>, String> {
+    with_db(&state, |conn| Ok(isnad::position(conn, &book, &number)))
+}
+
+/// The number before or after one in the book's order.
+#[tauri::command]
+fn step_number(
+    state: tauri::State<Data>,
+    book: String,
+    number: String,
+    delta: i32,
+) -> Result<Option<String>, String> {
+    with_db(&state, |conn| {
+        Ok(isnad::step_number(conn, &book, &number, delta))
+    })
+}
+
+/// A number typed on the page (isnad_page._go): the hadith, or why there is none — the nearest number, how the
+/// book writes its numbers, the range.
+#[tauri::command]
+fn hadith_by_number(
+    state: tauri::State<Data>,
+    book: String,
+    number: String,
+) -> Result<Value, String> {
+    with_db(&state, |conn| {
+        if let Some(id) = isnad::hadith_id(conn, &book, &number) {
+            return Ok(json!({"id": id}));
         }
-        let Some((hid, name)) = isnad::find_hadith(conn, &book, &number).map_err(err)? else {
-            let mut o = base;
-            o["error"] = json!("no_number");
-            o["nearest"] = json!(isnad::nearest_number(conn, &book, &number));
-            return Ok(o);
+        let sample: Vec<String> = conn
+            .prepare(
+                "SELECT h.number FROM hadiths h JOIN collections c ON c.id = h.collection_id WHERE c.key = ? \
+                 ORDER BY h.number_sort LIMIT 3",
+            )
+            .and_then(|mut st| st.query_map([&book], |r| r.get(0))?.collect())
+            .map_err(err)?;
+        let range = isnad::number_range(conn, &book)
+            .map_err(err)?
+            .map(|r| json!({"first": r.first, "last": r.last}));
+        Ok(json!({
+            "id": null, "near": isnad::nearest_number(conn, &book, &number), "sample": sample, "range": range,
+        }))
+    })
+}
+
+/// A link of a chain that names no one person, in words (`isnad.link_note`), in the interface language.
+fn link_note_in(raw: &str, next_raw: &str, lang: &str) -> String {
+    match isnad::link_kind(raw) {
+        "group" => {
+            let members = isnad::group_members(raw, next_raw);
+            if members.is_empty() {
+                i18n::t(lang, "A group of al-Kulayni's teachers", &[])
+            } else {
+                i18n::t(
+                    lang,
+                    "A group of al-Kulayni's teachers: {members} (as al-Kulayni explained it)",
+                    &[("members", members.join("، "))],
+                )
+            }
+        }
+        "previous" => i18n::t(
+            lang,
+            "\"From him\": the narrator who heads the previous chain in the book",
+            &[],
+        ),
+        "vague" => i18n::t(
+            lang,
+            "A narrator not named (mubham): the chain does not say who",
+            &[],
+        ),
+        _ => String::new(),
+    }
+}
+
+/// Whom a chain reaches, in words (`isnad.end_label`), in the interface language.
+fn end_label_in(ch: &isnad::Chain, lang: &str) -> String {
+    let key = if !ch.ends_with.is_empty() {
+        ch.ends_with.clone()
+    } else if ch.reaches_prophet {
+        "prophet".into()
+    } else {
+        return String::new();
+    };
+    let label = if key == "prophet" {
+        i18n::t(lang, "the Prophet ﷺ", &[])
+    } else if key == "imam" {
+        i18n::t(lang, "an Imam", &[])
+    } else {
+        let m = isnad::masum_label(&key);
+        if m.is_empty() {
+            key.clone()
+        } else {
+            m
+        }
+    };
+    if ch.raised {
+        i18n::t(lang, "raised (رفعه) to {whom}", &[("whom", label)])
+    } else {
+        label
+    }
+}
+
+/// An identified narrator of a chain, as its node shows him (chain_widgets.ChainNode).
+fn node_person(conn: &db::Connection, id: i64, lang: &str) -> Option<Value> {
+    let d = people::describe(conn, id)?;
+    let view = narrators::name_view(conn, id, &d.person.name_ar, page_langs(lang));
+    let v = d.verdicts.first();
+    Some(json!({
+        "id": id, "display_name": d.person.display_name, "name_ar": d.person.name_ar,
+        "other_names": d.other_names.iter().take(8).collect::<Vec<_>>(),
+        "reading": view.reading, "full_reading": view.full_reading, "how": view.how,
+        "latin": names::latin(&d.person.display_name, "en", 8).unwrap_or_default(),
+        "tabaqa": d.person.tabaqa, "tabaqa_label": i18n::t(lang, &d.tabaqa_label, &[]),
+        "death": d.person.death_year_ah, "death_note": d.death_year_note,
+        "verdict": v.map(|v| json!({
+            "critic_name": v.critic_name, "work": v.work, "phrase": v.phrase, "rank": v.rank,
+            "shia": v.rank_scheme.as_deref() == Some("shia"),
+            "label": if v.rank_label.is_empty() { String::new() } else { i18n::t(lang, &v.rank_label, &[]) },
+            "madhhab": if v.madhhab_label.is_empty() { String::new() } else { i18n::t(lang, &v.madhhab_label, &[]) },
+        })),
+    }))
+}
+
+/// One hadith's page (isnad_page.show_hadith): the book and number, the road, each chain with its nodes, the Arabic
+/// text, and the chain in words in the languages the texts are shown in.
+#[tauri::command]
+fn chain_page(state: tauri::State<Data>, id: i64) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let code = if lang == "tr" { "tr" } else { "en" };
+    with_db(&state, |conn| {
+        let Some(info) = isnad::describe(conn, id, &lang) else {
+            return Ok(Value::Null);
         };
-        let chains = isnad::chain(conn, hid).map_err(err)?;
+        let tradition: String = conn
+            .query_row(
+                "SELECT COALESCE(tradition, 'sunni') FROM collections WHERE key = ?",
+                [&info.book],
+                |r| r.get(0),
+            )
+            .map_err(err)?;
+        let chains = isnad::chain(conn, id).map_err(err)?;
         let mut people: HashMap<i64, Person> = HashMap::new();
+        let mut shown: HashMap<i64, Value> = HashMap::new();
         for ch in &chains {
             for l in &ch.links {
                 if let Some(pid) = l.person_id {
@@ -795,10 +927,54 @@ fn chain(state: tauri::State<Data>, book: String, number: String) -> Result<Valu
                         if let Some(p) = narrators::describe(conn, pid) {
                             e.insert(p);
                         }
+                        if let Some(v) = node_person(conn, pid, &lang) {
+                            shown.insert(pid, v);
+                        }
                     }
                 }
             }
         }
+        let t = tables::get();
+        let out: Vec<Value> = chains
+            .iter()
+            .map(|ch| {
+                let names = isnad::chain_link_names(ch, code, &people);
+                let links: Vec<Value> = ch
+                    .links
+                    .iter()
+                    .enumerate()
+                    .map(|(i, l)| {
+                        let (ar, meaning) = isnad::term_label(&l.transmission);
+                        let nxt = ch
+                            .links
+                            .get(i + 1)
+                            .map(|x| x.raw_name.as_str())
+                            .unwrap_or("");
+                        let (reading, spelled) = isnad::name_reading(&l.raw_name, &lang);
+                        json!({
+                            "position": l.position, "raw": l.raw_name, "short": isnad::short_name(&l.raw_name),
+                            "term": l.transmission, "term_ar": ar, "term_meaning": i18n::t(&lang, &meaning, &[]),
+                            "term_why": i18n::t(&lang, &isnad::term_why(&l.transmission), &[]),
+                            "note": link_note_in(&l.raw_name, nxt, &lang),
+                            "reading": reading, "spelled": spelled,
+                            "name": names.get(i).cloned().unwrap_or_default(),
+                            "person": l.person_id.and_then(|p| shown.get(&p).cloned()),
+                            "confidence": l.match_confidence, "candidates": l.candidates,
+                        })
+                    })
+                    .collect();
+                json!({
+                    "problem": ch.problem, "links": links, "raw": ch.raw,
+                    "reaches_prophet": ch.reaches_prophet, "ends_with": ch.ends_with, "raised": ch.raised,
+                    "end": end_label_in(ch, &lang),
+                    "jamian": isnady_core::normalize::normalize(ch.raw.as_deref().unwrap_or("")).contains("جميعا"),
+                    "meeting": ch.meeting.as_ref().map(|m| json!({
+                        "first_position": m.first_position, "said": m.said, "attested": m.attested,
+                    })),
+                })
+            })
+            .collect();
+        // under the Arabic, each road in the languages the texts are shown in (ISN-TR1)
         let codes = isnad::chain_codes(
             &config::get_str("view.content_languages", "")
                 .split(',')
@@ -806,62 +982,95 @@ fn chain(state: tauri::State<Data>, book: String, number: String) -> Result<Valu
                 .map(String::from)
                 .collect::<Vec<_>>(),
         );
-        let borrowed = &tables::get().isnad.borrowed;
-        let tradition = chains
-            .first()
-            .map(|c| c.tradition.clone())
-            .unwrap_or_else(|| "sunni".into());
-        let out_chains: Vec<Value> = chains
+        let words: Vec<Value> = codes
             .iter()
-            .map(|ch| {
-                let links: Vec<Value> = ch
-                    .links
+            .map(|c| {
+                let roads: Vec<String> = chains
                     .iter()
-                    .enumerate()
-                    .map(|(i, l)| {
-                        let (ar, meaning) = isnad::term_label(&l.transmission);
-                        let nxt = ch.links.get(i + 1).map(|x| x.raw_name.as_str()).unwrap_or("");
-                        json!({
-                            "position": l.position,
-                            "term": l.transmission,
-                            "term_ar": ar,
-                            "term_meaning": meaning,
-                            "raw": l.raw_name,
-                            "reading": isnad::name_reading(&isnad::short_name(&l.raw_name), lang).0,
-                            "kind": isnad::link_kind(&l.raw_name),
-                            "members": isnad::group_members(&l.raw_name, nxt),
-                            "person": l.person_id.and_then(|p| people.get(&p)).map(|p| person_json(p, lang)),
-                            "confidence": l.match_confidence,
-                            "candidates": l.candidates,
-                            "meeting": ch.meeting.as_ref().filter(|m| m.first_position == l.position).map(|m| json!({
-                                "said": m.said, "attested": m.attested,
-                            })),
-                        })
+                    .filter(|ch| {
+                        (ch.problem.is_none() || !ch.links.is_empty())
+                            && (!ch.links.is_empty()
+                                || ch.problem.as_deref() == Some(t.isnad.direct.as_str()))
                     })
+                    .map(|ch| isnad::chain_in_words(ch, c, &people))
                     .collect();
-                let words: Vec<Value> = codes
-                    .iter()
-                    .map(|c| json!({"code": c, "text": isnad::chain_in_words(ch, c, &people)}))
-                    .filter(|w| w["text"].as_str().is_some_and(|s| !s.is_empty()))
-                    .collect();
-                json!({
-                    "links": links,
-                    "problem": ch.problem,
-                    "borrowed": ch.problem.as_deref() == Some(borrowed.as_str()),
-                    "raised": ch.raised,
-                    "reaches_prophet": ch.reaches_prophet,
-                    "end": isnad::end_label(ch),
-                    "jamian": isnady_core::normalize::normalize(ch.raw.as_deref().unwrap_or("")).contains("جميعا"),
-                    "raw": ch.raw,
-                    "words": words,
-                })
+                json!({"code": c, "roads": roads})
             })
             .collect();
-        let mut o = base;
-        o["name"] = json!(name);
-        o["tradition"] = json!(tradition);
-        o["chains"] = Value::Array(out_chains);
-        Ok(o)
+        Ok(json!({
+            "info": {"id": info.id, "number": info.number, "book": info.book, "book_name": info.book_name,
+                     "prev": info.prev, "next": info.next},
+            "tradition": tradition, "chains": out, "text": isnad::arabic_text(conn, id), "words": words,
+            "problems": {"borrowed": t.isnad.borrowed, "direct": t.isnad.direct, "note": t.isnad.note,
+                         "continued": t.isnad.continued, "no_chain": t.isnad.no_chain, "no_term": t.isnad.no_term},
+        }))
+    })
+}
+
+/// "From the contents…" (chapter_picker.ChapterPicker): a book's chapters as a tree, the one holding a hadith.
+#[tauri::command]
+fn contents_tree(
+    state: tauri::State<Data>,
+    book: String,
+    hadith: Option<i64>,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let Some(work) = works::find_work(conn, &book, &lang).map_err(err)? else {
+            return Ok(Value::Null);
+        };
+        fn walk(conn: &db::Connection, work: i64, parent: Option<i64>, lang: &str) -> Vec<Value> {
+            works::containers(conn, work, parent, lang)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|c| {
+                    let label = c.label.as_deref().filter(|l| !l.is_empty()).map(|l| format!("{l}. ")).unwrap_or_default()
+                        + &c.title;
+                    json!({
+                        "id": c.id, "label": label, "leaves": c.leaves,
+                        "children": if c.subchapters > 0 { walk(conn, work, Some(c.id), lang) } else { vec![] },
+                    })
+                })
+                .collect()
+        }
+        let here = hadith.and_then(|h| works::chapter_of_hadith(conn, h));
+        Ok(json!({"title": work.title, "tree": walk(conn, work.id, None, &lang), "here": here}))
+    })
+}
+
+/// One chapter of the picker: where it stands, and its hadith with the start of their text and how far each chain
+/// was read.
+#[tauri::command]
+fn contents_chapter(state: tauri::State<Data>, chapter: i64) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let trail: Vec<String> = works::path(conn, chapter, &lang)
+            .into_iter()
+            .map(|n| {
+                n.label
+                    .as_deref()
+                    .filter(|l| !l.is_empty())
+                    .map(|l| format!("{l}. "))
+                    .unwrap_or_default()
+                    + &n.title
+            })
+            .collect();
+        // the start of each text in the first language chosen for the texts after Arabic, else the interface's
+        let chosen: Vec<String> = config::get_str("view.content_languages", "")
+            .split(',')
+            .filter(|s| !s.is_empty() && *s != "Arabic")
+            .map(String::from)
+            .collect();
+        let language = chosen.first().cloned().or_else(|| match lang.as_str() {
+            "tr" => Some("Turkish".into()),
+            "en" => Some("English".into()),
+            _ => None,
+        });
+        let rows = works::chapter_hadith(conn, chapter, language.as_deref(), 90).map_err(err)?;
+        Ok(json!({
+            "trail": trail,
+            "hadith": rows.iter().map(|h| json!({"id": h.hadith_id, "number": h.number, "links": h.links, "words": h.words})).collect::<Vec<_>>(),
+        }))
     })
 }
 
@@ -1279,7 +1488,15 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             start,
             find,
-            chain,
+            chains_overview,
+            book_numbers,
+            numbers_starting,
+            number_place,
+            step_number,
+            hadith_by_number,
+            chain_page,
+            contents_tree,
+            contents_chapter,
             random_number,
             shelf,
             contents,

@@ -193,160 +193,17 @@ function show(key) {
     $("later-title").textContent = t(sectionLabel(key));
     $("later-text").textContent = t("LATER");
   }
-  if (key === "chains" && !CHAIN_SHOWN) showChain();
+  if (key === "chains") chainsRefresh();
   if (!HISTORY.opening) record(["section", key]);
 }
 
-let CHAIN_SHOWN = true;
-
 // ------------------------------------------------------------------ Search
 
-// ------------------------------------------------------------------ Isnad Chains
+// ------------------------------------------------------------------ Isnad Chains (chains.js)
 
 function rankColor(rank) {
   return (WIN.rank_colors[DARK ? "dark" : "light"] || {})[rank] || "var(--muted)";
 }
-
-function linkCard(l) {
-  const term = `<div class="term">${esc(t(l.term_meaning))}<span class="ar" lang="ar">${esc(l.term_ar)}</span></div>`;
-  let body = "";
-  if (l.person) {
-    const p = l.person, v = p.verdict;
-    const name = p.reading || p.full_reading;
-    body += `<div class="full" lang="ar">${esc(p.arabic)}</div>`;
-    body += `<div class="who"><b>${esc(name)}</b>${p.full_reading && p.full_reading !== name ? ` · <span class="muted">${esc(p.full_reading)}</span>` : ""}`;
-    if (l.confidence !== null && l.confidence < 0.8) {
-      body += ` <span class="how">${esc(l.confidence >= 0.6 ? t("Identified by the narrators around him: this teacher and student are seen with him in the chains elsewhere.") : t("Taken as the famous narrator of this name: nothing else decided between those who bear it."))}</span>`;
-    }
-    body += "</div>";
-    if (v) {
-      const rank = v.rank ? (v.shia ? esc(t(v.label)) : esc(t("rank {rank} of 12", { rank: v.rank })) + ": " + esc(t(v.label))) : "";
-      const phrase = Array.from(v.phrase).length > 160 ? Array.from(v.phrase).slice(0, 160).join("") + " …" : v.phrase;
-      body += `<div class="verdict" title="${esc(v.phrase)}">${esc(v.critic)}: <span class="phrase" lang="ar">${esc(phrase)}</span>` +
-        (v.rank ? `<span class="dot" style="background:${v.shia ? "var(--gold)" : rankColor(v.rank)}"></span>${rank}` : "") + "</div>";
-    }
-    const facts = [];
-    if (p.tabaqa) facts.push(t("tabaqa {tabaqa}", { tabaqa: p.tabaqa }) + (p.tabaqa_label ? ": " + t(p.tabaqa_label) : ""));
-    if (p.death) facts.push(t("d. {year} AH", { year: p.death }));
-    if (facts.length) body += `<div class="facts">${esc(facts.join(" · "))}</div>`;
-  } else if (l.kind === "group") {
-    body += `<div class="unknown">${esc(l.members.length
-      ? t("A group of al-Kulayni's teachers: {members} (as al-Kulayni explained it)", { members: l.members.join("، ") })
-      : t("A group of al-Kulayni's teachers"))}</div>`;
-  } else if (l.kind === "previous") {
-    body += `<div class="unknown">${esc(t("\"From him\": the narrator who heads the previous chain in the book"))}</div>`;
-  } else if (l.kind === "vague") {
-    body += `<div class="unknown">${esc(t("A narrator not named (mubham): the chain does not say who"))}</div>`;
-  } else if (l.candidates !== null) {
-    body += `<div class="unknown">${esc(l.candidates ? t("not identified: {n} narrators could have this name", { n: l.candidates }) : t("not identified: no narrator of this name in the rijal work"))}</div>`;
-  }
-  const reading = l.reading && !l.person ? `<div class="facts">${esc(l.reading)}</div>` : "";
-  const meeting = l.meeting ? `<div class="meeting">⤷ tahwil (ح): ${esc(l.meeting.said
-    ? "the text says the roads meet here (كلهم عن …); attested in " + l.meeting.attested + " other hadith"
-    : "not said in the text: the narrator before is found narrating from this one in " + l.meeting.attested + " other hadith, in chains read whole")}</div>` : "";
-  return `${meeting}<div class="link"><div class="card">${term}<div class="raw" lang="ar">${esc(l.raw)}</div>${reading}${body}</div></div>`;
-}
-
-function chainHtml(ch, i, n, data) {
-  let out = n > 1 ? `<div class="chain-label">${esc(t("Chain {i}", { i: i + 1 }))}${ch.borrowed ? " — " + esc(t("from the hadith before (بهذا الإسناد), not counted in the statistics")) : ""}</div>` : "";
-  out += '<div class="timeline">';
-  out += `<div class="link"><div class="card"><b style="font-family:Georgia,serif;font-size:18px">${esc(data.name)}</b>
-          <div class="facts">${esc(t("The compiler's book, where the chain begins"))}</div></div></div>`;
-  out += ch.links.map(linkCard).join("");
-  if (ch.links.length) {
-    if (ch.end && !ch.raised) {
-      out += `<div class="link end"><div class="card">${esc(t("The chain reaches {whom}", { whom: t(ch.end) }))}</div></div>`;
-    } else if (ch.raised) {
-      out += `<div class="link end"><div class="card"><span class="ar-inline" lang="ar">رفعه</span> ${esc(t("Raised (marfu'): the rest of the chain is left out — whom it reaches is not named"))}</div></div>`;
-    } else if (ch.problem && !ch.borrowed) {
-      out += `<div class="link"><div class="card muted">… ${esc(t("The chain is read as far as here; the rest is in the text. ({reason})", { reason: t(ch.problem) }))}</div></div>`;
-    }
-  }
-  out += "</div>";
-  if (!ch.links.length) {
-    out += `<div class="notice">${esc(ch.problem ? t(ch.problem) : t("No Arabic text for this hadith, so no chain was read."))}</div>`;
-    if (ch.raw) out += `<div class="rawtext" lang="ar">${esc(ch.raw)}</div>`;
-  }
-  for (const w of ch.words) out += `<div class="words"><span class="code">${esc(w.code)}</span>${esc(w.text)}</div>`;
-  return out;
-}
-
-// what the page says first about the chain (gui/isnad_page.py _verdict)
-function verdictText(ch, tradition) {
-  if (!ch) return t("No Arabic text for this hadith, so no chain was read.");
-  if (ch.borrowed) {
-    return t("This hadith names no chain of its own: the book says it is the chain of the hadith before it (\"وعنه\", \"وبهذا الإسناد\"). The chain drawn is taken from that hadith and is not counted in the statistics.");
-  }
-  if (ch.problem) return t("This chain was kept whole and not split: {reason}. The full wording is shown below.", { reason: t(ch.problem) });
-  const n = ch.links.length;
-  const known = ch.links.filter((l) => l.person).length;
-  const looked = ch.links.some((l) => l.candidates !== null);
-  let text;
-  if (tradition === "shia" && n) {
-    if (ch.end && !ch.raised) {
-      text = n_("Read as a Shia chain: {n} link between the compiler and {end}.", "Read as a Shia chain: {n} links between the compiler and {end}.", n, { end: t(ch.end) });
-    } else if (ch.raised) {
-      text = n_("Read as a Shia chain: {n} link, then raised (رفعه) without the rest of its links — a gap (marfu' in the Imami usage): whom it reaches is not named.",
-        "Read as a Shia chain: {n} links, then raised (رفعه) without the rest of its links — a gap (marfu' in the Imami usage): whom it reaches is not named.", n);
-    } else {
-      text = n_("Read as a Shia chain: {n} link; it stops before a Ma'sum is named (maqtu', or the last link could not be read with confidence).",
-        "Read as a Shia chain: {n} links; it stops before a Ma'sum is named (maqtu', or the last link could not be read with confidence).", n);
-    }
-    if (looked) text += " " + t("{known} of them identified in the Shia rijal works (al-Najashi …).", { known });
-    if (ch.jamian) text += " " + t("A second road joins it (\"jami'an\"); the first road is drawn.");
-    return text;
-  }
-  if (ch.reaches_prophet) {
-    text = n_("{n} narrator between the compiler and the Prophet, as read from the text.", "{n} narrators between the compiler and the Prophet, as read from the text.", n);
-    if (looked) text += " " + t("{known} of them identified in Ibn Hajar's Taqrib al-Tahdhib.", { known });
-    return text;
-  }
-  return t("The chain as read stops before the Prophet: the report may be from a Companion or a later narrator, or the last link could not be read with confidence.");
-}
-
-async function showChain(book, number) {
-  if (book) $("chain-book").value = book;
-  if (number !== undefined) $("chain-number").value = number;
-  CHAIN_SHOWN = true;
-  const before = HISTORY.opening;
-  HISTORY.opening = true;
-  show("chains");
-  HISTORY.opening = before;
-  const view = $("chain-view");
-  view.innerHTML = '<p class="muted">…</p>';
-  try {
-    const d = await invoke("chain", { book: $("chain-book").value, number: $("chain-number").value });
-    $("chain-number").value = d.number || "";
-    $("prev").disabled = !d.prev || d.prev === d.number;
-    $("next").disabled = !d.next || d.next === d.number;
-    $("prev").dataset.number = d.prev || "";
-    $("next").dataset.number = d.next || "";
-    if (d.error === "no_book") { view.innerHTML = ""; return; }
-    if (d.error === "not_read") {
-      view.innerHTML = `<div class="notice">${esc(t("NOT_READ", { cmd: `iy chain ${d.book} ${d.number}` }))}</div>`;
-      return;
-    }
-    if (d.error === "no_number") {
-      view.innerHTML = `<div class="notice">${esc(t("There is no hadith {number} in this book.{hint}", {
-        number: d.number, hint: " " + t("Its numbers run from {first} to {last}.", { first: d.first, last: d.last }) }))}
-        ${d.nearest ? `<button class="quiet" id="nearest">${esc(t("Show {number} instead", { number: d.nearest }))}</button>` : ""}</div>`;
-      if (d.nearest) $("nearest").onclick = () => showChain(d.book, d.nearest);
-      return;
-    }
-    record(["chain", $("chain-book").value, d.number]);
-    const summary = verdictText(d.chains[0], d.tradition);
-    view.innerHTML = `<div class="chain-title"><h1>${esc(d.name)}</h1><span class="num">${esc(t("hadith {number}", { number: d.number }))}</span>
-        ${d.tradition === "shia" ? `<span class="road">${esc(t("Shia — read the Shia way"))}</span>` : ""}</div>
-        <div class="summary">${esc(summary)}</div>` +
-      (d.chains.length ? d.chains.map((c, i) => chainHtml(c, i, d.chains.length, d)).join("")
-        : `<div class="notice">${esc(t("No Arabic text for this hadith, so no chain was read."))}</div>`);
-    $("main").scrollTop = 0;
-  } catch (e) {
-    view.innerHTML = `<div class="notice">${esc(String(e))}</div>`;
-  }
-}
-
-// ------------------------------------------------------------------ Books (gui/books_page.py)
 
 let BOOKS = { loaded: false, works: [], road: "sunni", key: null, chapter: 0, offset: 0, limit: 40 };
 const ARABIC_RE = /[\u0600-\u06FF]/;
@@ -455,17 +312,9 @@ async function start() {
   buildSearchPage();
   await fillSearchFilters();
   showStart();
-  for (const b of s.books) {
-    const opt = `<option value="${esc(b.key)}">${esc(b.name)} (${b.count.toLocaleString("en-US")})</option>`;
-    $("chain-book").insertAdjacentHTML("beforeend", opt);
-  }
-  $("book-label").textContent = t("Book");
-  $("number-label").textContent = t("Number");
-  $("show-chain").textContent = t("Show chain");
-  $("random").textContent = t("Random hadith");
-  $("prev").textContent = "‹ " + t("Previous");
-  $("next").textContent = t("Next") + " ›";
   wireNarratorView();
+  chainsBuild();
+  $("c-body").addEventListener("click", chainsClick);
   $("roads").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-road]");
     if (!b) return;
@@ -483,16 +332,6 @@ async function start() {
     const b = e.target.closest("button[data-book]");
     if (b) showChain(b.dataset.book, b.dataset.number);
   });
-  $("show-chain").onclick = () => showChain();
-  $("chain-number").addEventListener("keydown", (e) => { if (e.key === "Enter") showChain(); });
-  $("chain-book").onchange = () => showChain($("chain-book").value, "");
-  $("prev").onclick = () => showChain(undefined, $("prev").dataset.number);
-  $("next").onclick = () => showChain(undefined, $("next").dataset.number);
-  $("random").onclick = async () => {
-    const n = await invoke("random_number", { book: $("chain-book").value });
-    if (n) showChain(undefined, n);
-  };
-  CHAIN_SHOWN = false;
   const open = s.open || "";
   if (open.startsWith("chain:")) {
     const [, book, ...num] = open.split(":");

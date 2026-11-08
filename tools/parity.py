@@ -79,6 +79,11 @@ CASES = [
     ["life", "Aisha", "--limit", "2"],
     ["life", "qqqzzz"],
     # the chains (RS2): read by the Python isnady, shown by both; road A with Ibn Hajar's Taqrib, road B with al-Najashi
+    # the report of every book (RS-WIN3b: the overview of the Isnad Chains page)
+    ["isnads"],
+    ["chain", "bukhari", "1260"],
+    ["chain", "muslim", "133"],
+    ["chain", "kafi", "1:4"],
     ["chain", "nawawi"],
     ["chain", "nawawi", "1"],
     ["chain", "nawawi", "2", "--raw"],

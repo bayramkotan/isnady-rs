@@ -15,7 +15,7 @@ let FOOTER = "";
 
 const READY = new Set(["search", "books", "narrators", "chains"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
-const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books" };
+const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", find: "search", tree: "genealogy" };
 
 function sectionLabel(key) {
   const s = WIN.sections.find((x) => x[0] === key);
@@ -110,7 +110,10 @@ async function goHistory(step) {
   HISTORY.replaying = true;
   try {
     if (entry[0] === "section") show(entry[1]);
-    else if (entry[0] === "chain") await showChain(entry[1], entry[2]);
+    else if (entry[0] === "chain") await openChain(entry[1]);
+    else if (entry[0] === "in_book") await openInBook(entry[1]);
+    else if (entry[0] === "find") { show("search"); searchFor(entry[1], "narrators"); }
+    else if (entry[0] === "tree") show("genealogy");
     else if (entry[0] === "narrator") await openNarratorPlace(entry[1]);
     else if (entry[0] === "book") await openBookPlace(entry[1]);
     else if (entry[0] === "chapter") await openBookPlace(entry[1], entry[2]);

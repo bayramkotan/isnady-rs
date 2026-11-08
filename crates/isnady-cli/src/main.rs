@@ -39,6 +39,12 @@ enum Command {
     Search(SearchArgs),
     /// Show the chain of one hadith
     Chain(ChainArgs),
+    /// The chains of transmission read from the Arabic texts: the report of every book
+    Isnads {
+        /// (not ported yet: reading every chain again — use iy isnads --rebuild)
+        #[arg(long)]
+        rebuild: bool,
+    },
     /// Read a book in its own order: the list, a book's chapters, or a chapter
     Book(BookArgs),
     /// Look up a narrator: verdict, rank, tabaqa, death, books
@@ -201,7 +207,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -220,6 +226,7 @@ fn main() -> ExitCode {
         Some(Command::Sources) => sources(),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
+        Some(Command::Isnads { rebuild }) => isnads_cmd(rebuild),
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
         Some(Command::Life(a)) => life_cmd(a),
@@ -721,6 +728,72 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
 }
 
 const TAHWIL_NOTE: &str = " (roads joined by tahwil, a second road after a link — \"وعن\" / \"وحدثنا\" — or two narrators at one link)";
+
+/// `iy isnads`: how far the chains of every book were read, and why the rest were kept whole; then how many of their
+/// narrators are identified. Reading them is the Python isnady's (the parser stays there for now).
+fn isnads_cmd(rebuild: bool) -> ExitCode {
+    if rebuild {
+        return not_yet("Reading every chain again", "iy isnads --rebuild");
+    }
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    if !isnad::isnads_ready(&conn) {
+        eprintln!(
+            "The chains of the books imported last are not read yet. The Python isnady reads them once, for every \
+             book: run iy isnads (or open the Isnad Chains page), then iy-rs shows them."
+        );
+        return ExitCode::from(1);
+    }
+    let run = || -> rusqlite_conn::Result<()> {
+        println!("Parser: {}", isnady_core::tables::get().parser_id);
+        for b in isnad::book_stats(&conn)? {
+            let shia = b.tradition == "shia";
+            let end = if shia {
+                "a Ma'sum (the Prophet or an Imam)"
+            } else {
+                "the Prophet"
+            };
+            println!(
+                "  {}{}: {} chains, {} split into narrators ({:.1}%), {} reach {end}, {} links",
+                works::book_title(&b.key, &b.stored_name, "en"),
+                if shia { " (Shia)" } else { "" },
+                b.chains,
+                b.split,
+                100.0 * b.split as f64 / b.chains as f64,
+                b.marfu,
+                b.links
+            );
+            for (problem, count) in &b.problems {
+                println!("    {count:6}  not split: {problem}");
+            }
+        }
+        if narrators::loaded(&conn) {
+            if !narrators::links_ready(&conn) {
+                eprintln!(
+                    "The narrators of the chains are not identified yet. The Python isnady does it once: run iy \
+                     isnads, then iy-rs shows them."
+                );
+                return Ok(());
+            }
+            for (book, total, found) in isnad::identified_by_book(&conn)? {
+                println!(
+                    "  {book}: {found} of {total} narrators in chains identified ({:.1}%)",
+                    100.0 * found as f64 / total as f64
+                );
+            }
+        }
+        Ok(())
+    };
+    match run() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
 
 fn chain_cmd(a: ChainArgs) -> ExitCode {
     let conn = match open() {

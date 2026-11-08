@@ -33,6 +33,15 @@ pub struct Traditions {
 pub struct Isnad {
     /// transmission term → (Arabic, meaning)
     pub terms: HashMap<String, (String, String)>,
+    /// transmission term → what the critics took it to mean
+    pub term_why: HashMap<String, String>,
+    /// why a chain was kept whole: given the words without narrators, the compiler's own words, going on from the
+    /// hadith before, cited without a chain, not starting with a term
+    pub direct: String,
+    pub note: String,
+    pub continued: String,
+    pub no_chain: String,
+    pub no_term: String,
     pub templates: HashMap<String, String>,
     pub end: String,
     pub raised: String,

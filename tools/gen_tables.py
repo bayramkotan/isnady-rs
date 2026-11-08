@@ -56,6 +56,12 @@ def tables() -> dict:
         },
         "isnad": {
             "terms": {k: [v[0], v[1]] for k, v in isnad.TERM_LABELS.items()},
+            "term_why": {k: v[2] for k, v in isnad.TERM_LABELS.items()},
+            "direct": isnad.DIRECT,
+            "note": isnad.NOTE,
+            "continued": isnad.CONTINUED,
+            "no_chain": isnad.NO_CHAIN,
+            "no_term": isnad._NO_TERM,
             "templates": templates,
             "end": isnad.CHAIN_END,
             "raised": isnad.CHAIN_RAISED,

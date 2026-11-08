@@ -5,6 +5,35 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The Isnad Chains page as the Python window has it (RS-WIN3b).** Built again from gui/isnad_page.py,
+  chain_widgets.py (ChainNode), hadith_nav.py and chapter_picker.py and compared with the Python window side by side,
+  hadith by hadith (one chain, four chains joined by tahwil, a tahwil meeting, a chain from the hadith before, a text
+  going on from the one before, a book without chains, al-Kafi with al-Kulayni's group and a raised chain, Turkish).
+  The book list with the Sunni and Shia collections apart under their headings, 📖 From the contents… (the chapters as
+  a tree, opened at the hadith shown; the hadith of a chapter with the start of their text and how far each chain was
+  read; a word looked for among them; a double click or Show chain), Random hadith; the number field with the book's
+  last number beside it, the numbers that begin with what is typed, the arrow keys and the mouse wheel stepping through
+  the book, Show chain, ⏮ ‹ › ⏭ and "hadith 93 of 7,583 in this book" (hadith_nav, also for Books in RS-WIN3c); a
+  number the book does not have, said with how the book writes its numbers, its range and Show … instead. The
+  overview: per book the chains read, split into narrators, reaching the Prophet (a Ma'sum on road B), narrators per
+  chain, identified in the Taqrib or al-Najashi, and why the rest were kept whole; a book opens its first chain. A
+  hadith: what the page says first, the count of its chains, each chain as a timeline — the compiler's book (opening the
+  hadith in Books), each link with its term and what the critics took it to mean, the name as written and its reading,
+  the narrator in the rijal work with his verdict, rank, tabaqa and death (opening him on Narrators) or why he is not
+  identified (a name several narrators bear opens them on Search), the tahwil meetings, al-Kulayni's groups, whom it
+  reaches (the Genealogies: not here yet) — then the Arabic with the chain in lighter ink and the chain in words in
+  Turkish and English. Opened from Search, Narrators or Books, the hadith is a place in Back and Forward; a name looked
+  for opens Search on Narrators, as in the Python window.
+- **`iy-rs isnads`**: the report of every book as `iy isnads` prints it, word for word (reading the chains again,
+  `--rebuild`, stays with the Python isnady). New in the core: `isnad::{hadith_id, numbers_starting, position,
+  describe, arabic_text, split_text, book_stats, known_by_book, identified_by_book, term_why}`; gen_tables also writes
+  what each transmission term meant to the critics and the reasons a chain was kept whole. 4 more parity cases (106 in
+  all).
+- **Fixed:** Search showed no hadith after RS-WIN3a (a function of the Narrators page had the name of the one that
+  draws a hadith's card). The Python window's Isnad Chains page opened with no book chosen and its buttons off
+  (`fill_book_combo` took the line between the Sunni and the Shia books); it now opens at the first book, and isnady-rs
+  does the same.
+
 - **The Narrators page as the Python window has it (RS-WIN3a).** Built again from gui/narrators_page.py, name_card.py
   and life_card.py and compared with the Python window side by side. Left: All / Sunni / Shia, the overview of each
   road (how many narrators from which works, how many names of its chains are identified), the search as you type with

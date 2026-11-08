@@ -227,6 +227,16 @@ pub fn term_label(term: &str) -> (String, String) {
     }
 }
 
+/// What the critics took a transmission term to mean, in English ("" for a term isnady does not know).
+pub fn term_why(term: &str) -> String {
+    tables::get()
+        .isnad
+        .term_why
+        .get(term)
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// What a link of a Shia chain is when it names no one person; "" for an ordinary name.
 pub fn link_note(raw_name: &str, next_raw: &str) -> String {
     match link_kind(raw_name) {
@@ -997,6 +1007,288 @@ pub fn find_hadith(
         |r| Ok((r.get(0)?, r.get(1)?)),
     )
     .optional()
+}
+
+/// The hadith of a book by its number as the book writes it (`isnad.hadith_id`).
+pub fn hadith_id(conn: &Connection, book: &str, number: &str) -> Option<i64> {
+    conn.query_row(
+        "SELECT h.id FROM hadiths h JOIN collections c ON c.id = h.collection_id WHERE c.key = ? AND h.number = ?",
+        params![book, number.trim()],
+        |r| r.get(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+}
+
+/// The book's numbers that begin with what is typed, in the book's order (`isnad.numbers_starting`).
+pub fn numbers_starting(conn: &Connection, book: &str, prefix: &str, limit: i64) -> Vec<String> {
+    let prefix = prefix.trim();
+    if prefix.is_empty() {
+        return Vec::new();
+    }
+    let like = prefix
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
+        + "%";
+    let run = || -> rusqlite::Result<Vec<String>> {
+        let mut st = conn.prepare(
+            "SELECT h.number FROM hadiths h JOIN collections c ON c.id = h.collection_id \
+             WHERE c.key = ? AND h.number LIKE ? ESCAPE '\\' ORDER BY h.number_sort, h.id LIMIT ?",
+        )?;
+        let rows = st.query_map(params![book, like, limit], |r| r.get(0))?;
+        rows.collect()
+    };
+    run().unwrap_or_default()
+}
+
+/// (place, count): where a number stands among the book's hadith in its own order, or None for a number the book
+/// does not have (`isnad.position`).
+pub fn position(conn: &Connection, book: &str, number: &str) -> Option<(i64, i64)> {
+    let (sort, id): (f64, i64) = conn
+        .query_row(
+            "SELECT h.number_sort, h.id FROM hadiths h JOIN collections c ON c.id = h.collection_id \
+             WHERE c.key = ? AND h.number = ?",
+            params![book, number.trim()],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    let (before, count): (Option<i64>, i64) = conn
+        .query_row(
+            "SELECT SUM(CASE WHEN h.number_sort < ? OR (h.number_sort = ? AND h.id < ?) THEN 1 ELSE 0 END), COUNT(*) \
+             FROM hadiths h JOIN collections c ON c.id = h.collection_id WHERE c.key = ?",
+            params![sort, sort, id, book],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .ok()?;
+    Some((before.unwrap_or(0) + 1, count))
+}
+
+/// A hadith's book, number and neighbours, for going through the book (`isnad.describe`).
+#[derive(Debug, Clone)]
+pub struct HadithInfo {
+    pub id: i64,
+    pub number: String,
+    pub book: String,
+    pub book_name: String,
+    pub prev: Option<i64>,
+    pub next: Option<i64>,
+}
+
+pub fn describe(conn: &Connection, hid: i64, lang: &str) -> Option<HadithInfo> {
+    let (id, number, sort, cid, key, name): (i64, String, f64, i64, String, String) = conn
+        .query_row(
+            "SELECT h.id, h.number, h.number_sort, h.collection_id, c.key, c.name FROM hadiths h \
+             JOIN collections c ON c.id = h.collection_id WHERE h.id = ?",
+            params![hid],
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
+            },
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    let one = |sql: &str| -> Option<i64> {
+        conn.query_row(sql, params![cid, sort, sort, id], |r| r.get(0))
+            .optional()
+            .ok()
+            .flatten()
+    };
+    let prev = one(
+        "SELECT id FROM hadiths WHERE collection_id = ? AND (number_sort < ? OR (number_sort = ? AND id < ?)) \
+         ORDER BY number_sort DESC, id DESC LIMIT 1",
+    );
+    let next = one(
+        "SELECT id FROM hadiths WHERE collection_id = ? AND (number_sort > ? OR (number_sort = ? AND id > ?)) \
+         ORDER BY number_sort, id LIMIT 1",
+    );
+    Some(HadithInfo {
+        id,
+        number,
+        book_name: crate::works::book_title(&key, &name, lang),
+        book: key,
+        prev,
+        next,
+    })
+}
+
+/// The Arabic text of a hadith, of its first Arabic edition (`isnad.arabic_text`).
+pub fn arabic_text(conn: &Connection, hid: i64) -> Option<String> {
+    conn.query_row(
+        "SELECT t.text FROM texts t JOIN editions e ON e.id = t.edition_id \
+         WHERE t.hadith_id = ? AND e.language = 'Arabic' ORDER BY e.id LIMIT 1",
+        params![hid],
+        |r| r.get(0),
+    )
+    .optional()
+    .ok()
+    .flatten()
+}
+
+/// (chain part, text part) of the Arabic text, by the stored raw chain (`isnad.split_text`).
+pub fn split_text(text: &str, raw_isnad: Option<&str>) -> (String, String) {
+    let Some(raw) = raw_isnad.filter(|r| !r.is_empty()) else {
+        return (String::new(), text.to_string());
+    };
+    match text.find(raw) {
+        Some(at) => {
+            let end = at + raw.len();
+            (text[..end].to_string(), text[end..].to_string())
+        }
+        None => (String::new(), text.to_string()),
+    }
+}
+
+/// One book's chains as counted for the overview (`isnad.book_stats`).
+#[derive(Debug, Clone)]
+pub struct BookStats {
+    pub key: String,
+    /// the name stored with the book (the overview shows its title in the interface language)
+    pub stored_name: String,
+    pub chains: i64,
+    pub split: i64,
+    pub marfu: i64,
+    pub tradition: String,
+    pub links: i64,
+    pub problems: Vec<(String, i64)>,
+}
+
+/// A value counted once while the database is unchanged, as the Python isnady keeps it (core.cache).
+fn kept<T: Clone + Send + 'static>(
+    store: &'static std::sync::Mutex<Option<(String, T)>>,
+    conn: &Connection,
+    count: impl FnOnce() -> rusqlite::Result<T>,
+) -> rusqlite::Result<T> {
+    let version: i64 = conn.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+    let stamp: (Option<i64>, Option<i64>, Option<i64>) = conn.query_row(
+        "SELECT (SELECT MAX(id) FROM isnads), (SELECT COUNT(*) FROM isnads), (SELECT SUM(person_id) FROM isnad_links)",
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    let key = format!("{:?}|{version}|{stamp:?}", conn.path());
+    if let Ok(last) = store.lock() {
+        if let Some((k, v)) = last.as_ref() {
+            if *k == key {
+                return Ok(v.clone());
+            }
+        }
+    }
+    let v = count()?;
+    if let Ok(mut last) = store.lock() {
+        *last = Some((key, v.clone()));
+    }
+    Ok(v)
+}
+
+/// Per book: chains read, split into narrators, reaching the Prophet (on road B: a Ma'sum), and why the rest were not
+/// split, in the books' reading order.
+pub fn book_stats(conn: &Connection) -> rusqlite::Result<Vec<BookStats>> {
+    static KEPT: std::sync::Mutex<Option<(String, Vec<BookStats>)>> = std::sync::Mutex::new(None);
+    kept(&KEPT, conn, || {
+        let order = books::order_sql(conn, "c.key")?;
+        let mut st = conn.prepare(&format!(
+            "SELECT c.id, c.key, c.name, COUNT(*), SUM(i.problem IS NULL), \
+                    SUM(i.problem IS NULL AND i.reaches_prophet = 1), COALESCE(c.tradition, 'sunni') \
+             FROM isnads i JOIN hadiths h ON h.id = i.hadith_id JOIN collections c ON c.id = h.collection_id \
+             WHERE i.derived_by IS NOT NULL AND (i.problem IS NULL OR i.ordinal = 1) \
+             GROUP BY c.id ORDER BY {order}"
+        ))?;
+        type Row = (i64, String, String, i64, Option<i64>, Option<i64>, String);
+        let rows: Vec<Row> = st
+            .query_map([], |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                ))
+            })?
+            .collect::<rusqlite::Result<_>>()?;
+        let mut problems = conn.prepare(
+            "SELECT i.problem, COUNT(*) FROM isnads i JOIN hadiths h ON h.id = i.hadith_id \
+             WHERE h.collection_id = ? AND i.problem IS NOT NULL AND i.ordinal = 1 GROUP BY i.problem ORDER BY 2 DESC",
+        )?;
+        let mut links = conn.prepare(
+            "SELECT COUNT(*) FROM isnad_links l JOIN isnads i ON i.id = l.isnad_id JOIN hadiths h ON h.id = i.hadith_id \
+             WHERE h.collection_id = ? AND i.problem IS NULL",
+        )?;
+        let mut out = Vec::new();
+        for (cid, key, name, chains, split, marfu, tradition) in rows {
+            let ps: Vec<(String, i64)> = problems
+                .query_map(params![cid], |r| Ok((r.get(0)?, r.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+            let n: i64 = links.query_row(params![cid], |r| r.get(0))?;
+            out.push(BookStats {
+                key,
+                stored_name: name,
+                chains,
+                split: split.unwrap_or(0),
+                marfu: marfu.unwrap_or(0),
+                tradition,
+                links: n,
+                problems: ps,
+            });
+        }
+        Ok(out)
+    })
+}
+
+/// {book key: (links, identified, looked up)}
+pub type Known = HashMap<String, (i64, i64, i64)>;
+
+/// {book key: (links, identified, looked up)} of the whole chains (gui/isnad_page.py `_known_by_book`).
+pub fn known_by_book(conn: &Connection) -> rusqlite::Result<Known> {
+    static KEPT: std::sync::Mutex<Option<(String, Known)>> = std::sync::Mutex::new(None);
+    kept(&KEPT, conn, || {
+        let mut st = conn.prepare(
+            "SELECT c.key, COUNT(*), SUM(l.person_id IS NOT NULL), SUM(l.candidates IS NOT NULL) FROM isnad_links l \
+             JOIN isnads i ON i.id = l.isnad_id JOIN hadiths h ON h.id = i.hadith_id \
+             JOIN collections c ON c.id = h.collection_id WHERE i.problem IS NULL GROUP BY c.key",
+        )?;
+        let rows = st.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                (
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, Option<i64>>(2)?.unwrap_or(0),
+                    r.get::<_, Option<i64>>(3)?.unwrap_or(0),
+                ),
+            ))
+        })?;
+        rows.collect()
+    })
+}
+
+/// Per book, by the name stored with it: (name, links, identified) of the chains split into narrators, in the books'
+/// reading order (what `iy isnads` says after the counts).
+pub fn identified_by_book(conn: &Connection) -> rusqlite::Result<Vec<(String, i64, i64)>> {
+    let order = books::order_sql(conn, "c.key")?;
+    let mut st = conn.prepare(&format!(
+        "SELECT c.name, COUNT(*), SUM(l.person_id IS NOT NULL) FROM isnad_links l \
+         JOIN isnads i ON i.id = l.isnad_id JOIN hadiths h ON h.id = i.hadith_id \
+         JOIN collections c ON c.id = h.collection_id WHERE i.problem IS NULL GROUP BY c.id ORDER BY {order}"
+    ))?;
+    let rows = st.query_map([], |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get::<_, Option<i64>>(2)?.unwrap_or(0),
+        ))
+    })?;
+    rows.collect()
 }
 
 #[cfg(test)]
