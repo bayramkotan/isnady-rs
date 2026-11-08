@@ -42,7 +42,7 @@ function siraBuild() {
       const id = Number(b.dataset.chapter);
       place(["chapter", id], () => openChapterAt(id));
     } else if (b.dataset.phrase) searchPhrase(b.dataset.phrase);
-    else later(["The Qur'an"])();                      // the Qur'an reader comes with RS10
+    else openVerse(Number(b.dataset.sura), Number(b.dataset.aya));
   });
   new ResizeObserver(() => drawTimeline()).observe($("sr-line"));
 }

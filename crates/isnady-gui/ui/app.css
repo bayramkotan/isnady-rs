@@ -603,6 +603,119 @@ button.linkbtn { background: transparent; color: var(--lapis); border: none; pad
 button.linkbtn:hover { color: var(--gold); }
 button.linkbtn:disabled { color: var(--muted); cursor: default; }
 
+/* ------------------------------------------------------------------ Help → Log (gui/log_viewer.py) */
+.dialog.lv { width: min(1100px, 90vw); height: min(720px, 90vh); max-width: none; max-height: none; box-sizing: border-box; gap: 8px; }
+.dialog.lv h2 { margin-bottom: 4px; }
+.lv-top, .lv-bottom { display: flex; align-items: center; gap: 8px; flex: none; }
+.lv-top select:first-of-type { flex: 1; min-width: 320px; }
+.lv-top input[type=search] { flex: 1; padding: 5px 8px; min-height: 0; }
+.lv-bottom .grow { flex: 1; }
+#lv-text { flex: 1; min-height: 0; resize: none; font-family: "DejaVu Sans Mono", "Consolas", monospace; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 6px; white-space: pre; overflow: auto; }
+#lv-day { padding: 4px 6px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; }
+
+/* ------------------------------------------------------------------ Edit → Preferences (gui/preferences.py) */
+.dialog.pf { width: min(1400px, 85vw); height: min(950px, 88vh); max-width: none; max-height: none; box-sizing: border-box; padding: 18px 22px 16px; display: flex; flex-direction: column; gap: 10px; }
+.pf-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); flex: none; flex-wrap: wrap; }
+.pf-tabs button { background: transparent; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; padding: 6px 14px; color: var(--muted); cursor: pointer; font-size: inherit; }
+.pf-tabs button.on { background: var(--surface); border-color: var(--border); color: var(--ink); font-weight: 600; margin-bottom: -1px; }
+.pf-page { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 14px; padding: 12px 12px 12px 6px; }
+.pf-page > * { flex: none; }
+.pf-bottom { display: flex; align-items: center; gap: 8px; flex: none; }
+.pf-where { flex: 1; user-select: text; }
+.pf-tiles { display: grid; grid-template-columns: repeat(3, minmax(236px, 1fr)); gap: 16px; justify-items: start; }
+.pf-tile { width: 236px; height: 196px; padding: 0; background: transparent; border: none; cursor: pointer; text-align: start; display: flex; flex-direction: column; gap: 4px; }
+.pf-tile > .pf-mini, .pf-tile > .pf-halves { height: 136px; border-radius: 10px; outline: 1.2px solid var(--border); }
+.pf-tile:hover > .pf-mini, .pf-tile:hover > .pf-halves { outline-color: var(--muted); }
+.pf-tile.on > .pf-mini, .pf-tile.on > .pf-halves { outline: 3px solid var(--lapis); }
+.pf-tname { font-weight: 700; color: var(--ink); font-size: 10pt; margin-top: 6px; }
+.pf-tile .caption { white-space: normal; }
+.pf-halves { position: relative; overflow: hidden; }
+.pf-halves > .pf-mini { position: absolute; inset: 0; border-radius: 0; }
+.pf-halves > .pf-mini:last-child { clip-path: inset(0 0 0 50%); }
+.pf-mini { display: flex; overflow: hidden; height: 100%; box-sizing: border-box; }
+.pf-mside { width: 28%; flex: none; padding: 6px 4px; font-size: 7.5pt; display: flex; flex-direction: column; gap: 6px; box-sizing: border-box; }
+.pf-mside i { display: block; height: 3px; width: 60%; margin-left: 5px; }
+.pf-mside i:first-of-type { height: 11px; width: auto; margin: 4px 0 0; }
+.pf-mmain { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pf-mbar { display: flex; gap: 4%; height: 14px; }
+.pf-mbar span { border-radius: 5px; border: 1px solid transparent; }
+.pf-mbar span:first-child { flex: 74; }
+.pf-mbar span:last-child { flex: 22; }
+.pf-mcard { flex: 1; border: 1px solid; border-radius: 7px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.pf-mcard i { display: block; height: 3px; border-radius: 2px; }
+.pf-mcard i:first-child { height: 5px; }
+.pf-mcard i:last-child { height: 6px; margin-top: 10px; }
+.pf-card { padding: 14px 18px; gap: 8px; }
+.pf-grid4 { display: grid; grid-template-columns: 3fr auto auto auto auto; gap: 8px 10px; align-items: center; }
+.pf-grid3 { display: grid; grid-template-columns: 1fr auto auto; gap: 8px 10px; align-items: center; max-width: 720px; }
+.pf-font { width: 100%; box-sizing: border-box; padding: 5px 8px; min-height: 0; }
+.pf-num { white-space: nowrap; color: var(--muted); }
+.pf-num input { width: 70px; padding: 4px 6px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; }
+.pf-swatch { position: relative; min-width: 130px; border-radius: 6px; padding: 5px 10px; border: 1px solid var(--border); cursor: pointer; text-align: center; box-sizing: border-box; white-space: nowrap; }
+.pf-swatch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.pf-preview { padding-top: 6px; white-space: pre-wrap; }
+.pf-preview.rtl { text-align: right; direction: rtl; }
+.pf-order { display: flex; gap: 14px; align-items: flex-start; flex-direction: row; }
+.pf-list { width: 420px; max-width: 420px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); overflow-y: auto; max-height: 392px; }
+.pf-row { height: 32px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 8px; border-bottom: 1px solid var(--border); color: var(--ink); cursor: default; white-space: pre; }
+.pf-row[data-on] { background: var(--lapis-soft); }
+.pf-row[draggable="true"] { cursor: grab; }
+.pf-arrows { display: flex; flex-direction: column; gap: 8px; }
+.pf-ghead { display: flex; align-items: center; gap: 6px; }
+.pf-ghead .grow { flex: 1; }
+.pf-flow { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.pf-radio { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.pf-rhead { font-size: 13pt; font-weight: 700; }
+.pf-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; color: var(--ink); line-height: 150%; }
+button.pf-danger { color: white; border: none; border-radius: 6px; padding: 6px 16px; font-weight: 600; cursor: pointer; }
+.dialog.small { max-width: 520px; }
+
+/* ------------------------------------------------------------------ the Qur'an in Books (gui/quran_view.py) */
+#b-quran { gap: 8px; }
+.qr-head { display: flex; align-items: center; gap: 12px; }
+.qr-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.qr-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qr-ar { flex: none; }
+.qr-nav { display: flex; align-items: center; gap: 6px; }
+.qr-nav[hidden], .qr-langs[hidden], .qr-offer[hidden] { display: none; }
+#qr-find { flex: 1; min-width: 0; margin-inline-start: 12px; padding: 5px 8px; box-sizing: border-box; }
+#qr-find:focus { outline: none; border-color: var(--lapis); }
+.qr-langs { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.qr-offer { flex-direction: row; align-items: center; padding: 8px 16px; gap: 8px; }
+.qr-offer .lead { flex: 1; }
+.qr-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 8px 8px 28px 0; }
+.qr-body > * { flex: none; }
+.qr-verse { padding: 12px 22px; gap: 6px; }
+.qr-verse.focus { border: 2px solid var(--gold); }
+.qr-text { user-select: text; white-space: pre-wrap; }
+.qr-text.rtl { text-align: right; }
+.qr-num { color: var(--gold); }
+.qr-foot { display: flex; gap: 12px; align-items: flex-start; }
+.qr-ref { flex: none; white-space: nowrap; }
+.qr-links { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.qr-named a { text-decoration: none; cursor: pointer; }
+.qr-named a.sunni { color: var(--lapis); }
+.qr-named a.shia { color: var(--gold); }
+.qr-more { display: flex; justify-content: center; }
+.qr-download { padding: 18px 24px; }
+.qr-found { padding: 10px 22px; gap: 4px; }
+
+/* ------------------------------------------------------------------ Written sources (gui/sahifa_page.py) */
+.sh-left { width: 340px; }
+.sh-row { min-height: 58px; box-sizing: border-box; padding: 4px 6px; border-bottom: 1px solid var(--border); cursor: pointer; line-height: normal; display: flex; flex-direction: column; justify-content: center; }
+.sh-row:hover, .sh-row.on { background: var(--lapis-soft); }
+.sh-name { color: var(--ink); }
+.sh-sub { color: var(--ink); }
+.sh-card { padding: 14px 20px; gap: 6px; }
+.sh-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; }
+.sh-ctitle { font-family: var(--heading); font-weight: 700; font-size: calc(15pt * var(--scale)); color: var(--ink); }
+.sh-card .lead b { color: var(--ink); }
+.sh-note a { color: var(--lapis); text-decoration: none; cursor: pointer; }
+.sh-more { display: flex; justify-content: center; }
+.sh-busy { height: 6px; border-radius: 3px; background: var(--lapis-soft); overflow: hidden; position: relative; }
+.sh-busy > div { position: absolute; top: 0; bottom: 0; width: 30%; background: var(--lapis); border-radius: 3px; animation: sh-busy 1.4s ease-in-out infinite; }
+@keyframes sh-busy { 0% { left: -30%; } 100% { left: 100%; } }
+
 /* ------------------------------------------------------------------ Genealogies (gui/genealogy_page.py) */
 .page.genealogy-page { max-width: none; margin: 0; height: 100%; padding: 20px 24px 18px; box-sizing: border-box; }
 .gt { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }

@@ -21,6 +21,11 @@ fn home() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
+/// `Path(p).expanduser()`.
+pub fn expand_user(p: &str) -> PathBuf {
+    expand(p)
+}
+
 fn expand(p: &str) -> PathBuf {
     if let Some(rest) = p.strip_prefix("~/").or_else(|| p.strip_prefix("~\\")) {
         return home().join(rest);
@@ -121,4 +126,92 @@ pub fn db_path() -> PathBuf {
 /// Shown as Python shows a path (no trailing separator, as the system writes it).
 pub fn shown(p: &Path) -> String {
     p.display().to_string()
+}
+
+/// Use another data folder from the next start (`paths.relocate`): "copy" copies the current data there (the old
+/// folder is kept), "as-is" uses the folder as it is; None goes back to the platform default. The folder used, or
+/// the message for the user.
+pub fn relocate(new: Option<&str>, mode: &str) -> Result<PathBuf, String> {
+    if env::var_os("ISNADY_DATA_DIR").is_some_and(|v| !v.is_empty()) {
+        return Err(
+            "The data folder is set by the ISNADY_DATA_DIR environment variable; unset it first."
+                .into(),
+        );
+    }
+    let current = data_dir();
+    let target = match new {
+        Some(p) => {
+            let p = expand(p);
+            let abs = if p.is_absolute() {
+                p
+            } else {
+                env::current_dir().unwrap_or_default().join(p)
+            };
+            std::fs::canonicalize(&abs).unwrap_or(abs)
+        }
+        None => default_data_dir(),
+    };
+    if Some(&target) == std::fs::canonicalize(&current).ok().as_ref() || target == current {
+        return Err(format!("isnady already uses {}.", shown(&target)));
+    }
+    std::fs::create_dir_all(&target)
+        .map_err(|_| format!("{} cannot be written to.", shown(&target)))?;
+    let probe = target.join(".isnady-write-test");
+    if std::fs::write(&probe, b"").is_err() {
+        return Err(format!("{} cannot be written to.", shown(&target)));
+    }
+    let _ = std::fs::remove_file(&probe);
+    if mode == "copy" {
+        if target.join(DB_FILE_NAME).exists() {
+            return Err(format!(
+                "{} already holds an isnady database. Choose 'use as it is', or another folder.",
+                shown(&target)
+            ));
+        }
+        let source_db = current.join(DB_FILE_NAME);
+        if source_db.exists() {
+            if let Ok(c) = rusqlite::Connection::open(&source_db) {
+                let _ = c.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(()));
+            }
+        }
+        copy_tree(&current, &target, true).map_err(|e| e.to_string())?;
+    } else if mode != "as-is" {
+        return Err("mode must be copy or as-is".into());
+    }
+    let pointer = config_dir().join(POINTER_FILE);
+    if let Some(parent) = pointer.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if new.is_some() {
+        let mut m = serde_json::Map::new();
+        m.insert("data_dir".into(), serde_json::Value::from(shown(&target)));
+        let mut buf = Vec::new();
+        let fmt = serde_json::ser::PrettyFormatter::with_indent(b"  ");
+        let mut ser = serde_json::Serializer::with_formatter(&mut buf, fmt);
+        serde::Serialize::serialize(&serde_json::Value::Object(m), &mut ser)
+            .map_err(|e| e.to_string())?;
+        std::fs::write(&pointer, buf).map_err(|e| e.to_string())?;
+    } else if pointer.exists() {
+        let _ = std::fs::remove_file(&pointer);
+    }
+    Ok(target)
+}
+
+/// Every file and folder of `from` into `to` (the top level skips the write-ahead files and hidden ones).
+pub fn copy_tree(from: &Path, to: &Path, top: bool) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for item in std::fs::read_dir(from)? {
+        let item = item?;
+        let name = item.file_name().to_string_lossy().to_string();
+        if top && (name.ends_with("-wal") || name.ends_with("-shm") || name.starts_with('.')) {
+            continue;
+        }
+        let dest = to.join(&name);
+        if item.file_type()?.is_dir() {
+            copy_tree(&item.path(), &dest, false)?;
+        } else {
+            std::fs::copy(item.path(), dest)?;
+        }
+    }
+    Ok(())
 }

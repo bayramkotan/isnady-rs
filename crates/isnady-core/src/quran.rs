@@ -285,6 +285,436 @@ pub fn sura_name(n: u32, lang: &str) -> String {
     }
 }
 
+// ------------------------------------------------------------------ reading the Qur'an (Q1)
+
+/// The translation each language starts with (Q1d): the one its readers know best, kept in isnady-data.
+pub const DEFAULT_OF: [(&str, &str); 18] = [
+    ("Turkish", "tur-diyanetisleri"),
+    ("English", "eng-ummmuhammad"),
+    ("Urdu", "urd-fatehmuhammadja"),
+    ("Indonesian", "ind-indonesianislam"),
+    ("Bengali", "ben-muhiuddinkhan"),
+    ("French", "fra-muhammadhamidul"),
+    ("Russian", "rus-elmirkuliev"),
+    ("Tamil", "tam-janturstfoundat"),
+    ("German", "deu-asfbubenheimand"),
+    ("Persian", "fas-hussainansarian"),
+    ("Spanish", "spa-juliocortes"),
+    ("Bosnian", "bos-besimkorkut"),
+    ("Albanian", "sqi-sherifahmeti"),
+    ("Azerbaijani", "aze-vasimmammadaliy"),
+    ("Uzbek", "uzb-muhammadsodikmu"),
+    ("Kazakh", "kaz-khalifahaltai"),
+    ("Tatar", "tat-yakubibnnugman"),
+    ("Malay", "msa-abdullahmuhamma"),
+];
+
+/// Where an edition is read from.
+pub const OWN: &str = "isnady-data";
+pub const SOURCE: &str = "fawazahmed0/quran-api";
+
+pub fn default_of(language: &str) -> Option<&'static str> {
+    DEFAULT_OF
+        .iter()
+        .find(|(l, _)| *l == language)
+        .map(|(_, k)| *k)
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Sura {
+    pub n: u32,
+    pub name: String,
+    pub english: String,
+    pub arabic: String,
+    pub place: String,
+    pub verses: u32,
+    pub tr: String,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Edition {
+    pub key: String,
+    pub language: String,
+    pub author: String,
+    pub direction: String,
+    pub source: String,
+    pub comments: String,
+    pub origin: String,
+}
+
+fn text_of(r: &rusqlite::Row, i: usize) -> rusqlite::Result<String> {
+    Ok(r.get::<_, Option<String>>(i)?.unwrap_or_default())
+}
+
+/// The suras of the downloaded Qur'an (`quran.suras`).
+pub fn suras() -> Vec<Sura> {
+    let Some(c) = open() else {
+        return vec![];
+    };
+    let Ok(mut st) =
+        c.prepare("SELECT n, name, english, arabic, place, verses FROM suras ORDER BY n")
+    else {
+        return vec![];
+    };
+    st.query_map([], |r| {
+        let n: u32 = r.get(0)?;
+        let name = text_of(r, 1)?;
+        Ok(Sura {
+            n,
+            tr: TR_NAMES
+                .get((n as usize).wrapping_sub(1))
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| name.clone()),
+            name,
+            english: text_of(r, 2)?,
+            arabic: text_of(r, 3)?,
+            place: text_of(r, 4)?,
+            verses: r.get::<_, Option<u32>>(5)?.unwrap_or(0),
+        })
+    })
+    .map(|rows| rows.flatten().collect())
+    .unwrap_or_default()
+}
+
+/// The editions downloaded, the Arabic first (`quran.editions`).
+pub fn editions() -> Vec<Edition> {
+    let Some(c) = open() else {
+        return vec![];
+    };
+    let has_origin = c.prepare("SELECT origin FROM editions LIMIT 0").is_ok();
+    let sql = format!(
+        "SELECT key, language, author, direction, source, comments, {} FROM editions ORDER BY language, author",
+        if has_origin { "origin" } else { "NULL" }
+    );
+    let Ok(mut st) = c.prepare(&sql) else {
+        return vec![];
+    };
+    let mut eds: Vec<Edition> = st
+        .query_map([], |r| {
+            let origin = text_of(r, 6)?;
+            Ok(Edition {
+                key: text_of(r, 0)?,
+                language: text_of(r, 1)?,
+                author: text_of(r, 2)?,
+                direction: text_of(r, 3)?,
+                source: text_of(r, 4)?,
+                comments: text_of(r, 5)?,
+                origin: if origin.is_empty() {
+                    SOURCE.to_string()
+                } else {
+                    origin
+                },
+            })
+        })
+        .map(|rows| rows.flatten().collect())
+        .unwrap_or_default();
+    eds.sort_by(|a, b| {
+        (a.key != ARABIC, &a.language, &a.author).cmp(&(b.key != ARABIC, &b.language, &b.author))
+    });
+    eds
+}
+
+/// The languages the reader reads (Q1d): the interface language first, then the content languages chosen, Arabic
+/// aside (`quran.wanted_languages`).
+pub fn wanted_languages() -> Vec<String> {
+    let ui = crate::i18n::ui_language();
+    let mut out: Vec<String> = vec![crate::i18n::languages()
+        .iter()
+        .find(|l| l.0 == ui)
+        .map(|l| l.2.clone())
+        .unwrap_or_else(|| "English".to_string())];
+    for part in crate::config::get_str("view.content_languages", "").split(',') {
+        if !part.is_empty() {
+            out.push(part.to_string());
+        }
+    }
+    let mut seen = Vec::new();
+    for l in out {
+        if !l.is_empty() && l != "Arabic" && !seen.contains(&l) {
+            seen.push(l);
+        }
+    }
+    seen
+}
+
+/// The translations downloaded with the Arabic: one in each language the reader reads.
+pub fn default_editions() -> Vec<String> {
+    let out: Vec<String> = wanted_languages()
+        .iter()
+        .filter_map(|l| default_of(l).map(String::from))
+        .collect();
+    if out.is_empty() {
+        vec![default_of("English").unwrap_or_default().to_string()]
+    } else {
+        out
+    }
+}
+
+/// The languages the reader reads that have no translation downloaded yet (and one isnady-data keeps).
+pub fn missing_languages() -> Vec<String> {
+    let have: Vec<String> = editions().into_iter().map(|e| e.language).collect();
+    wanted_languages()
+        .into_iter()
+        .filter(|l| default_of(l).is_some() && !have.contains(l))
+        .collect()
+}
+
+/// The translations shown beside the Arabic (`quran.shown`). saved: the reader's own choice ("quran.editions"; ","
+/// = none); None (never chosen): those downloaded in the languages the reader reads, the interface language first.
+pub fn shown(saved: Option<&str>) -> Vec<String> {
+    let have: Vec<Edition> = editions().into_iter().filter(|e| e.key != ARABIC).collect();
+    let keys: Vec<String> = have.iter().map(|e| e.key.clone()).collect();
+    if let Some(saved) = saved {
+        return saved
+            .split(',')
+            .filter(|k| keys.iter().any(|x| x == k))
+            .map(String::from)
+            .collect();
+    }
+    let mut out = vec![];
+    for lang in wanted_languages() {
+        let mut mine: Vec<String> = have
+            .iter()
+            .filter(|e| e.language == lang)
+            .map(|e| e.key.clone())
+            .collect();
+        let first = default_of(&lang);
+        mine.sort_by_key(|k| Some(k.as_str()) != first);
+        out.extend(mine.into_iter().take(1));
+    }
+    if out.is_empty() {
+        keys.into_iter().take(1).collect()
+    } else {
+        out
+    }
+}
+
+/// The reader's own choice of translations, as kept in state.json ("quran.editions"), the way Python reads it.
+pub fn saved_choice() -> Option<String> {
+    crate::config::state_get("quran.editions").and_then(|v| match v {
+        serde_json::Value::Null => None,
+        serde_json::Value::String(s) => Some(s),
+        other => Some(other.to_string()),
+    })
+}
+
+/// A verse with its texts: {edition: text}.
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Verse {
+    pub ayah: u32,
+    pub texts: HashMap<String, String>,
+}
+
+/// The verses of a sura (or of its verses start..end) in the Arabic and these editions (`quran.verses`).
+pub fn verses(sura: u32, editions: &[String], start: u32, end: Option<u32>) -> Vec<Verse> {
+    let Some(c) = open() else {
+        return vec![];
+    };
+    let mut keys = vec![ARABIC.to_string()];
+    keys.extend(editions.iter().filter(|e| *e != ARABIC).cloned());
+    let sql = format!(
+        "SELECT ayah, edition, text FROM verses WHERE sura = ? AND ayah BETWEEN ? AND ? AND edition IN ({}) ORDER BY ayah",
+        vec!["?"; keys.len()].join(",")
+    );
+    let mut args: Vec<rusqlite::types::Value> = vec![
+        (sura as i64).into(),
+        (start as i64).into(),
+        (end.unwrap_or(999) as i64).into(),
+    ];
+    args.extend(keys.iter().map(|k| rusqlite::types::Value::from(k.clone())));
+    let Ok(mut st) = c.prepare(&sql) else {
+        return vec![];
+    };
+    let mut out: Vec<Verse> = vec![];
+    if let Ok(rows) = st.query_map(rusqlite::params_from_iter(args), |r| {
+        Ok((r.get::<_, u32>(0)?, text_of(r, 1)?, text_of(r, 2)?))
+    }) {
+        for (ayah, edition, text) in rows.flatten() {
+            match out.iter_mut().find(|v| v.ayah == ayah) {
+                Some(v) => {
+                    v.texts.insert(edition, text);
+                }
+                None => out.push(Verse {
+                    ayah,
+                    texts: HashMap::from([(edition, text)]),
+                }),
+            }
+        }
+    }
+    out.sort_by_key(|v| v.ayah);
+    out
+}
+
+/// A verse found by a search.
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct Found {
+    pub sura: u32,
+    pub ayah: u32,
+    pub edition: String,
+    pub text: String,
+}
+
+/// Verses holding every word (Arabic without its vowels; Latin letters without case and accents), in the order of
+/// the mushaf (`quran.search`).
+pub fn search(text: &str, editions_: &[String], limit: usize) -> Vec<Found> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let Some(c) = (if words.is_empty() { None } else { open() }) else {
+        return vec![];
+    };
+    let mut keys = vec![ARABIC.to_string()];
+    if editions_.is_empty() {
+        keys.extend(
+            editions()
+                .into_iter()
+                .map(|e| e.key)
+                .filter(|k| k != ARABIC),
+        );
+    } else {
+        keys.extend(editions_.iter().filter(|e| *e != ARABIC).cloned());
+    }
+    let arabic = text
+        .chars()
+        .any(|ch| ('\u{0600}'..='\u{06FF}').contains(&ch));
+    let wanted: Vec<String> = words
+        .iter()
+        .map(|w| {
+            if arabic {
+                crate::normalize::normalize(w)
+            } else {
+                crate::people::fold_latin(w)
+            }
+        })
+        .collect();
+    let sql = format!(
+        "SELECT sura, ayah, edition, text FROM verses WHERE edition IN ({}) ORDER BY sura, ayah",
+        vec!["?"; keys.len()].join(",")
+    );
+    let Ok(mut st) = c.prepare(&sql) else {
+        return vec![];
+    };
+    let mut out = vec![];
+    let Ok(mut rows) = st.query(rusqlite::params_from_iter(keys.iter())) else {
+        return vec![];
+    };
+    while let Ok(Some(r)) = rows.next() {
+        let edition = text_of(r, 2).unwrap_or_default();
+        if (edition == ARABIC) != arabic {
+            continue;
+        }
+        let t = text_of(r, 3).unwrap_or_default();
+        let hay = if arabic {
+            crate::normalize::normalize(&t)
+        } else {
+            crate::people::fold_latin(&t)
+        };
+        if wanted.iter().all(|w| hay.contains(w.as_str())) {
+            out.push(Found {
+                sura: r.get(0).unwrap_or(0),
+                ayah: r.get(1).unwrap_or(0),
+                edition,
+                text: t,
+            });
+            if out.len() >= limit {
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// Remove a translation downloaded (never the Arabic); whether there was one (`quran.remove`).
+pub fn remove(edition: &str) -> bool {
+    let p = path();
+    if edition == ARABIC || !p.exists() {
+        return false;
+    }
+    let Ok(c) = Connection::open(p) else {
+        return false;
+    };
+    let n = c
+        .execute("DELETE FROM verses WHERE edition = ?", [edition])
+        .unwrap_or(0);
+    let _ = c.execute("DELETE FROM editions WHERE key = ?", [edition]);
+    n > 0
+}
+
+/// Every verse each hadith names, and the hadith that name each verse (`quran.cites`), counted once per change.
+#[derive(Clone, Default, Debug)]
+pub struct Named {
+    pub hadith: HashMap<i64, Vec<(u32, u32, u32)>>,
+    /// "s:a" → the hadith that name it, in the order they were read
+    pub verse: HashMap<String, Vec<i64>>,
+}
+
+pub fn named(conn: &Connection) -> rusqlite::Result<Named> {
+    crate::cache::kept(conn, "quran-cites", || {
+        let mut out = Named::default();
+        let mut stmt = conn.prepare(
+            "SELECT t.hadith_id, t.text FROM texts t JOIN editions e ON e.id = t.edition_id \
+             WHERE e.language IN ('English', 'Turkish') AND (t.text LIKE '%:%' OR t.text LIKE '%/%')",
+        )?;
+        let mut rows = stmt.query([])?;
+        while let Some(r) = rows.next()? {
+            let hid: i64 = r.get(0)?;
+            let text = text_of(r, 1)?;
+            for (s, a, b) in marks_in(&text) {
+                let list = out.hadith.entry(hid).or_default();
+                if !list.contains(&(s, a, b)) {
+                    list.push((s, a, b));
+                    for v in a..=b {
+                        out.verse.entry(format!("{s}:{v}")).or_default().push(hid);
+                    }
+                }
+            }
+        }
+        Ok(out)
+    })
+}
+
+/// The hadith that name a verse, each once (`quran.hadith_of`).
+pub fn hadith_of(n: &Named, sura: u32, ayah: u32) -> Vec<i64> {
+    let mut out: Vec<i64> = vec![];
+    for h in n.verse.get(&format!("{sura}:{ayah}")).into_iter().flatten() {
+        if !out.contains(h) {
+            out.push(*h);
+        }
+    }
+    out
+}
+
+/// How many hadith name a verse of each sura (`quran.counts_by_sura`).
+pub fn counts_by_sura(n: &Named) -> HashMap<u32, usize> {
+    let mut sets: HashMap<u32, std::collections::HashSet<i64>> = HashMap::new();
+    for (key, hids) in &n.verse {
+        let s: u32 = key
+            .split(':')
+            .next()
+            .and_then(|x| x.parse().ok())
+            .unwrap_or(0);
+        sets.entry(s).or_default().extend(hids.iter().copied());
+    }
+    sets.into_iter().map(|(s, h)| (s, h.len())).collect()
+}
+
+/// "2", "2:255", "2:255-257" → (sura, first verse, last verse or None for the whole sura) — `cli.cmd_quran`.
+pub fn parse_ref(text: &str) -> Option<(u32, u32, Option<u32>)> {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    let re =
+        RE.get_or_init(|| Regex::new(r"^(\d{1,3})(?::(\d{1,3})(?:-(\d{1,3}))?)?$").expect("verse"));
+    let m = re.captures(text)?;
+    let sura: u32 = m[1].parse().ok()?;
+    if !(1..=114).contains(&sura) {
+        return None;
+    }
+    let start: u32 = m.get(2).and_then(|x| x.as_str().parse().ok()).unwrap_or(1);
+    let end = match (m.get(2), m.get(3)) {
+        (_, Some(b)) => b.as_str().parse().ok(),
+        (Some(_), None) => Some(start),
+        _ => None,
+    };
+    Some((sura, start, end))
+}
+
 /// "Ahzâb 33:33", "Mü'minûn 23:99-100" (`quran.label`).
 pub fn label(sura: u32, a: u32, b: u32, lang: &str) -> String {
     let range = if b != a {

@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use isnady_core::{
     bookmarks, db, genealogy, grades, huffaz, i18n, isnad, learn, lives, narrators, paths, people,
-    py, quran, readmarks, sahaba, scholars, search, sira, tables, works, VERSION,
+    py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables, works, VERSION,
 };
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -28,11 +28,22 @@ struct Cli {
 enum Command {
     /// Show the version
     Version,
-    /// Where the data is kept
+    /// Show or change the data folder (database, settings, your sources)
     Datadir {
-        /// (not ported yet: moving the data folder — use iy datadir PATH)
+        /// New folder; without it the current one is shown
         path: Option<String>,
+        /// Use the folder as it is instead of copying your data there
+        #[arg(long = "as-is")]
+        as_is: bool,
+        /// Go back to the platform's default folder
+        #[arg(long)]
+        default: bool,
     },
+    /// Appearance and other settings (the same as Edit → Preferences)
+    Config(ConfigArgs),
+    /// Profiles: several people on one isnady, each with their own settings, place and bookmarks (the same as File →
+    /// Profiles)
+    Profile(ProfileArgs),
     /// What is imported: every source with its editions and texts
     Sources,
     /// Search the hadith
@@ -58,6 +69,35 @@ enum Command {
     Group(GroupArgs),
     /// The life of the Prophet as a timeline: events, dates, verses, Ibn Hisham's chapter and the hadith that name each
     Sira(SiraArgs),
+    /// The cache that keeps the counts of books, narrators, scholars …: info, clear
+    Cache {
+        #[arg(default_value = "info", value_parser = ["info", "clear"])]
+        action: String,
+    },
+    /// isnady's log: the last lines, errors only, a text, follow it, crash reports
+    Log(LogArgs),
+    /// Back to zero: delete all settings, all books, or everything
+    Reset {
+        #[arg(value_parser = ["settings", "books", "all"])]
+        what: String,
+        /// Do not ask
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Put isnady on the desktop and in the applications menu, with its icon
+    Shortcut {
+        /// Only the applications menu
+        #[arg(long = "no-desktop")]
+        no_desktop: bool,
+        /// Only the desktop
+        #[arg(long = "no-menu")]
+        no_menu: bool,
+    },
+    /// The Qur'an with its translations, and the hadith that name each verse (downloaded once on request)
+    Quran(QuranArgs),
+    /// The written sources: Hammam's sahifa with its parallels, the writings that live in later books, writing in the
+    /// chains (Sunni and Shia apart)
+    Sahifa(SahifaArgs),
     /// Genealogies: the prophets, Quraysh, a narrator's family, his line of learning
     Tree(TreeArgs),
     /// Bookmarks in folders: list, folders, add, remove, export, import
@@ -134,6 +174,112 @@ struct TreeArgs {
 struct SiraArgs {
     /// badr, uhud, hijra, revelation …; none = the timeline
     event: Option<String>,
+    /// The language (default: the interface language)
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// Characters per line
+    #[arg(long, default_value_t = 100)]
+    width: usize,
+}
+
+#[derive(clap::Args)]
+struct LogArgs {
+    /// The last N lines (0: all; default 60)
+    #[arg(long, short = 'n', default_value_t = 60)]
+    lines: usize,
+    /// Only lines of this level and above
+    #[arg(long, value_parser = ["info", "warning", "error"])]
+    level: Option<String>,
+    /// Only lines holding this text
+    #[arg(long)]
+    grep: Option<String>,
+    /// Keep showing new lines (Ctrl+C ends)
+    #[arg(long, short = 'f')]
+    follow: bool,
+    /// The newest crash report instead
+    #[arg(long)]
+    crash: bool,
+    /// List the log files
+    #[arg(long)]
+    files: bool,
+    /// Print where the log is
+    #[arg(long)]
+    path: bool,
+    /// Remove what was logged before this day
+    #[arg(long, value_name = "YYYY-MM-DD")]
+    before: Option<String>,
+    /// Empty the log and remove the crash reports
+    #[arg(long)]
+    clear: bool,
+}
+
+#[derive(clap::Args)]
+struct ConfigArgs {
+    #[arg(value_parser = ["list", "get", "set", "reset"])]
+    action: String,
+    /// e.g. text.arabic.size, colors.dark.gilt, ui.family
+    key: Option<String>,
+    /// Value for set; an empty string restores the default
+    value: Option<String>,
+    /// List only keys starting with this, e.g. text.arabic
+    #[arg(long, default_value = "")]
+    prefix: String,
+}
+
+#[derive(clap::Args)]
+struct ProfileArgs {
+    #[arg(value_parser = ["list", "new", "use", "rename", "delete", "export", "import"])]
+    action: String,
+    /// The profile's name (import: the file)
+    name: Option<String>,
+    /// rename: the new name; export: the file or folder to write; import: a name for the new profile
+    value: Option<String>,
+    /// new: start from this profile's settings
+    #[arg(long, value_name = "PROFILE")]
+    copy: Option<String>,
+}
+
+#[derive(clap::Args)]
+struct QuranArgs {
+    /// none: the suras; 2 / 2:255 / 2:255-257: verses; search WORDS; download [EDITION …]; editions [--language L |
+    /// --installed]; remove EDITION
+    what: Vec<String>,
+    /// The translations to show (keys from iy quran editions --installed); default: those downloaded
+    #[arg(long)]
+    edition: Vec<String>,
+    /// Under each verse, the hadith that name it (Sunni and Shia books apart)
+    #[arg(long)]
+    hadith: bool,
+    /// editions: only this language, e.g. Turkish
+    #[arg(long)]
+    language: Option<String>,
+    /// editions: only those downloaded
+    #[arg(long)]
+    installed: bool,
+    /// editions: only those isnady-data keeps (★)
+    #[arg(long)]
+    own: bool,
+    /// The language of the sura names
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// search: how many verses to show
+    #[arg(long, default_value_t = 30)]
+    limit: usize,
+    /// Characters per line
+    #[arg(long, default_value_t = 100)]
+    width: usize,
+}
+
+#[derive(clap::Args)]
+struct SahifaArgs {
+    /// hammam, sadiqa, ali, zakat, hazm, chains-sunni; kitab-ali, jamia, fatima, chains-shia; none = the list
+    id: Option<String>,
+    /// The list: one road, or both
+    #[arg(long, default_value = "all", value_parser = ["sunni", "shia", "all"])]
+    tradition: String,
+    /// How many hadith to list
+    #[arg(long, default_value_t = 40)]
+    limit: usize,
     /// The language (default: the interface language)
     #[arg(long, value_parser = ["en", "tr", "ar"])]
     lang: Option<String>,
@@ -327,24 +473,67 @@ fn main() -> ExitCode {
     if cli.version {
         return version();
     }
-    match cli.command {
+    // no book yet (FR1): one command brings them all, as one click does in the window
+    if !matches!(
+        cli.command,
+        Some(Command::Version) | Some(Command::Reset { .. }) | None
+    ) {
+        let empty = db::connect(None)
+            .ok()
+            .map(|c| {
+                c.query_row("SELECT 1 FROM hadiths LIMIT 1", [], |_| Ok(()))
+                    .is_err()
+            })
+            .unwrap_or(true);
+        if empty {
+            eprintln!("isnady has no books yet. Import every hadith book and rijal work of isnady-data with one command: iy catalog import --all");
+        }
+    }
+    // every command in the log too (LOG1): what was asked, how it ended, how long it took — not `iy-rs log` itself
+    let logged = !matches!(cli.command, Some(Command::Log(_)));
+    let started = std::time::Instant::now();
+    if logged {
+        isnady_core::log::setup("command line");
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        isnady_core::log::info("cli", &format!("▶ iy-rs {}", args.join(" ")));
+    }
+    let code = run(cli.command);
+    if logged {
+        let ok = code == ExitCode::SUCCESS;
+        isnady_core::log::info(
+            "cli",
+            &format!(
+                "{} exit {} in {:.1} s",
+                if ok { "✔" } else { "✖" },
+                if ok { "0" } else { "1" },
+                started.elapsed().as_secs_f64()
+            ),
+        );
+    }
+    code
+}
+
+fn run(command: Option<Command>) -> ExitCode {
+    match command {
         None => {
             println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs scholar, iy-rs group, iy-rs sira, iy-rs tree, iy-rs bookmark, iy-rs term, iy-rs learn, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
-        Some(Command::Datadir { path }) => {
-            if path.is_some() {
-                return not_yet("Moving the data folder", "iy datadir PATH");
-            }
-            println!(
-                "{}  ({})",
-                paths::shown(&paths::data_dir()),
-                paths::data_dir_source()
-            );
-            println!("default: {}", paths::shown(&paths::default_data_dir()));
-            ExitCode::SUCCESS
-        }
+        Some(Command::Datadir {
+            path,
+            as_is,
+            default,
+        }) => datadir_cmd(path, as_is, default),
+        Some(Command::Config(a)) => config_cmd(a),
+        Some(Command::Cache { action }) => cache_cmd(&action),
+        Some(Command::Log(a)) => log_cmd(a),
+        Some(Command::Reset { what, yes }) => reset_cmd(&what, yes),
+        Some(Command::Shortcut {
+            no_desktop,
+            no_menu,
+        }) => shortcut_cmd(!no_desktop, !no_menu),
+        Some(Command::Profile(a)) => profile_cmd(a),
         Some(Command::Sources) => sources(),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
@@ -355,6 +544,8 @@ fn main() -> ExitCode {
         Some(Command::Scholar(a)) => scholar_cmd(a),
         Some(Command::Group(a)) => group_cmd(a),
         Some(Command::Sira(a)) => sira_cmd(a),
+        Some(Command::Sahifa(a)) => sahifa_cmd(a),
+        Some(Command::Quran(a)) => quran_cmd(a),
         Some(Command::Tree(a)) => tree_cmd(a),
         Some(Command::Bookmark(a)) => bookmark_cmd(a),
         Some(Command::Term(a)) => term_cmd(a),
@@ -631,6 +822,648 @@ fn sira_cmd(a: SiraArgs) -> ExitCode {
         );
     }
     ExitCode::SUCCESS
+}
+
+/// iy-rs cache info|clear (`cli.cmd_cache`): the folder of the kept counts.
+fn cache_cmd(action: &str) -> ExitCode {
+    let folder = paths::data_dir().join("cache");
+    let jsons = || -> Vec<std::path::PathBuf> {
+        std::fs::read_dir(&folder)
+            .map(|d| {
+                d.flatten()
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().map(|x| x == "json").unwrap_or(false))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    if action == "clear" {
+        isnady_core::log::info("cache", "⟲ kept files cleared");
+        isnady_core::cache::clear();
+        let n = jsons()
+            .iter()
+            .filter(|p| std::fs::remove_file(p).is_ok())
+            .count();
+        println!("Deleted {n} kept file(s); everything is counted again when next asked for.");
+        return ExitCode::SUCCESS;
+    }
+    let files = jsons();
+    let size: u64 = files
+        .iter()
+        .filter_map(|p| p.metadata().ok())
+        .map(|m| m.len())
+        .sum();
+    println!("Cache folder: {}", paths::shown(&folder));
+    println!(
+        "{} file(s), {} KB — counted once per change of the database, read from here after.",
+        files.len(),
+        py::thousands(py::round_even(size as f64 / 1024.0) as i64)
+    );
+    ExitCode::SUCCESS
+}
+
+/// iy-rs log (`cli.cmd_log`, LOG1).
+fn log_cmd(a: LogArgs) -> ExitCode {
+    use isnady_core::log;
+    if a.path {
+        println!("{}", paths::shown(&log::path()));
+        return ExitCode::SUCCESS;
+    }
+    if a.clear {
+        println!(
+            "{} log file(s) emptied or removed: {}",
+            log::clear(),
+            paths::shown(&log::folder())
+        );
+        return ExitCode::SUCCESS;
+    }
+    if let Some(day) = &a.before {
+        println!("{} line(s) before {day} removed", log::delete_before(day));
+        return ExitCode::SUCCESS;
+    }
+    if a.files {
+        for f in log::files() {
+            if let Ok(m) = f.metadata() {
+                let when = m.modified().map(chrono_like).unwrap_or_default();
+                println!(
+                    "{when}  {:8.1} KB  {}",
+                    m.len() as f64 / 1024.0,
+                    paths::shown(&f)
+                );
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+    let mut target = log::path();
+    if a.crash {
+        match log::files().into_iter().find(|f| {
+            f.file_name()
+                .map(|n| n.to_string_lossy().starts_with("crash_"))
+                .unwrap_or(false)
+        }) {
+            Some(f) => target = f,
+            None => {
+                println!("No crash reports.");
+                return ExitCode::SUCCESS;
+            }
+        }
+    }
+    if !target.exists() {
+        println!("No log yet: {}", paths::shown(&target));
+        return ExitCode::SUCCESS;
+    }
+    println!(
+        "{}",
+        log::read(
+            &target,
+            a.lines,
+            a.level.as_deref().unwrap_or(""),
+            a.grep.as_deref().unwrap_or("")
+        )
+    );
+    if a.follow {
+        use std::io::{Read, Seek, Write};
+        let mut size = target.metadata().map(|m| m.len()).unwrap_or(0);
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            let now = target.metadata().map(|m| m.len()).unwrap_or(0);
+            if now < size {
+                size = 0;
+            }
+            if now > size {
+                if let Ok(mut f) = std::fs::File::open(&target) {
+                    let _ = f.seek(std::io::SeekFrom::Start(size));
+                    let mut buf = Vec::new();
+                    let _ = f.read_to_end(&mut buf);
+                    let mut out = std::io::stdout();
+                    let _ = out.write_all(String::from_utf8_lossy(&buf).as_bytes());
+                    let _ = out.flush();
+                }
+                size = now;
+            }
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+fn chrono_like(t: std::time::SystemTime) -> String {
+    isnady_core::py::local_time(t, "%Y-%m-%d %H:%M")
+}
+
+/// iy-rs reset settings|books|all (`cli.cmd_reset`, RST1). The books go with the import of books.
+fn reset_cmd(what: &str, yes: bool) -> ExitCode {
+    use std::io::IsTerminal;
+    let shown = match what {
+        "settings" => "every setting and remembered place",
+        "books" => "every imported book and source",
+        _ => "the books, the settings, the bookmarks and the downloaded data",
+    };
+    if what != "settings" {
+        return not_yet("Deleting the books", &format!("iy reset {what}"));
+    }
+    if !yes {
+        if !std::io::stdin().is_terminal() {
+            eprintln!("Add --yes to delete without being asked.");
+            return ExitCode::from(2);
+        }
+        eprint!("Delete {shown}? This cannot be undone. Type yes: ");
+        let mut answer = String::new();
+        let _ = std::io::stdin().read_line(&mut answer);
+        if !["yes", "evet", "y", "e"].contains(&answer.trim().to_lowercase().as_str()) {
+            println!("Nothing deleted.");
+            return ExitCode::from(1);
+        }
+    }
+    match isnady_core::config::reset_settings() {
+        Ok(n) => {
+            isnady_core::log::warning("reset", &format!("⟲ every setting reset ({n} stored)"));
+            println!("{n} settings deleted; isnady is as at its first start.");
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// iy-rs shortcut [--no-desktop] [--no-menu] (`cli.cmd_shortcut`): the window on the desktop and in the menu.
+fn shortcut_cmd(desktop: bool, menu: bool) -> ExitCode {
+    use isnady_core::shortcut;
+    let (program, how) = shortcut::launch_command();
+    match shortcut::create(desktop, menu) {
+        Ok(made) => {
+            for (what, path) in made {
+                println!("  {what:8} {}", paths::shown(&path));
+            }
+            println!("It starts {how}: {}", paths::shown(&program));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("The shortcut could not be created: {e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// iy-rs datadir [PATH] [--as-is] [--default] (`cli.cmd_datadir`).
+fn datadir_cmd(path: Option<String>, as_is: bool, default: bool) -> ExitCode {
+    if path.is_none() && !default {
+        println!(
+            "{}  ({})",
+            paths::shown(&paths::data_dir()),
+            paths::data_dir_source()
+        );
+        println!("default: {}", paths::shown(&paths::default_data_dir()));
+        return ExitCode::SUCCESS;
+    }
+    let wanted = if default { None } else { path.as_deref() };
+    match paths::relocate(wanted, if as_is { "as-is" } else { "copy" }) {
+        Ok(target) => {
+            let how = if as_is {
+                "used as it is"
+            } else {
+                "your data was copied there; the old folder is kept"
+            };
+            println!("isnady now uses {} ({how}).", paths::shown(&target));
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// iy-rs config list|get|set|reset (`cli.cmd_config`).
+fn config_cmd(a: ConfigArgs) -> ExitCode {
+    use isnady_core::config;
+    let done = (|| -> Result<(), String> {
+        match a.action.as_str() {
+            "list" => {
+                for (key, value, default) in config::all_values() {
+                    if !a.prefix.is_empty() && !key.starts_with(&a.prefix) {
+                        continue;
+                    }
+                    let mark = if config::same_value(&value, &default) {
+                        ""
+                    } else {
+                        "   (changed)"
+                    };
+                    let shown = config::py_str(&value);
+                    let shown = if shown.is_empty() {
+                        "(default)".to_string()
+                    } else {
+                        shown
+                    };
+                    println!("{key:32} {shown}{mark}");
+                }
+                println!("\nSaved in {}", paths::shown(&config::settings_path()));
+            }
+            "get" => {
+                let key = a
+                    .key
+                    .as_deref()
+                    .ok_or("Give the setting: iy config get text.arabic.size")?;
+                config::validate(key, &"".into())?;
+                println!("{}", config::py_str(&config::effective(key)));
+            }
+            "set" => {
+                let (Some(key), Some(value)) = (a.key.as_deref(), a.value.as_deref()) else {
+                    return Err(
+                        "Give the setting and the value: iy config set text.arabic.size 22".into(),
+                    );
+                };
+                config::set(key, value.into())?;
+                println!("{key} = {}", config::py_str(&config::effective(key)));
+            }
+            _ => {
+                let prefix = a.key.clone().unwrap_or_default();
+                let removed = config::reset(&prefix)?;
+                println!(
+                    "Reset {removed} setting{} to the default{}",
+                    if removed != 1 { "s" } else { "" },
+                    if prefix.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" under {prefix}")
+                    }
+                );
+            }
+        }
+        Ok(())
+    })();
+    match done {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// iy-rs profile list|new|use|rename|delete|export|import (`cli.cmd_profile`, PRF1).
+fn profile_cmd(a: ProfileArgs) -> ExitCode {
+    use isnady_core::config;
+    let which = |text: Option<&str>| -> Result<Option<String>, String> {
+        match text.filter(|t| !t.is_empty()) {
+            None => Ok(None),
+            Some(t) => config::find_profile(t)
+                .map(Some)
+                .ok_or_else(|| format!("No profile {t}. See: iy profile list")),
+        }
+    };
+    let done = (|| -> Result<(), String> {
+        let name = a.name.as_deref();
+        match a.action.as_str() {
+            "list" => {
+                for p in config::all_profiles() {
+                    let shown = if p.name.is_empty() {
+                        "Default"
+                    } else {
+                        &p.name
+                    };
+                    println!(
+                        "{} {:24} {:20} {}",
+                        if p.active { '*' } else { ' ' },
+                        shown,
+                        p.id,
+                        paths::shown(&config::folder_of(&p.id))
+                    );
+                }
+                println!("\n* the profile in use. Its settings, place and bookmarks are its own; the books are shared.");
+            }
+            "new" => {
+                let from = match &a.copy {
+                    Some(c) => which(Some(c))?,
+                    None => None,
+                };
+                let pid = config::create_profile(name.unwrap_or(""), from.as_deref())?;
+                let n = name.unwrap_or("None");
+                println!("Made the profile {n} ({pid}). Use it: iy profile use \"{n}\"");
+            }
+            "use" => {
+                let pid = which(name)?.unwrap_or_else(|| config::DEFAULT_PROFILE.to_string());
+                config::switch_profile(&pid)?;
+                let now = config::profile_name(&config::active_profile());
+                println!("In use: {}", if now.is_empty() { "Default" } else { &now });
+            }
+            "rename" => {
+                let Some(value) = a.value.as_deref().filter(|v| !v.is_empty()) else {
+                    return Err("Give the new name: iy profile rename OLD NEW".into());
+                };
+                let pid = which(name)?.unwrap_or_else(|| config::DEFAULT_PROFILE.to_string());
+                config::rename_profile(&pid, value)?;
+                println!("Renamed to {value}");
+            }
+            "delete" => {
+                let pid = which(name)?.unwrap_or_default();
+                config::delete_profile(&pid)?;
+                println!("Deleted {}", name.unwrap_or("None"));
+            }
+            "export" => {
+                let pid = match name {
+                    Some(_) => which(name)?.unwrap_or_default(),
+                    None => config::active_profile(),
+                };
+                let written = config::export_profile(&pid, a.value.as_deref().unwrap_or("."))?;
+                println!("Written: {}", paths::shown(&written));
+            }
+            _ => {
+                let Some(file) = name.filter(|n| !n.is_empty()) else {
+                    return Err("Give the file: iy profile import FILE.isnady-profile.zip".into());
+                };
+                let pid = config::import_profile(file, a.value.as_deref())?;
+                let n = config::profile_name(&pid);
+                println!("Imported as {n} ({pid}). Use it: iy profile use \"{n}\"");
+            }
+        }
+        Ok(())
+    })();
+    match done {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// iy-rs quran (Q1, Q2): the suras, a sura or verses with the translations chosen and the hadith that name each
+/// verse, a search; editions downloaded, remove (`cli.cmd_quran`). Downloading comes with the data sources.
+fn quran_cmd(a: QuranArgs) -> ExitCode {
+    let lang = a.lang.clone().unwrap_or_else(i18n::ui_language);
+    let words = &a.what;
+    let first = words.first().map(String::as_str);
+    if first == Some("download") {
+        return not_yet("Downloading the Qur'an", "iy quran download");
+    }
+    if first == Some("editions") {
+        if a.installed || (words.len() == 1 && a.language.is_none()) {
+            for e in quran::editions() {
+                println!(
+                    "  {:28} {:12} {:40} [{}]",
+                    e.key, e.language, e.author, e.origin
+                );
+            }
+            if !quran::available() {
+                println!("The Qur'an is not downloaded: iy quran download");
+            }
+            return ExitCode::SUCCESS;
+        }
+        return not_yet(
+            "The list of translations to download",
+            "iy quran editions --language L",
+        );
+    }
+    if first == Some("remove") {
+        for key in &words[1..] {
+            println!(
+                "{key}: {}",
+                if quran::remove(key) {
+                    "removed"
+                } else {
+                    "not downloaded (the Arabic is always kept)"
+                }
+            );
+        }
+        return ExitCode::SUCCESS;
+    }
+    if !quran::available() {
+        println!("The Qur'an is not downloaded yet (about 3 MB, once): iy quran download\n  more translations: iy quran editions --language Turkish, then iy quran download KEY …");
+        return ExitCode::from(1);
+    }
+    let chosen = if a.edition.is_empty() {
+        quran::shown(quran::saved_choice().as_deref())
+    } else {
+        a.edition.clone()
+    };
+    let eds = quran::editions();
+    if first == Some("search") {
+        let text = words[1..].join(" ");
+        let found = quran::search(&text, &chosen, 200);
+        for r in found.iter().take(a.limit) {
+            println!(
+                "  {:24} {}",
+                quran::label(r.sura, r.ayah, r.ayah, &lang),
+                py::take(&r.text, a.width)
+            );
+        }
+        println!(
+            "{} verses{}",
+            found.len(),
+            if found.len() >= 200 {
+                " (the first 200)"
+            } else {
+                ""
+            }
+        );
+        return ExitCode::SUCCESS;
+    }
+    let Some(first) = first else {
+        for x in quran::suras() {
+            let name = match lang.as_str() {
+                "tr" if !x.tr.is_empty() => x.tr.clone(),
+                "ar" if !x.arabic.is_empty() => x.arabic.clone(),
+                _ => format!("{} ({})", x.name, x.english),
+            };
+            println!(
+                "  {:3}. {:34} {:3} verses  {}",
+                x.n,
+                name,
+                x.verses,
+                if x.place == "Mecca" {
+                    "Meccan"
+                } else {
+                    "Medinan"
+                }
+            );
+        }
+        println!(
+            "\n(iy quran 2, iy quran 2:255, iy quran 33:28-34 --hadith, iy quran search WORDS)"
+        );
+        return ExitCode::SUCCESS;
+    };
+    let Some((sura, start, end)) = quran::parse_ref(first) else {
+        eprintln!("Write a sura, or a verse: iy quran 2, iy quran 2:255, iy quran 2:255-257");
+        return ExitCode::from(1);
+    };
+    let conn = if a.hadith {
+        match open() {
+            Ok(c) => Some(c),
+            Err(code) => return code,
+        }
+    } else {
+        None
+    };
+    let named = match conn.as_ref().map(quran::named) {
+        Some(Ok(n)) => Some(n),
+        Some(Err(e)) => {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+        None => None,
+    };
+    println!(
+        "{sura}. {}  {}\n",
+        quran::sura_name(sura, &lang),
+        quran::sura_name(sura, "ar")
+    );
+    for v in quran::verses(sura, &chosen, start, end) {
+        println!(
+            "  {sura}:{}  {}",
+            v.ayah,
+            v.texts.get(quran::ARABIC).map(String::as_str).unwrap_or("")
+        );
+        for key in &chosen {
+            if let Some(t) = v.texts.get(key).filter(|t| !t.is_empty()) {
+                let author = eds
+                    .iter()
+                    .find(|e| &e.key == key)
+                    .map(|e| e.author.clone())
+                    .unwrap_or_else(|| key.clone());
+                println!("{}   [{author}]", py::fill(t, a.width, "      "));
+            }
+        }
+        if let (Some(conn), Some(named)) = (&conn, &named) {
+            let hids = quran::hadith_of(named, sura, v.ayah);
+            if !hids.is_empty() {
+                let sql = format!(
+                    "SELECT c.key, h.number, COALESCE(c.tradition, 'sunni') FROM hadiths h JOIN collections c \
+                     ON c.id = h.collection_id WHERE h.id IN ({})",
+                    vec!["?"; hids.len()].join(",")
+                );
+                let rows: Vec<(String, String, String)> = conn
+                    .prepare(&sql)
+                    .and_then(|mut st| {
+                        st.query_map(isnady_core::db::params_from_iter(hids.iter()), |r| {
+                            Ok((r.get(0)?, isnady_core::db::number_text(r, 1)?, r.get(2)?))
+                        })
+                        .and_then(|rows| rows.collect())
+                    })
+                    .unwrap_or_default();
+                for road in ["sunni", "shia"] {
+                    let mine: Vec<String> = rows
+                        .iter()
+                        .filter(|(_, _, r)| r == road)
+                        .map(|(k, n, _)| format!("{k} {n}"))
+                        .collect();
+                    if !mine.is_empty() {
+                        let more = if mine.len() > 15 {
+                            format!(" … +{}", mine.len() - 15)
+                        } else {
+                            String::new()
+                        };
+                        println!(
+                            "      named in the {} books: {}{more}",
+                            py::upper_first(road),
+                            mine[..mine.len().min(15)].join(", ")
+                        );
+                    }
+                }
+            }
+        }
+        println!();
+    }
+    ExitCode::SUCCESS
+}
+
+/// iy-rs sahifa [ID] (SHF1): the written sources — Hammam's sahifa in the Musnad with its parallels, the writings
+/// that live in later books, writing in the chains; the Sunni road and the Shia road apart (`cli.cmd_sahifa`).
+fn sahifa_cmd(a: SahifaArgs) -> ExitCode {
+    let lang = a.lang.clone().unwrap_or_else(i18n::ui_language);
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    match sahifa_shown(&conn, &a, &lang) {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn sahifa_shown(
+    conn: &rusqlite_conn::Connection,
+    a: &SahifaArgs,
+    lang: &str,
+) -> rusqlite_conn::Result<ExitCode> {
+    let c = sahifa::counted(conn)?;
+    let Some(id) = &a.id else {
+        let counts = sahifa::summary(&c);
+        for road in ["sunni", "shia"] {
+            if a.tradition != "all" && a.tradition != road {
+                continue;
+            }
+            println!("\n{} road", py::upper_first(road));
+            for s in sahifa::sources(Some(road)) {
+                let r = counts.iter().find(|r| r.id == s.id).expect("summary");
+                let extra = if s.id == "hammam" {
+                    format!(
+                        ", {} with parallels ({} hadith)",
+                        r.with_parallels, r.parallels
+                    )
+                } else {
+                    String::new()
+                };
+                println!(
+                    "  {:14} {:52} {:>5} hadith{extra}",
+                    s.id,
+                    sahifa::text(&s.title, lang),
+                    py::thousands(r.count as i64)
+                );
+            }
+        }
+        println!("\n(iy sahifa ID: what it is, where it lives, its hadith)");
+        return Ok(ExitCode::SUCCESS);
+    };
+    let Some(s) = sahifa::find(id) else {
+        eprintln!("No written source '{id}'. See: iy sahifa");
+        return Ok(ExitCode::from(1));
+    };
+    println!("{}   [{} road]\n", sahifa::text(&s.title, lang), s.road);
+    println!("{}", py::fill(&sahifa::text(&s.lead, lang), a.width, ""));
+    println!(
+        "{}\n",
+        py::fill(
+            &format!("How isnady finds it: {}", sahifa::text(&s.how, lang)),
+            a.width,
+            ""
+        )
+    );
+    let ids = sahifa::hadith(&c, &s.id);
+    let books: Vec<String> = sahifa::by_book(conn, &ids)?
+        .iter()
+        .map(|(k, _, n)| format!("{k} {}", py::thousands(*n)))
+        .collect();
+    println!(
+        "{} hadith in the books imported here: {}",
+        py::thousands(ids.len() as i64),
+        books.join(", ")
+    );
+    for (i, (hid, key, num)) in sahifa::refs(conn, &ids)?.iter().take(a.limit).enumerate() {
+        let mut line = format!("  {:4}. {key} {num}", i + 1);
+        if s.id == "hammam" {
+            let par = sahifa::refs(conn, &sahifa::parallels(&c, *hid))?;
+            line += "   ← ";
+            if par.is_empty() {
+                line += "no parallel through Hammam";
+            } else {
+                let p: Vec<String> = par.iter().map(|(_, k, n)| format!("{k} {n}")).collect();
+                line += &p.join(", ");
+            }
+        }
+        println!("{line}");
+    }
+    if ids.len() > a.limit {
+        println!(
+            "  … {} more (--limit)",
+            py::thousands((ids.len() - a.limit) as i64)
+        );
+    }
+    Ok(ExitCode::SUCCESS)
 }
 
 /// iy-rs tree WHICH [NAME] (GEN1): the prophets, Quraysh, a narrator's family, a narrator's line of learning

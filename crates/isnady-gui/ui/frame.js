@@ -13,9 +13,9 @@ let THEME_MODE = "system";          // view.theme
 let CONTENT = [];                   // view.content_languages ([] = all)
 let FOOTER = "";
 
-const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "genealogy", "learn", "bookmarks"]);
+const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "sahifa", "genealogy", "learn", "bookmarks"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
-const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions", sira: "sira", genealogy: "genealogy", term: "learn" };
+const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions", sira: "sira", sahifa: "sahifa", verse: "books", genealogy: "genealogy", term: "learn" };
 
 function sectionLabel(key) {
   const s = WIN.sections.find((x) => x[0] === key);
@@ -123,6 +123,8 @@ async function goHistory(step) {
     else if (entry[0] === "scholar") await openScholarAt(entry[1]);
     else if (entry[0] === "group") await openGroupAt(entry[1]);
     else if (entry[0] === "sira") await openEventAt(entry[1]);
+    else if (entry[0] === "sahifa") await openSahifaAt(entry[1]);
+    else if (entry[0] === "verse") await openVerseAt(entry[1], entry[2]);
   } catch (_) {
     // a place that is gone (a book removed): stay where we are
   } finally {
@@ -190,7 +192,7 @@ function menus() {
       act("Back", () => goHistory(-1), "Alt+Left"),
       act("Forward", () => goHistory(+1), "Alt+Right"),
       SEP,
-      act("Preferences…", later(["&Edit", "Preferences…"]), "Ctrl+,"),
+      act("Preferences…", () => openPreferences(), "Ctrl+,"),
     ]],
     ["&View", () => [
       ...ORDER.map((key, i) => act(sectionLabel(key), () => show(key), sectionShortcut(i))),
@@ -207,12 +209,12 @@ function menus() {
       act("Full Screen", () => invoke("full_screen"), "F11"),
     ]],
     ["&Tools", () => [
-      act("Clear the Cache", later(["&Tools", "Clear the Cache"])),
+      act("Clear the Cache", clearCache),
       act("Rebuild Search Index", later(["&Tools", "Rebuild Search Index"])),
       act("Read Chains Again", later(["&Tools", "Read Chains Again"])),
       act("Identify Narrators Again", later(["&Tools", "Identify Narrators Again"])),
       SEP,
-      act("Create Desktop Shortcut…", later(["&Tools", "Create Desktop Shortcut…"])),
+      act("Create Desktop Shortcut…", createShortcut),
       SEP,
       act("Build AI Indexes (Meaning, Takhrij)", later(["&Tools", "Build AI Indexes (Meaning, Takhrij)"])),
     ]],
@@ -222,7 +224,7 @@ function menus() {
       SEP,
       act("Check for Updates…", later(["&Help", "Check for Updates…"])),
       act("Check Installation…", later(["&Help", "Check Installation…"])),
-      act("Log…", later(["&Help", "Log…"]), "Ctrl+Shift+L"),
+      act("Log…", openLog, "Ctrl+Shift+L"),
       act("Licences", licences),
       act("isnady on GitHub", () => invoke("open_url", { url: WIN.repo_url })),
       act("Report an Issue", () => invoke("open_url", { url: WIN.issues_url })),
@@ -321,7 +323,7 @@ function themeMenu() {
     items.push(act(label, () => setTheme(mode), "", { radio: true, checked: THEME_MODE === mode }));
     if (n === 0) items.push(SEP);
   });
-  items.push(SEP, act("Choose with previews…", later(["&View", "Theme", "Choose with previews…"])));
+  items.push(SEP, act("Choose with previews…", () => openPreferences("themes")));
   return items;
 }
 
@@ -612,8 +614,8 @@ function shortcutAction(name) {
     "Ctrl++": () => changeTextScale(+1),
     "Ctrl+-": () => changeTextScale(-1), "Ctrl+0": () => changeTextScale(0),
     "Ctrl+Shift+I": later(["&File", "Data Sources…"]), "Ctrl+E": later(["&File", "Export…"]),
-    "Ctrl+Shift+E": later(["&File", "Import…"]), "Ctrl+,": later(["&Edit", "Preferences…"]),
-    "Ctrl+Shift+L": later(["&Help", "Log…"]),
+    "Ctrl+Shift+E": later(["&File", "Import…"]), "Ctrl+,": () => openPreferences(),
+    "Ctrl+Shift+L": openLog,
   };
   if (fixed[name]) return fixed[name];
   const m = name.match(/^Ctrl\+([1-9])$/);

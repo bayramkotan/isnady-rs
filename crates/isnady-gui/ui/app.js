@@ -12,11 +12,12 @@ let APP = { catalog: {}, books: [], ui_language: "en" };
 
 // {n}, {n:,} (thousands), {x:.1f}, {s:+.2f} — the format specs the Python texts use
 function fill(text, values) {
-  return text.replace(/\{(\w+)(?::([+]?)(,|\.(\d)f))?\}/g, (whole, key, sign, spec, digits) => {
+  return text.replace(/\{(\w+)(?::([+]?)(,|,?\.(\d)f))?\}/g, (whole, key, sign, spec, digits) => {
     if (!(key in values)) return whole;
     const v = values[key];
     if (typeof v !== "number" || !spec) return String(v);
     if (spec === ",") return v.toLocaleString("en-US");
+    if (spec.startsWith(",")) return v.toLocaleString("en-US", { minimumFractionDigits: Number(digits), maximumFractionDigits: Number(digits) });
     const s = v.toFixed(Number(digits));
     return sign && v >= 0 ? "+" + s : s;
   });
@@ -99,6 +100,8 @@ function applyTheme(name) {
   const key = resolvedTheme(name);
   const tk = Object.assign({ ui_family: "", heading_family: "", roundness: 1, room: 1, nav_signs: false, latin_family: "" },
     (WIN.tokens || {})[key] || {});
+  // the user's own colours belong to the Lapis pair (theme.apply)
+  if (key === "light" || key === "dark") Object.assign(tk, ((APP.settings || {}).colors || {})[key] || {});
   TOKENS = tk;
   DARK = !!tk.dark;
   const root = document.documentElement.style;
@@ -193,6 +196,7 @@ function show(key) {
   $("page-scholars").hidden = key !== "scholars";
   $("page-companions").hidden = key !== "companions";
   $("page-sira").hidden = key !== "sira";
+  $("page-sahifa").hidden = key !== "sahifa";
   $("page-genealogy").hidden = key !== "genealogy";
   $("page-learn").hidden = key !== "learn";
   $("page-bookmarks").hidden = key !== "bookmarks";
@@ -201,6 +205,7 @@ function show(key) {
   if (key === "scholars" && !HISTORY.opening) scholarsRefresh();
   if (key === "companions" && !HISTORY.opening) companionsRefresh();
   if (key === "sira" && !HISTORY.opening) siraRefresh();
+  if (key === "sahifa" && (!HISTORY.opening || SH.stale)) sahifaRefresh();
   if (key === "genealogy" && !HISTORY.opening) genealogyRefresh();
   if (key === "learn" && !HISTORY.opening) learnRefresh();
   if (key === "bookmarks") bookmarksRefresh();
@@ -245,6 +250,7 @@ async function start() {
   wireNarratorView();
   chainsBuild();
   $("c-body").addEventListener("click", chainsClick);
+  setTimeout(sahifaWarm, 4000);          // the written sources counted in the background (main_window: warm)
   const open = s.open || "";
   if (open.startsWith("chain:")) {
     const [, book, ...num] = open.split(":");
@@ -275,6 +281,17 @@ async function start() {
   } else if (open.startsWith("sira:")) {
     const id = open.slice(5);
     await place(["sira", id], () => openEventAt(id));
+  } else if (open === "log") {
+    show("search");
+    await openLog();
+  } else if (open.startsWith("prefs:")) {
+    show("search");
+    await openPreferences(open.slice(6));
+  } else if (open.startsWith("verse:")) {
+    const [, s, a] = open.split(":");
+    await openVerse(Number(s), a ? Number(a) : null);
+  } else if (open.startsWith("sahifa:")) {
+    await openSahifa(open.slice(7));
   } else if (open.startsWith("group:")) {
     await openGroup(open.slice(6));
   } else if (open.startsWith("scholar:")) {

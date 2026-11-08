@@ -1,0 +1,260 @@
+{
+"about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+"hammam_name": "همام بن منبه",
+"schema": "isnady-sahifa/1",
+"sources": [
+{
+"id": "hammam",
+"book": "sahifat_hammam_ibn_munabbih",
+"road": "sunni",
+"layer": 1,
+"title": {
+"en": "The Sahifa of Hammam b. Munabbih",
+"tr": "Hemmâm b. Münebbih'in Sahîfesi",
+"ar": "صحيفة همام بن منبه"
+},
+"lead": {
+"en": "Hammam b. Munabbih (d. 132), a Successor of Yemen, wrote down what Abu Hurayra told him from the Prophet ﷺ. The sahifa came down whole — Hammam to Ma'mar, Ma'mar to 'Abd al-Razzaq — and Ahmad b. Hanbal copied it into his Musnad under that one chain: the first hadith with the chain (\"This is what Abu Hurayra told us …\"), every other one \"And the Messenger of God ﷺ said …\". A manuscript of the sahifa itself was published by Muhammad Hamidullah (1953) with the same 138 hadith. Al-Bukhari and Muslim took many of them through the same chain; their parallels are shown beside each.",
+"tr": "Yemenli tâbiî Hemmâm b. Münebbih (ö. 132), Ebû Hüreyre'nin Resûlullah'tan ﷺ anlattıklarını yazdı. Sahîfe bütün olarak ulaştı — Hemmâm'dan Ma'mer'e, Ma'mer'den Abdürrezzâk'a — ve Ahmed b. Hanbel onu Müsned'ine tek senedle aldı: ilk hadis senediyle (\"Bu, Ebû Hüreyre'nin bize anlattıklarıdır …\"), diğerleri \"Ve Resûlullah ﷺ dedi ki …\" diye. Sahîfenin kendi yazmasını Muhammed Hamîdullah aynı 138 hadisle yayımladı (1953). Buhârî ve Müslim bunların birçoğunu aynı senedle aldı; her hadisin yanında karşılıkları gösterilir.",
+"ar": "كتب همام بن منبه (ت ١٣٢)، التابعي اليمني، ما حدّثه به أبو هريرة عن النبي ﷺ. ووصلت الصحيفة كاملة — من همام إلى معمر، ومن معمر إلى عبد الرزاق — ونقلها أحمد بن حنبل في مسنده بإسناد واحد: الحديث الأول بإسناده («هذا ما حدثنا به أبو هريرة …») وسائرها «وقال رسول الله ﷺ …». ونشر محمد حميد الله مخطوطة الصحيفة نفسها (١٩٥٣) بالأحاديث المئة والثمانية والثلاثين نفسها. وأخرج البخاري ومسلم كثيرًا منها بالإسناد نفسه، وتُعرض نظائرها بجانب كل حديث."
+},
+"how": {
+"en": "Found in the imported Musnad: the runs of hadith under Ma'mar ← Hammam that go on with \"And the Messenger of God ﷺ said\"; the parallels are the hadith of the other books whose chain passes through Hammam, matched to one of them by their wording (isnady's reading).",
+"tr": "İçe aktarılan Müsned'de bulunur: Ma'mer ← Hemmâm senedinin altında \"Ve Resûlullah ﷺ dedi ki\" diye süren hadis dizileri; karşılıklar, diğer kitaplarda senedi Hemmâm'dan geçen hadislerdir, sözlerine göre biriyle eşleştirilir (isnady'nin okuyuşu).",
+"ar": "يُستخرج من المسند المستورد: السلاسل التي تحت إسناد معمر عن همام وتستمر بـ«وقال رسول الله ﷺ»؛ والنظائر أحاديث الكتب الأخرى التي يمر إسنادها بهمام، تُطابَق بألفاظها (قراءة isnady)."
+}
+},
+{
+"id": "sadiqa",
+"book": "al_sahifa_al_sadiqa_abd_allah_ibn_amr",
+"road": "sunni",
+"layer": 2,
+"title": {
+"en": "al-Sahifa al-Sadiqa of 'Abdullah b. 'Amr",
+"tr": "Abdullah b. Amr'ın es-Sahîfetü's-Sâdıka'sı",
+"ar": "الصحيفة الصادقة لعبد الله بن عمرو"
+},
+"lead": {
+"en": "'Abdullah b. 'Amr b. al-'As wrote what he heard from the Prophet ﷺ, who told him: \"Write — by Him in whose hand my soul is, nothing comes out of it but the truth\" (Abu Dawud, Ahmad); he called what he wrote al-Sadiqa, \"the truthful\". It did not reach us as a book of its own: it lives in later books, above all through his great-grandson's chain — 'Amr b. Shu'ayb from his father from his grandfather — which many critics held to be read from that written sahifa.",
+"tr": "Abdullah b. Amr b. Âs, Resûlullah'tan ﷺ işittiklerini yazdı; Resûlullah ona \"Yaz! Nefsim elinde olana yemin olsun ki ondan haktan başka bir şey çıkmaz\" dedi (Ebû Dâvûd, Ahmed). Yazdıklarına es-Sâdıka, \"doğru olan\" adını verdi. Ayrı bir kitap olarak ulaşmadı: sonraki kitaplarda yaşar, en çok torununun torununun senediyle — Amr b. Şuayb, babasından, o da dedesinden — ki birçok münekkit bu senedin o yazılı sahîfeden okunduğunu söyledi.",
+"ar": "كتب عبد الله بن عمرو بن العاص ما سمعه من النبي ﷺ، وقال له: «اكتب، فوالذي نفسي بيده ما يخرج منه إلا حق» (أبو داود، أحمد)، وسمّى ما كتب «الصادقة». ولم تصل كتابًا مستقلًا، بل تعيش في الكتب اللاحقة، وأكثر ذلك بإسناد حفيده: عمرو بن شعيب عن أبيه عن جده، وقد عدّه كثير من النقاد قراءةً من تلك الصحيفة المكتوبة."
+},
+"how": {
+"en": "The hadith whose chain reads \"'Amr b. Shu'ayb from his father from his grandfather\", and those that tell of his writing (\"Write …\") — isnady's reading of the texts.",
+"tr": "Senedi \"Amr b. Şuayb, babasından, o da dedesinden\" diye giden hadisler ve yazmasını anlatan hadisler (\"Yaz …\") — isnady'nin metinleri okuyuşu.",
+"ar": "الأحاديث التي إسنادها «عمرو بن شعيب عن أبيه عن جده»، وما يروي كتابته («اكتب …») — قراءة isnady للنصوص."
+},
+"patterns": [
+"عمرو بن شعيب عن أبيه عن جده",
+"اكتب فوالذي نفسي بيده"
+]
+},
+{
+"id": "ali",
+"book": "sahifat_ali_ibn_abi_talib",
+"road": "sunni",
+"layer": 2,
+"title": {
+"en": "The sahifa of 'Ali",
+"tr": "Hz. Ali'nin sahîfesi",
+"ar": "صحيفة علي"
+},
+"lead": {
+"en": "Asked whether the Prophet's family had been given anything besides the Qur'an, 'Ali said: nothing but the Book of God and what is in this sahifa — blood-money, the freeing of captives, and that no Muslim is killed for a disbeliever (al-Bukhari); in other versions also the sanctity of Medina. He kept it in the sheath of his sword. The hadith that name it, as the Sunni books give them.",
+"tr": "Ehl-i Beyt'e Kur'an'dan başka bir şey verilip verilmediği sorulunca Hz. Ali: Allah'ın Kitabı ve bu sahîfedekilerden başka bir şey yok, dedi — diyetler, esirlerin kurtarılması ve bir Müslüman'ın bir kâfir için öldürülmemesi (Buhârî); başka rivayetlerde Medine'nin haremliği de. Onu kılıcının kınında taşırdı. Onu anan hadisler, Sünnî kitapların verdiği gibi.",
+"ar": "سُئل عليّ: هل خصّكم رسول الله ﷺ بشيء سوى القرآن؟ فقال: ما عندنا إلا كتاب الله وما في هذه الصحيفة: العقل، وفكاك الأسير، ولا يُقتل مسلم بكافر (البخاري)، وفي روايات أخرى حرم المدينة. وكانت في قراب سيفه. والأحاديث التي تذكرها كما في الكتب السنية."
+},
+"how": {
+"en": "The hadith of the Sunni books that speak of \"this sahifa\".",
+"tr": "Sünnî kitaplarda \"bu sahîfe\"den söz eden hadisler.",
+"ar": "أحاديث الكتب السنية التي تذكر «هذه الصحيفة»."
+},
+"patterns": [
+"هذه الصحيفة"
+]
+},
+{
+"id": "zakat",
+"book": "kitab_al_sadaqa_abi_bakr",
+"road": "sunni",
+"layer": 2,
+"title": {
+"en": "Abu Bakr's letter on zakat",
+"tr": "Hz. Ebû Bekir'in zekât mektubu",
+"ar": "كتاب أبي بكر في الصدقة"
+},
+"lead": {
+"en": "When Abu Bakr sent Anas b. Malik to Bahrain he wrote for him \"the obligation of zakat which the Messenger of God ﷺ imposed on the Muslims\": how much is due on camels, sheep and silver (al-Bukhari, through Anas's grandson Thumama, who had the letter).",
+"tr": "Hz. Ebû Bekir, Enes b. Mâlik'i Bahreyn'e gönderirken ona \"Resûlullah'ın ﷺ Müslümanlara farz kıldığı zekât\"ı yazdı: deve, koyun ve gümüşte ne kadar verileceği (Buhârî; mektup Enes'in torunu Sümâme'deydi).",
+"ar": "لما وجّه أبو بكر أنسَ بن مالك إلى البحرين كتب له «فريضة الصدقة التي فرض رسول الله ﷺ على المسلمين»: ما يجب في الإبل والغنم والفضة (البخاري، من طريق ثمامة حفيد أنس، وكان الكتاب عنده)."
+},
+"how": {
+"en": "The hadith that quote the letter (\"he wrote for him this letter\", \"the obligation of zakat which …\").",
+"tr": "Mektubu aktaran hadisler (\"ona bu mektubu yazdı\", \"farz kıldığı zekât …\").",
+"ar": "الأحاديث التي تنقل الكتاب («كتب له هذا الكتاب»، «فريضة الصدقة التي فرض …»)."
+},
+"patterns": [
+"كتب له هذا الكتاب",
+"فريضة الصدقة التي فرض"
+]
+},
+{
+"id": "hazm",
+"book": "kitab_amr_ibn_hazm",
+"road": "sunni",
+"layer": 2,
+"title": {
+"en": "The letter for 'Amr b. Hazm",
+"tr": "Amr b. Hazm'a yazılan mektup",
+"ar": "كتاب عمرو بن حزم"
+},
+"lead": {
+"en": "The letter the Prophet ﷺ had written for 'Amr b. Hazm when he sent him to Yemen: blood-money, zakat, and that none but the pure touch the Qur'an. Malik and al-Nasa'i give parts of it; the family of 'Amr b. Hazm kept it.",
+"tr": "Resûlullah'ın ﷺ Amr b. Hazm'ı Yemen'e gönderirken onun için yazdırdığı mektup: diyetler, zekât ve Kur'an'a temizlerden başkasının dokunmaması. Mâlik ve Nesâî ondan parçalar verir; mektup Amr b. Hazm'ın ailesinde saklandı.",
+"ar": "الكتاب الذي كتبه رسول الله ﷺ لعمرو بن حزم حين بعثه إلى اليمن: الديات والصدقة وألا يمسّ القرآن إلا طاهر. يروي مالك والنسائي أجزاءً منه، وكان عند آل عمرو بن حزم."
+},
+"how": {
+"en": "The hadith that name the letter \"for 'Amr b. Hazm\".",
+"tr": "\"Amr b. Hazm için\" yazılan mektubu anan hadisler.",
+"ar": "الأحاديث التي تذكر الكتاب «لعمرو بن حزم»."
+},
+"patterns": [
+"لعمرو بن حزم",
+"كتاب عمرو بن حزم"
+]
+},
+{
+"id": "chains-sunni",
+"book": "al_kitaba_fi_al_asanid_ahl_al_sunna",
+"road": "sunni",
+"layer": 3,
+"title": {
+"en": "Writing in the chains",
+"tr": "Senedlerde yazı",
+"ar": "الكتابة في الأسانيد"
+},
+"lead": {
+"en": "Most links of a chain say they heard (\"he told us\", \"from\"). Some say the text came in writing: \"he wrote to me\" (mukataba), \"I found in the book of …\" (wijada — 'Abdullah b. Ahmad's \"I found in my father's book, in his hand\" in the Musnad), \"I read in the book of …\". These are the chains of the Sunni books that say so.",
+"tr": "Senedlerin çoğu halkası işittiğini söyler (\"bize anlattı\", \"…den\"). Bazıları metnin yazıyla geldiğini söyler: \"bana yazdı\" (mükâtebe), \"…in kitabında buldum\" (vicâde — Müsned'de Abdullah b. Ahmed'in \"babamın kitabında, onun el yazısıyla buldum\" sözü), \"…in kitabında okudum\". Bunlar Sünnî kitaplarda bunu söyleyen senedlerdir.",
+"ar": "أكثر حلقات الإسناد تذكر السماع («حدثنا»، «عن»)، وبعضها يذكر أن النص جاء كتابةً: «كتب إليّ» (المكاتبة)، «وجدت في كتاب …» (الوجادة — ومنها قول عبد الله بن أحمد في المسند «وجدت في كتاب أبي بخط يده»)، «قرأت في كتاب …». هذه أسانيد الكتب السنية التي تذكر ذلك."
+},
+"how": {
+"en": "Read from the chains as written: the words of writing in the chain itself, not in the text.",
+"tr": "Senedler yazıldığı gibi okunur: yazı sözleri metinde değil, senedin kendisinde.",
+"ar": "تُقرأ الأسانيد كما كُتبت: ألفاظ الكتابة في الإسناد نفسه لا في المتن."
+},
+"chain": [
+"كتب إلي",
+"كتب إلينا",
+"كتب إليه",
+"كتبت إلى",
+"وجدت في كتاب",
+"قرأت في كتاب",
+"في كتاب أبي"
+]
+},
+{
+"id": "kitab-ali",
+"book": "kitab_ali_fi_al_kutub_al_shiiyya",
+"road": "shia",
+"layer": 2,
+"title": {
+"en": "The Book of 'Ali",
+"tr": "Kitâbu Alî",
+"ar": "كتاب علي"
+},
+"lead": {
+"en": "The Imams of the Shia books often answer from \"the Book of 'Ali\": what 'Ali wrote in his own hand from the dictation of the Messenger of God ﷺ, as these books relate it. The hadith of the Shia books that cite it.",
+"tr": "Şiî kitaplarda imamlar çoğu zaman \"Kitâbu Alî\"den cevap verir: bu kitapların anlattığına göre Resûlullah'ın ﷺ yazdırdığını Hz. Ali'nin kendi eliyle yazdığı kitap. Onu anan Şiî rivayetler.",
+"ar": "كثيرًا ما يجيب الأئمة في الكتب الشيعية من «كتاب علي»: ما كتبه عليّ بخط يده من إملاء رسول الله ﷺ، كما ترويه هذه الكتب. وهذه أحاديث الكتب الشيعية التي تذكره."
+},
+"how": {
+"en": "The hadith of the Shia books that name \"the Book of 'Ali\" or \"this sahifa\".",
+"tr": "Şiî kitaplarda \"Kitâbu Alî\" ya da \"bu sahîfe\" diyen rivayetler.",
+"ar": "أحاديث الكتب الشيعية التي تذكر «كتاب علي» أو «هذه الصحيفة»."
+},
+"patterns": [
+"كتاب علي",
+"هذه الصحيفة"
+]
+},
+{
+"id": "jamia",
+"book": "al_jamia_fi_al_kutub_al_shiiyya",
+"road": "shia",
+"layer": 2,
+"title": {
+"en": "al-Jami'a",
+"tr": "el-Câmia",
+"ar": "الجامعة"
+},
+"lead": {
+"en": "In al-Kafi (Kitab al-Hujja) the Imam describes al-Jami'a: a scroll seventy cubits long by the cubit of the Messenger of God ﷺ, from his dictation and in 'Ali's hand, holding every lawful and unlawful thing people need. The hadith of the Shia books that describe it.",
+"tr": "el-Kâfî'de (Kitâbü'l-Hucce) imam el-Câmia'yı anlatır: Resûlullah'ın ﷺ zirâıyla yetmiş zirâ uzunluğunda, onun yazdırmasıyla ve Hz. Ali'nin eliyle yazılmış, insanların ihtiyaç duyduğu her helâl ve haramı içeren bir sayfa. Onu anlatan Şiî rivayetler.",
+"ar": "في الكافي (كتاب الحجة) يصف الإمام الجامعة: صحيفة طولها سبعون ذراعًا بذراع رسول الله ﷺ، من إملائه وخط علي، فيها كل حلال وحرام يحتاج إليه الناس. وهذه أحاديث الكتب الشيعية التي تصفها."
+},
+"how": {
+"en": "The hadith of the Shia books that name al-Jami'a with its length in cubits.",
+"tr": "Şiî kitaplarda el-Câmia'yı zirâ ölçüsüyle anan rivayetler.",
+"ar": "أحاديث الكتب الشيعية التي تذكر الجامعة مع طولها بالذراع."
+},
+"all": [
+"الجامعة",
+"ذراع"
+]
+},
+{
+"id": "fatima",
+"book": "mushaf_fatima_fi_al_kutub_al_shiiyya",
+"road": "shia",
+"layer": 2,
+"title": {
+"en": "Mushaf Fatima, as the Shia books relate it",
+"tr": "Mushaf-ı Fâtıma (Şiî kitapların anlattığı gibi)",
+"ar": "مصحف فاطمة كما ترويه الكتب الشيعية"
+},
+"lead": {
+"en": "The Shia books relate that the Imams had a book called Mushaf Fatima, and say in the same breath that it is not a Qur'an: \"not one letter of your Qur'an is in it\" (al-Kafi). Shown as these books give it, in their own words.",
+"tr": "Şiî kitaplar imamların yanında Mushaf-ı Fâtıma adlı bir kitap bulunduğunu anlatır ve aynı yerde onun bir Kur'an olmadığını söyler: \"İçinde sizin Kur'an'ınızdan tek harf yoktur\" (el-Kâfî). Bu kitapların kendi sözleriyle, verdikleri gibi gösterilir.",
+"ar": "تروي الكتب الشيعية أن عند الأئمة كتابًا يسمّى مصحف فاطمة، وتقول في الموضع نفسه إنه ليس قرآنًا: «ما فيه من قرآنكم حرف واحد» (الكافي). ويُعرض كما تعطيه هذه الكتب بألفاظها."
+},
+"how": {
+"en": "The hadith of the Shia books that name \"Mushaf Fatima\".",
+"tr": "Şiî kitaplarda \"Mushaf-ı Fâtıma\"yı anan rivayetler.",
+"ar": "أحاديث الكتب الشيعية التي تذكر «مصحف فاطمة»."
+},
+"patterns": [
+"مصحف فاطمة"
+]
+},
+{
+"id": "chains-shia",
+"book": "al_mukataba_maa_al_aimma",
+"road": "shia",
+"layer": 3,
+"title": {
+"en": "Writing in the chains, and letters to the Imams",
+"tr": "Senedlerde yazı ve imamlara mektuplar",
+"ar": "الكتابة في الأسانيد والمكاتبة مع الأئمة"
+},
+"lead": {
+"en": "In the Shia books many answers came in writing: \"I wrote to him (the Imam) asking …, and he wrote …\" (mukataba), besides \"he wrote to me\" and \"I found in the book of …\" in the chains. These are the hadith of the Shia books that say so.",
+"tr": "Şiî kitaplarda birçok cevap yazıyla geldi: \"Ona (imama) yazıp sordum …, o da yazdı …\" (mükâtebe); senedlerde de \"bana yazdı\", \"…in kitabında buldum\". Bunlar Şiî kitaplarda bunu söyleyen rivayetlerdir.",
+"ar": "كثير من الأجوبة في الكتب الشيعية جاء كتابةً: «كتبت إليه أسأله … فكتب …» (المكاتبة)، ومعها في الأسانيد «كتب إليّ» و«وجدت في كتاب …». وهذه أحاديث الكتب الشيعية التي تذكر ذلك."
+},
+"how": {
+"en": "The words of writing at the head of the text (the chain and its first lines).",
+"tr": "Metnin başındaki (sened ve ilk satırlar) yazı sözleri.",
+"ar": "ألفاظ الكتابة في صدر النص (الإسناد وأوله)."
+},
+"head": [
+"كتبت إليه",
+"كتبت إلى",
+"كتب إلي",
+"كتب إليه",
+"وجدت في كتاب",
+"قرأت في كتاب"
+]
+}
+]
+}

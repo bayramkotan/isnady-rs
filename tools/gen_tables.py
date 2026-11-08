@@ -259,6 +259,7 @@ def window() -> str:
         "signs": theme.value("NAV_SIGNS"),
         "nav_signs": {k: bool(v[2].get("nav_signs", False)) for k, v in themes.items()},
         "themes": [[k, v[0]] for k, v in themes.items()],
+        "theme_texts": {k: v[1] for k, v in themes.items()},
         # every token of every theme (colours, typefaces, how round, how roomy): the window draws them as Python does
         "tokens": {k: v[2] for k, v in themes.items()},
         "rank_colors": theme.value("RANK_COLORS"),
@@ -456,10 +457,59 @@ def learn_data() -> str:
     return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
 
 
+SAHIFA = os.path.join(HERE, "..", "crates", "isnady-core", "data", "sahifa.json")
+
+
+def sahifa() -> str:
+    """The written sources (core.sahifa): every source with its texts and the words that find its hadith."""
+    _import()
+    import json as _json
+
+    from isnady.core import sahifa as s
+
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "hammam_name": s.HAMMAM_NAME,
+        "schema": s.SCHEMA,
+        "sources": s.SOURCES,
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
+SETTINGS = os.path.join(HERE, "..", "crates", "isnady-core", "data", "settings.json")
+
+
+def settings() -> str:
+    """The settings (isnady/config.py): every key with its default in Python's order, the scripts, the colour tokens,
+    the sidebar's order and the themes a setting may name."""
+    _import()
+    import ast
+    import inspect
+    import json as _json
+
+    from isnady import config
+
+    source = inspect.getsource(config.validate)
+    themes = None
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Assign) and getattr(node.targets[0], "id", "") == "allowed":
+            themes = [e.value for e in node.value.elts]
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "defaults": [[k, v] for k, v in config.DEFAULTS.items()],
+        "scripts": [[k, list(v)] for k, v in config.SCRIPTS.items()],
+        "script_of_language": config.SCRIPT_OF_LANGUAGE,
+        "color_tokens": [[k, v] for k, v in config.COLOR_TOKENS.items()],
+        "sidebar": list(config.SIDEBAR),
+        "themes": themes,
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
 def outputs() -> dict:
     files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives(), HUFFAZ: huffaz_index(),
              SAHABA: sahaba(), SIRA: sira(),
-             GENEALOGY: genealogy(), LEARN: learn_data()}
+             GENEALOGY: genealogy(), LEARN: learn_data(), SAHIFA: sahifa(), SETTINGS: settings()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

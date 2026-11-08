@@ -5,6 +5,43 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Written sources, the Qur'an, Preferences and profiles, and the small commands (Bayram: "ok. geri kalanları da
+  bitir").** RS9, RS10, RS14 and RS18 at once, each compared with the Python window and with `iy`, word for word.
+- **Written sources as the Python window has it (RS9).** From gui/sahifa_page.py: the Sunni road and the Shia road
+  apart, the sources of each by layer (came down whole, lives in later books, writing in the chains) with how many
+  hadith the imported books hold of each; a source with its road, its layer, what it is, how isnady finds it, Read it as
+  a book in Books (or Import it, with Data sources); in the books imported here, book by book; its hadith as Search
+  draws them, twenty at a time — Hammam's each with its parallels through his chain. The count runs once per change
+  of the database in a thread of its own, a little after the window opens: the window is never held, and the page
+  fills in by itself. **`iy-rs sahifa [ID] [--tradition] [--limit] [--lang] [--width]`** word for word as `iy sahifa`.
+  New in the core: `sahifa.rs`; gen_tables writes data/sahifa.json.
+- **The Qur'an in Books (RS10).** From gui/quran_view.py: the Qur'an first on the shelf, the suras as the contents, a
+  sura with its title, verses, Meccan or Medinan and how many hadith name its verses; ‹ Previous sura, Next sura ›; the
+  translations downloaded to tick (in the reader's languages first), the languages with no translation yet offered;
+  every verse in Arabic and the translations chosen, and under it the hadith that name it — the Sunni books and the
+  Shia books each on a line of its own, each opening in its book; a search through the texts shown. The verses a
+  hadith names (Search, Books, the right-click menu) and the verses of an event of the Sira now open it, at the verse.
+  Downloading the Qur'an and more translations comes with the data sources (RS16; it says so). **`iy-rs quran [SURA |
+  S:A | S:A-B | search WORDS | editions | remove KEY] [--hadith] [--edition] [--lang] [--limit] [--width]`** word for
+  word as `iy quran`. New in the core: the suras, editions, verses, the search and the translations shown
+  (`quran.rs`).
+- **Preferences (RS14).** From gui/preferences.py, Edit → Preferences (Ctrl+,): Themes (every theme drawn as a small
+  isnady window), Reading text (each script's font, size, line spacing and colour, with a sample), Colours (the light
+  and the dark theme each their own), Interface (font, size, theme), Sidebar (dragged or moved with the arrows),
+  Books and languages (books switched on and off, the languages of the texts in their order, fold or leave out the
+  others), Reset (the settings; the books go with the data sources). Every change is saved at once and the window
+  redraws. The user's own colours of the Lapis pair now apply, as in the Python window. **`iy-rs config
+  list|get|set|reset`**, **`iy-rs profile list|new|use|rename|delete|export|import`** and **`iy-rs datadir PATH
+  [--as-is] [--default]`** as `iy`, on the same files (settings validated as `config.validate` does them).
+- **The small ones (RS18).** Tools → Clear the Cache, Tools → Create Desktop Shortcut… (the window `isnady-rs`, with
+  its icon, beside the Python one's), Help → Log… (the log in its own window: the files, followed live, a level, a
+  text, larger or smaller, copied, its folder, what is older removed, cleared). The two programs now write one log
+  (logs/isnady.log, the same line, the same rotation): every `iy-rs` command and every start of the window. **`iy-rs
+  cache info|clear`**, **`iy-rs log`** (`-n`, `--level`, `--grep`, `-f`, `--crash`, `--files`, `--path`,
+  `--before`, `--clear`), **`iy-rs reset settings`** and **`iy-rs shortcut`** as `iy`. Like `iy`, `iy-rs` says so
+  when the database has no book yet.
+- 24 more parity cases (188 in all).
+
 - **Four pages more at once (Bayram: "Devam et. Önce ne kaldı onları listele sonra yukarıdaki gibi birçoğunu çöz").**
   Sira, Genealogies, Bookmarks and Learn, each built again from its Python page and compared with the Python window
   side by side; their commands print what `iy` prints, word for word.

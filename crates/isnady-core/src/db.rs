@@ -2,7 +2,18 @@
 //! and upgrading its schema stay with the Python isnady until they are ported (PARITY.md).
 
 use rusqlite::OpenFlags;
-pub use rusqlite::{Connection, Error};
+pub use rusqlite::{params_from_iter, Connection, Error};
+
+/// A hadith's number as the Python isnady prints it (the column holds text, or now and then an integer).
+pub fn number_text(r: &rusqlite::Row, i: usize) -> rusqlite::Result<String> {
+    use rusqlite::types::ValueRef;
+    Ok(match r.get_ref(i)? {
+        ValueRef::Integer(n) => n.to_string(),
+        ValueRef::Real(f) => f.to_string(),
+        ValueRef::Text(t) => String::from_utf8_lossy(t).into_owned(),
+        _ => "None".to_string(),
+    })
+}
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 

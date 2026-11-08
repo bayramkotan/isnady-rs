@@ -132,6 +132,18 @@
    "High Contrast"
   ]
  ],
+ "theme_texts": {
+  "sky": "Bright sky blue with sunny gold",
+  "starry": "A gentle dark of lavender and stars",
+  "garden": "Soft rose and cream, round and roomy",
+  "light": "Lapis and gold of illuminated manuscripts",
+  "dark": "The same, by night",
+  "paper": "Warm cream and ink, for long reading",
+  "slate": "Quiet and modern, a light sidebar",
+  "emerald": "Green and gold",
+  "midnight": "Deep dark with teal",
+  "contrast": "Black, white and yellow, for low vision"
+ },
  "tokens": {
   "sky": {
    "dark": false,

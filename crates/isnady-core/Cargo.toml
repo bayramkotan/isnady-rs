@@ -21,3 +21,5 @@ regex.workspace = true
 fancy-regex.workspace = true
 unicode-normalization.workspace = true
 caseless.workspace = true
+zip.workspace = true
+chrono.workspace = true

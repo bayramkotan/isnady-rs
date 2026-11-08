@@ -13,7 +13,9 @@ Python `iy` does on the same data.
 |---|---|---|
 | `iy -V`, `iy version` | ✅ | prints `isnady 0.7.4 (Rust)` |
 | `iy datadir` (show) | ✅ | `ISNADY_DATA_DIR`, a portable `isnady-data` folder, `location.json`, the platform default. Same order as Python. |
-| `iy datadir PATH` (move) | ⏳ | |
+| `iy datadir PATH` (move) | ✅ | `--as-is`, `--default`; the data copied there (the old folder kept) and location.json written as Python writes it |
+| `iy config list, get, set, reset` | ✅ | every setting with its default; validated as `config.validate` validates it; settings.json written as Python writes it |
+| `iy profile list, new, use, rename, delete, export, import` | ✅ | profiles.json and the profile's folder; `.isnady-profile.zip` read and written |
 | `iy sources` | ✅ | |
 | `iy search WORDS` | ✅ | all · any · phrase · `--whole-words` · `--book` · `--language` · `--limit` · `--offset` · `--width` · `--all-texts` · wildcards (`?` `*`) · near spellings · the recent searches list |
 | `iy search --grade …`, `--every-grader`, `--no-sahihayn` | ✅ | the Sunni and the Imami scales, the two Sahihs as sahih, "N found by the words in all" |
@@ -32,12 +34,15 @@ Python `iy` does on the same data.
 | `iy tree prophets, quraysh, family, learning [NAME]` | ✅ | `--depth`, `--width`, `--hadith`: the written trees, a box found with its line and notes, the hadith that name a prophet (the two roads apart), a narrator's family read from the names, his line of learning |
 | `iy book`, `iy book KEY`, `iy book KEY CHAPTER` | ✅ | the shelf (`--tradition`), a book's chapters in reading order, a chapter (`--language`, `--limit`, `--width`; the sira and the tabaqat wrapped as Python's textwrap does), the reader's places and markers (`--resume`, `--mark`, `--marks`, `--go`, `--unmark`, `--forget`, in the same state.json). The trees of newly imported books are built by the Python isnady (one `iy book`). |
 | `iy sira [EVENT]` | ✅ | `--lang`, `--width`: the timeline by period; an event with its date, place, age, verses, Ibn Hisham's chapter and the hadith that say its phrase |
-| `iy quran`, `iy sahifa` | ⏳ | |
+| `iy sahifa [ID]` | ✅ | `--tradition`, `--limit`, `--lang`, `--width`: the sources of each road with how many hadith, a source with its hadith (Hammam's with their parallels) |
+| `iy quran …` | ✅ | the suras, a sura or verses with the translations shown (`--edition`) and the hadith that name each (`--hadith`), `search`, `editions` (downloaded), `remove`. ⏳ `download` and the editions to download: with the data sources |
 | `iy stats …` | ⏳ | |
 | `iy catalog …`, `iy repo …`, `iy import …`, `iy database …`, `iy remove` | ⏳ | the database is imported by the Python isnady |
 | `iy bookmark list, folders, add, remove, export, import` | ✅ | `--folder`, `--title`, `--note`; the same bookmarks.json |
 | `iy term [NAME]`, `iy learn [ARTICLE]` | ✅ | `--search`, `--lang`, `--width`; the articles' numbers counted live |
-| `iy export`, `iy import-data`, `iy config`, `iy profile`, `iy ai`, `iy cache`, `iy log`, `iy reset`, `iy update`, `iy doctor` | ⏳ | |
+| `iy cache info, clear`, `iy log …`, `iy shortcut` | ✅ | the same cache folder, the same log file (one log for both), the shortcut of the window `isnady-rs` |
+| `iy reset settings` | ✅ | ⏳ `iy reset books`, `iy reset all`: with the data sources |
+| `iy export`, `iy import-data`, `iy ai`, `iy update`, `iy doctor`, `iy formats` | ⏳ | |
 
 ## The window
 
@@ -52,10 +57,14 @@ Python `iy` does on the same data.
 | Companions and the Household | ✅ as the Python page draws it: Sunni / Shia, the groups, a group's members two to a row (In the family tree opens the Genealogies) and the hadith that name it |
 | Sira | ✅ as the Python page draws it: the timeline, the events by period, an event with its chips, text, verses, Ibn Hisham's chapter and the hadith of its phrase, ‹ ›. ⏳ (it says so): the Qur'an reader a verse opens |
 | Genealogies | ✅ as the Python page draws it: the prophets, Quraysh, a narrator's family, his line of learning — dragged, zoomed, clicked; the box's names, line, notes, life, the hadith that name a prophet, ☆; find, ★ the famous Companions |
+| Written sources | ✅ as the Python page draws it: the two roads, the sources by layer with their counts, a source with its text and its hadith (Hammam's with their parallels), counted in the background |
+| The Qur'an (in Books) | ✅ as the Python reader draws it: the suras, a sura with its verses, translations and the hadith that name each verse, the search; the verses a hadith or an event names open it. ⏳ (it says so): downloading |
+| Edit → Preferences | ✅ Themes, Reading text, Colours, Interface, Sidebar, Books and languages, Reset (the settings). ⏳ (each says so): Data sources, deleting the books |
+| Tools → Clear the Cache, Create Desktop Shortcut; Help → Log | ✅ |
 | Bookmarks | ✅ as the Python page draws it: the folders, the bookmarks with their kind, detail, folders and notes, dragging onto a folder, every menu, Open where it belongs. ⏳ (each says so): Export / import (File → Export, Import) |
 | Learn | ✅ as the Python page draws it: the glossary in colour in three languages, the chips, the list, a term's card; History and method with its live numbers |
 | Narrators | ✅ as the Python page draws it: All / Sunni / Shia, the overview of each road, the search as you type (the famous ones by any spelling first), ★ the famous ones group by group, the filters (generation, Ibn Hajar's rank or the Imami assessment, the six books by Ibn Hajar's marks) with Clear filters, the list 200 at a time and the next ones at its end, its right-click menu; a narrator: the name card (the name he is known by, the parts of his name, ☆), his life (written, or read from the data; the classical entry when downloaded), what the critics say (the entry as written, every verdict with the glossary on the hover, tabaqa, death, Open his entry in the book, Ibn Hajar's marks opening their books), teachers and students, the compilers, the hadith (each opens its chain). ⏳ (it says so): downloading a classical work |
-| Written sources, Statistics; Settings; Data sources | ⏳ one page at a time; until then the Python window shows them, on the same data |
+| Statistics; Data sources | ⏳ one page at a time; until then the Python window shows them, on the same data |
 
 ## The core
 
@@ -69,10 +78,13 @@ Python `iy` does on the same data.
 | `isnady.core.sira` | ✅ `sira.rs` | the events from the Python isnady (`data/sira.json`) |
 | `isnady.core.genealogy` | ✅ `genealogy.rs` | the written trees and the words for the prophets from the Python isnady (`data/genealogy.json`) |
 | `isnady.core.learn`, `learn_history` | ✅ `learn.rs` | the terms and articles from the Python isnady (`data/learn.json`) |
-| `isnady.core.quran` (marks_in, cites, sura names) | ✅ `quran.rs` | reading the Qur'an: with the Qur'an in Books |
+| `isnady.core.quran` | ✅ `quran.rs` | the marks, the suras, editions, verses, search, the translations shown; ⏳ downloading (`fetch`, `catalog`) |
+| `isnady.core.sahifa` | ✅ `sahifa.rs` | the sources from the Python isnady (`data/sahifa.json`); ⏳ `export`, `write_work` (with the data sources) |
+| `isnady.core.log`, `cache` (info, clear), `reset.settings`, `shortcut` | ✅ `log.rs`, `cache.rs`, `config.rs`, `shortcut.rs` | the counts are kept in memory (not in cache/*.json) |
 | `isnady.core.takhrij.related` | ✅ `takhrij.rs` | |
 | `isnady.core.books` (order, active books) | ✅ `books.rs` | |
-| `isnady.config` (settings, state), `isnady.core.profiles` | ✅ `config.rs` (reading, the recent searches) | |
+| `isnady.config` (settings, state), `isnady.core.profiles` | ✅ `config.rs` | every setting, validated; profiles made, renamed, deleted, exported and imported (data/settings.json) |
+| `isnady.data.paths.relocate` | ✅ `paths.rs` | |
 | `isnady.data.db` | ✅ reading schema 8 (`db.rs`) | creating and upgrading stay with the Python isnady |
 | `isnady.core.isnad` (the stored chains, reading aids, the chain in words), `tahwil_meet.meeting` | ✅ `isnad.rs` | the parser itself: ⏳ |
 | `isnady.core.names` (names in Latin letters), `names_lexicon` | ✅ `names.rs` | the word list itself is read from the Python isnady (`data/tables.json`) |

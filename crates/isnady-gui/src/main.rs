@@ -7,8 +7,8 @@
 use isnady_core::narrators::Person;
 use isnady_core::{
     bookmarks, books, config, db, genealogy, huffaz, i18n, isnad, learn, lives, name_parts, names,
-    narrators, paths, people, py, quran, readmarks, sahaba, scholars, search, sira, tables, works,
-    VERSION,
+    narrators, paths, people, py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables,
+    works, VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -117,11 +117,115 @@ fn look_settings() -> Value {
             (script.to_string(), Value::Object(one))
         })
         .collect();
+    // the user's own colours of the Lapis pair (theme.apply: colors.light.*, colors.dark.*)
+    let mut colors = serde_json::Map::new();
+    for mode in ["light", "dark"] {
+        let mut one = serde_json::Map::new();
+        for (token, _) in &config::known().color_tokens {
+            let v = config::py_str(&config::effective(&format!("colors.{mode}.{token}")));
+            if !v.is_empty() {
+                one.insert(token.clone(), json!(v));
+            }
+        }
+        colors.insert(mode.to_string(), Value::Object(one));
+    }
     json!({
         "ui.family": config::get_str("ui.family", ""),
         "ui.size": config::get_f64("ui.size", 0.0),
         "text": text,
+        "colors": colors,
     })
+}
+
+// ------------------------------------------------------------------ Edit → Preferences (gui/preferences.py)
+
+/// Preferences: every setting in effect, what the tabs list, the books and the languages of the texts.
+#[tauri::command]
+fn prefs_state(state: tauri::State<Data>) -> Result<Value, String> {
+    let k = config::known();
+    let values: serde_json::Map<String, Value> = config::all_values()
+        .into_iter()
+        .map(|(key, v, _)| (key, v))
+        .collect();
+    let (books, languages) = with_db(&state, |conn| {
+        let books = books::all_books(conn, true).map_err(err)?;
+        Ok((books, content_languages_of(conn)?))
+    })
+    .unwrap_or_default();
+    let canon = |t: &str| {
+        if t == "sunni" || t == "shia" {
+            t.to_string()
+        } else {
+            "other".to_string()
+        }
+    };
+    let groups: Vec<Value> = [("sunni", "Sunni"), ("shia", "Shia"), ("other", "Other")]
+        .iter()
+        .filter_map(|(t, label)| {
+            let mine: Vec<Value> = books
+                .iter()
+                .filter(|b| canon(&b.tradition) == *t)
+                .map(|b| json!({"key": b.key, "name": works::book_title(&b.key, &b.name, &i18n::ui_language()), "count": b.count, "active": b.active}))
+                .collect();
+            (!mine.is_empty()).then(|| json!({"tradition": t, "label": label, "books": mine}))
+        })
+        .collect();
+    Ok(json!({
+        "values": values,
+        "scripts": k.scripts.iter().map(|(key, (label, sample, family, size, line))| json!({"key": key, "label": label,
+            "sample": sample, "family": family, "size": size, "line": line})).collect::<Vec<_>>(),
+        "color_tokens": k.color_tokens,
+        "sidebar": config::sidebar_order(),
+        "settings_path": paths::shown(&config::settings_path()),
+        "books": groups,
+        "languages": languages,
+        "content": config::py_str(&config::effective("view.content_languages")),
+        "folds": config::py_str(&config::effective("view.other_languages")) != "omit",
+        "look": look_settings(),
+    }))
+}
+
+/// Preferences: one setting stored (config.set, validated); the look as it now is.
+#[tauri::command]
+fn prefs_set(key: String, value: Value) -> Result<Value, String> {
+    config::set(&key, value)?;
+    if key == "view.content_languages" {
+        config::state_forget("reader.languages.");
+    }
+    Ok(look_settings())
+}
+
+/// Preferences: the settings under a prefix back to their defaults ("" = all: Reset appearance).
+#[tauri::command]
+fn prefs_reset(prefix: String) -> Result<Value, String> {
+    config::reset(&prefix)?;
+    Ok(look_settings())
+}
+
+/// Preferences → Reset: back to zero (core.reset). The books go with the import of books (RS16).
+#[tauri::command]
+fn reset_data(kind: String) -> Result<Value, String> {
+    if kind != "settings" {
+        return Err("later".into());
+    }
+    let n = config::reset_settings()?;
+    Ok(json!({"n": n, "look": look_settings(), "sidebar": config::sidebar_order()}))
+}
+
+/// Preferences → Books: a book switched on or off (books.set_active).
+#[tauri::command]
+fn book_active(keys: Vec<String>, on: bool) -> Result<(), String> {
+    let mut off = books::disabled();
+    for k in keys {
+        if on {
+            off.remove(&k);
+        } else {
+            off.insert(k);
+        }
+    }
+    let mut list: Vec<String> = off.into_iter().collect();
+    list.sort();
+    config::set("books.disabled", json!(list.join(",")))
 }
 
 /// A setting the menus change, stored as the Python isnady stores it (config.set), with what goes with it: the
@@ -208,6 +312,96 @@ fn open_external(target: &str) -> Result<(), String> {
 #[tauri::command]
 fn open_data_folder() -> Result<(), String> {
     open_external(&paths::shown(&paths::data_dir()))
+}
+
+// ------------------------------------------------------------------ Tools and Help → Log (RS18)
+
+/// Tools → Clear the Cache: the kept files deleted and what is in memory forgotten (MainWindow._clear_cache).
+#[tauri::command]
+fn cache_clear() -> Value {
+    let folder = paths::data_dir().join("cache");
+    let files: Vec<std::path::PathBuf> = std::fs::read_dir(&folder)
+        .map(|d| {
+            d.flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|x| x == "json"))
+                .collect()
+        })
+        .unwrap_or_default();
+    let size: u64 = files
+        .iter()
+        .filter_map(|p| p.metadata().ok())
+        .map(|m| m.len())
+        .sum();
+    isnady_core::log::info("cache", "⟲ kept files cleared");
+    isnady_core::cache::clear();
+    let n = files
+        .iter()
+        .filter(|p| std::fs::remove_file(p).is_ok())
+        .count();
+    json!({"n": n, "size": size as f64 / 1024.0})
+}
+
+/// Tools → Create Desktop Shortcut… (MainWindow._create_shortcut).
+#[tauri::command]
+fn shortcut_create() -> Result<Value, String> {
+    let (program, how) = isnady_core::shortcut::launch_command();
+    let made = isnady_core::shortcut::create(true, true)?;
+    Ok(
+        json!({"made": made.iter().map(|(w, p)| json!([w, paths::shown(p)])).collect::<Vec<_>>(),
+        "program": paths::shown(&program), "how": how}),
+    )
+}
+
+/// Help → Log: the files, newest first, each with its kind, time and size (LogViewer._fill_files).
+#[tauri::command]
+fn log_files() -> Vec<Value> {
+    use isnady_core::log;
+    let mut files = log::files();
+    if files.is_empty() {
+        files.push(log::path());
+    }
+    files
+        .iter()
+        .map(|f| {
+            let name = f.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let (stamp, size) = match f.metadata() {
+                Ok(m) => (
+                    m.modified().map(|t| py::local_time(t, "%Y-%m-%d %H:%M")).unwrap_or_default(),
+                    format!("{} KB", py::thousands(py::round_even(m.len() as f64 / 1024.0) as i64)),
+                ),
+                Err(_) => (String::new(), String::new()),
+            };
+            json!({"path": paths::shown(f), "name": name, "crash": name.starts_with("crash_"), "stamp": stamp, "size": size})
+        })
+        .collect()
+}
+
+/// Help → Log: a file read, only a level and above or the lines holding a text (log.read).
+#[tauri::command]
+fn log_read(path: String, level: String, text: String) -> Value {
+    let p = std::path::PathBuf::from(&path);
+    let size = p.metadata().map(|m| m.len()).unwrap_or(0);
+    json!({"body": isnady_core::log::read(&p, 0, &level, &text), "size": size})
+}
+
+/// Help → Log: Delete what is older, Clear the log, Open the folder.
+#[tauri::command]
+fn log_change(action: String, day: Option<String>) -> Result<Value, String> {
+    use isnady_core::log;
+    match action.as_str() {
+        "before" => Ok(json!(log::delete_before(day.as_deref().unwrap_or("")))),
+        "clear" => Ok(json!(log::clear())),
+        "folder" => {
+            let _ = std::fs::create_dir_all(log::folder());
+            open_external(&paths::shown(&log::folder())).map(|_| Value::Null)
+        }
+        _ => Ok(json!(format!(
+            "isnady {VERSION} (Rust) · {} · {}",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        ))),
+    }
 }
 
 /// Help → isnady on GitHub, Report an Issue; the links of the dialogs. Web pages only.
@@ -2567,6 +2761,293 @@ async fn learn_block(kind: String, lang: Option<String>) -> Value {
     .unwrap_or(Value::Null)
 }
 
+// ------------------------------------------------------------------ the Qur'an in Books (gui/quran_view.py)
+
+fn sura_title(s: &quran::Sura, lang: &str) -> String {
+    match lang {
+        "tr" if !s.tr.is_empty() => s.tr.clone(),
+        "ar" if !s.arabic.is_empty() => s.arabic.clone(),
+        _ => s.name.clone(),
+    }
+}
+
+/// The Qur'an: whether it is downloaded, its suras for the contents, the sura read last, the languages the reader
+/// reads (for the download card).
+#[tauri::command]
+fn quran_state() -> Value {
+    let lang = i18n::ui_language();
+    let suras = quran::suras();
+    json!({
+        "available": quran::available(),
+        "suras": suras.iter().map(|s| json!({"n": s.n, "label": format!("{}. {}   ({})", s.n, sura_title(s, &lang), s.verses)}))
+            .collect::<Vec<_>>(),
+        "last": config::state_get("quran.sura").and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|x| x.parse().ok()))).unwrap_or(1),
+        "languages": quran::wanted_languages(),
+    })
+}
+
+/// The Qur'an: one sura (QuranView.show_sura) — its title and facts, the translations to tick, the languages with no
+/// translation yet, its verses with the texts chosen and the hadith that name each (the two roads apart).
+#[tauri::command]
+fn quran_sura(state: tauri::State<Data>, n: u32) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    if !quran::available() {
+        return Ok(json!({"download": true, "languages": quran::wanted_languages()}));
+    }
+    let Some(s) = quran::suras().into_iter().find(|x| x.n == n) else {
+        return Ok(json!({"error": "no_sura"}));
+    };
+    config::state_set("quran.sura", json!(n));
+    let named = with_db(&state, |conn| quran::named(conn).map_err(err)).ok();
+    let chosen = quran::shown(quran::saved_choice().as_deref());
+    let langs = quran::wanted_languages();
+    let mut eds: Vec<quran::Edition> = quran::editions()
+        .into_iter()
+        .filter(|e| e.key != quran::ARABIC)
+        .collect();
+    eds.sort_by_key(|e| {
+        (
+            chosen
+                .iter()
+                .position(|k| *k == e.key)
+                .unwrap_or(chosen.len()),
+            langs
+                .iter()
+                .position(|l| *l == e.language)
+                .unwrap_or(langs.len()),
+            e.language.clone(),
+            e.author.clone(),
+        )
+    });
+    let all = quran::editions();
+    let skipped: Vec<String> = config::state_get("quran.skip")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_default()
+        .split(',')
+        .filter(|x| !x.is_empty())
+        .map(String::from)
+        .collect();
+    let missing: Vec<String> = quran::missing_languages()
+        .into_iter()
+        .filter(|l| !skipped.contains(l))
+        .collect();
+    let rows = quran::verses(n, &chosen, 1, None);
+    let books: HashMap<i64, (String, String, String)> = match &named {
+        Some(named) => {
+            let ids: Vec<i64> = rows
+                .iter()
+                .flat_map(|v| quran::hadith_of(named, n, v.ayah))
+                .collect();
+            with_db(&state, |conn| hadith_refs(conn, &ids, &lang)).unwrap_or_default()
+        }
+        None => HashMap::new(),
+    };
+    let verses: Vec<Value> = rows
+        .iter()
+        .map(|v| {
+            let texts: Vec<Value> = chosen
+                .iter()
+                .filter_map(|key| {
+                    let text = v.texts.get(key).filter(|t| !t.is_empty())?;
+                    let e = all.iter().find(|e| &e.key == key);
+                    Some(json!({"text": text, "rtl": e.is_some_and(|e| e.direction == "rtl"),
+                        "language": e.map(|e| e.language.clone()).unwrap_or_default(),
+                        "author": e.map(|e| e.author.clone()).unwrap_or_default()}))
+                })
+                .collect();
+            let hadith = named.as_ref().map(|nm| quran::hadith_of(nm, n, v.ayah)).unwrap_or_default();
+            let road = |r: &str| -> Vec<Value> {
+                hadith.iter().filter_map(|h| books.get(h).filter(|b| b.2 == r).map(|b| json!([h, b.0, b.1]))).collect()
+            };
+            json!({"ayah": v.ayah, "arabic": v.texts.get(quran::ARABIC).cloned().unwrap_or_default(), "texts": texts,
+                "sunni": road("sunni"), "shia": road("shia")})
+        })
+        .collect();
+    Ok(json!({
+        "n": s.n, "title": format!("{}. {}", s.n, match lang.as_str() {
+            "tr" | "ar" => sura_title(&s, &lang),
+            _ => format!("{} — {}", s.name, s.english),
+        }),
+        "arabic": s.arabic, "verses_count": s.verses, "meccan": s.place == "Mecca",
+        "named": named.as_ref().and_then(|nm| quran::counts_by_sura(nm).get(&n).copied()).unwrap_or(0),
+        "name": quran::sura_name(n, &lang),
+        "editions": eds.iter().map(|e| json!({"key": e.key, "language": e.language, "author": e.author,
+            "source": if e.source.is_empty() { e.origin.clone() } else { e.source.clone() }, "origin": e.origin,
+            "on": chosen.contains(&e.key)})).collect::<Vec<_>>(),
+        "missing": missing,
+        "verses": verses,
+    }))
+}
+
+/// (book title, number, road) of some hadith, for the links under a verse.
+fn hadith_refs(
+    conn: &db::Connection,
+    ids: &[i64],
+    lang: &str,
+) -> Result<HashMap<i64, (String, String, String)>, String> {
+    let mut out = HashMap::new();
+    for part in ids.chunks(900) {
+        let sql = format!(
+            "SELECT h.id, c.key, c.name, h.number, COALESCE(c.tradition, 'sunni') FROM hadiths h \
+             JOIN collections c ON c.id = h.collection_id WHERE h.id IN ({})",
+            vec!["?"; part.len()].join(",")
+        );
+        let mut st = conn.prepare(&sql).map_err(err)?;
+        let mut rows = st.query(db::params_from_iter(part.iter())).map_err(err)?;
+        while let Some(r) = rows.next().map_err(err)? {
+            let key: String = r.get(1).map_err(err)?;
+            let name: String = r
+                .get::<_, Option<String>>(2)
+                .map_err(err)?
+                .unwrap_or_default();
+            out.insert(
+                r.get(0).map_err(err)?,
+                (
+                    works::book_title(&key, &name, lang),
+                    db::number_text(r, 3).map_err(err)?,
+                    r.get(4).map_err(err)?,
+                ),
+            );
+        }
+    }
+    Ok(out)
+}
+
+/// The Qur'an: a translation ticked or unticked (QuranView._toggle).
+#[tauri::command]
+fn quran_toggle(key: String, on: bool) {
+    let mut chosen: Vec<String> = quran::shown(quran::saved_choice().as_deref())
+        .into_iter()
+        .filter(|k| *k != key)
+        .collect();
+    if on {
+        chosen.push(key);
+    }
+    let joined = chosen.join(",");
+    config::state_set(
+        "quran.editions",
+        json!(if joined.is_empty() {
+            ",".to_string()
+        } else {
+            joined
+        }),
+    );
+}
+
+/// The Qur'an: the languages offered not offered again (✕).
+#[tauri::command]
+fn quran_skip(languages: Vec<String>) {
+    let mut skipped: Vec<String> = config::state_get("quran.skip")
+        .and_then(|v| v.as_str().map(String::from))
+        .unwrap_or_default()
+        .split(',')
+        .filter(|x| !x.is_empty())
+        .map(String::from)
+        .collect();
+    skipped.extend(languages);
+    config::state_set("quran.skip", json!(skipped.join(",")));
+}
+
+/// The Qur'an: a search through the texts shown (QuranView._search).
+#[tauri::command]
+fn quran_search(text: String) -> Value {
+    let lang = i18n::ui_language();
+    let chosen = quran::shown(quran::saved_choice().as_deref());
+    let found = quran::search(&text, &chosen, 200);
+    json!(found
+        .iter()
+        .map(|r| json!({"sura": r.sura, "ayah": r.ayah, "rtl": r.edition == quran::ARABIC, "text": r.text,
+            "label": format!("{} {}:{}", quran::sura_name(r.sura, &lang), r.sura, r.ayah)}))
+        .collect::<Vec<_>>())
+}
+
+// ------------------------------------------------------------------ Written sources (gui/sahifa_page.py)
+
+/// Written sources: count them in a thread of their own (sahifa_page._Count) — the window is never held while it runs.
+#[tauri::command]
+async fn sahifa_count() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        db::connect(None)
+            .ok()
+            .map(|c| sahifa::counted(&c).is_ok())
+            .unwrap_or(false)
+    })
+    .await
+    .unwrap_or(false)
+}
+
+/// Written sources: the sources of a road, with how many hadith each has (none while the count runs).
+#[tauri::command]
+fn sahifa_list(state: tauri::State<Data>, road: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let counts = if sahifa::is_counted(conn) {
+            Some(sahifa::summary(&sahifa::counted(conn).map_err(err)?))
+        } else {
+            None
+        };
+        Ok(json!(sahifa::sources(Some(&road))
+            .iter()
+            .map(|s| json!({"id": s.id, "title": sahifa::text(&s.title, &lang), "layer": s.layer,
+                "count": counts.as_ref().and_then(|c| c.iter().find(|r| r.id == s.id)).map(|r| r.count)}))
+            .collect::<Vec<_>>()))
+    })
+}
+
+/// Written sources: one source (sahifa_page.show_source) — what it is, where it lives, its hadith; Hammam's with the
+/// parallels of each.
+#[tauri::command]
+fn sahifa_source(state: tauri::State<Data>, id: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let Some(s) = sahifa::find(&id) else {
+            return Ok(json!({"error": "no_source"}));
+        };
+        if !sahifa::is_counted(conn) {
+            return Ok(json!({"waiting": true, "road": s.road}));
+        }
+        let c = sahifa::counted(conn).map_err(err)?;
+        let as_book = conn
+            .query_row("SELECT 1 FROM works WHERE key = ?", [&s.book], |_| Ok(()))
+            .is_ok();
+        let ids = sahifa::hadith(&c, &s.id);
+        let books = |ids: &[i64]| -> Result<Vec<Value>, String> {
+            Ok(sahifa::by_book(conn, ids)
+                .map_err(err)?
+                .iter()
+                .map(|(k, name, n)| json!([works::book_title(k, name, &lang), n]))
+                .collect())
+        };
+        let mut out = json!({
+            "id": s.id, "road": s.road, "layer": s.layer, "book": s.book, "as_book": as_book,
+            "title": sahifa::text(&s.title, &lang), "lead": sahifa::text(&s.lead, &lang),
+            "how": sahifa::text(&s.how, &lang), "ids": ids, "books": books(&ids)?,
+        });
+        if s.id == "hammam" {
+            let others: Vec<i64> = c
+                .hammam
+                .parallels
+                .iter()
+                .flat_map(|(_, v)| v.iter().copied())
+                .collect();
+            let mut pars = serde_json::Map::new();
+            for (at, v) in &c.hammam.parallels {
+                let found = sahifa::refs(conn, v).map_err(err)?;
+                pars.insert(
+                    at.to_string(),
+                    json!(found
+                        .iter()
+                        .map(|(h, k, n)| json!([h, works::book_title(k, k, &lang), n]))
+                        .collect::<Vec<_>>()),
+                );
+            }
+            out["hammam"] = json!({"with": c.hammam.parallels.len(), "count": others.len(),
+                "books": books(&others)?, "parallels": pars});
+        }
+        Ok(out)
+    })
+}
+
 /// A number of the book chosen at random, of a hadith whose chain was read.
 #[tauri::command]
 fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<String>, String> {
@@ -2574,6 +3055,7 @@ fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<Strin
 }
 
 fn main() {
+    isnady_core::log::setup("window");
     tauri::Builder::default()
         .manage(Data(Mutex::new(None)))
         .manage(Cites(Mutex::new(None)))
@@ -2606,6 +3088,24 @@ fn main() {
             genealogy_find_narrators,
             genealogy_find_in_tree,
             sira_event,
+            sahifa_count,
+            prefs_state,
+            prefs_set,
+            prefs_reset,
+            book_active,
+            cache_clear,
+            shortcut_create,
+            log_files,
+            log_read,
+            log_change,
+            reset_data,
+            quran_state,
+            quran_sura,
+            quran_toggle,
+            quran_skip,
+            quran_search,
+            sahifa_list,
+            sahifa_source,
             companions_groups,
             companion_group,
             hadith_cards,

@@ -68,7 +68,8 @@ function booksBuild() {
     const arrow = e.target.closest(".pd-arrow");
     if (arrow) { arrow.closest(".pd-node").classList.toggle("open"); return; }
     const item = e.target.closest(".pd-item");
-    if (item && item.dataset.id) pickChapter(Number(item.dataset.id));
+    if (item && item.dataset.sura) quranGo(Number(item.dataset.sura));
+    else if (item && item.dataset.id) pickChapter(Number(item.dataset.id));
   });
   $("b-tree").addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -206,20 +207,9 @@ async function selectWork(key, chapter, focus) {
 
 // a book picked in the list: opened, and a place in Back and Forward (visited_book)
 function pickWork(key) {
-  if (key === "quran") { openQuran(); return; }
+  if (key === "quran") { openQuran(); record(["book", "quran"]); return; }
   openWork(key);
   record(["book", key]);
-}
-
-// the Qur'an (Q1) has its own reader: with RS10
-function openQuran() {
-  BK.quranMode = true;
-  BK.work = null;
-  markWork();
-  $("b-right").hidden = true;
-  $("b-quran").hidden = false;
-  $("b-tree").innerHTML = "";
-  $("b-quran").innerHTML = `<div class="later"><h1>${esc(t("The Holy Qur'an"))}</h1><p>${esc(t("LATER"))}</p></div>`;
 }
 
 async function openWork(key, chapter, focus) {
@@ -500,6 +490,7 @@ async function openBookAt(key) {
 
 // a chapter by its node (show_chapter: a bookmark, Back and Forward)
 async function openChapterAt(chapterId) {
+  if (chapterId < 0) { await openVerseAt(-chapterId, null); return; }       // a sura of the Qur'an
   const where = await invoke("book_place_of", { hadith: null, person: null, chapter: chapterId });
   if (where) await openPlaceInBook(where, {});
 }

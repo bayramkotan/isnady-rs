@@ -59,3 +59,21 @@ pub fn kept<T: Clone + Send + 'static>(
     }
     Ok(v)
 }
+
+/// Whether a value is kept under a name for the database as it is now (`cache.ready`).
+pub fn is_kept(conn: &Connection, name: &str) -> bool {
+    let Ok(now) = stamp(conn) else {
+        return false;
+    };
+    KEPT.lock()
+        .ok()
+        .and_then(|g| g.as_ref().and_then(|m| m.get(name)).map(|(s, _)| *s == now))
+        .unwrap_or(false)
+}
+
+/// Forget every value kept (`cache.clear`, in memory).
+pub fn clear() {
+    if let Ok(mut g) = KEPT.lock() {
+        *g = None;
+    }
+}

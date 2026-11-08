@@ -891,7 +891,7 @@ function card(r) {
   el.querySelector('[data-act="chain"]').onclick = () => showChain(r.key, r.number);
   if (!r.in_book) el.querySelector('[data-act="book"]').onclick = () => openInBook(r.hadith_id);
   el.querySelector('[data-act="export"]').onclick = later(["&File", "Export…"]);
-  el.querySelector('[data-act="languages"]').onclick = later(["&Edit", "Preferences…"]);
+  el.querySelector('[data-act="languages"]').onclick = () => openPreferences("books");
   const fold = el.querySelector('[data-act="fold"]');
   if (fold) {
     fold.onclick = () => {
@@ -903,7 +903,10 @@ function card(r) {
   }
   wireStar(el.querySelector(".star"), "hadith", reference, `${r.name} ${r.number}`, r.subtitle);
   for (const a of el.querySelectorAll("a[data-book]")) a.onclick = () => showChain(a.dataset.book, a.dataset.number);
-  for (const a of el.querySelectorAll("a[data-verse]")) a.onclick = later(["&View", "Books"]);
+  for (const a of el.querySelectorAll("a[data-verse]")) {
+    const [s, v] = a.dataset.verse.split(":").map(Number);
+    a.onclick = () => openVerse(s, v);
+  }
   wireStrip(el);
   el.addEventListener("contextmenu", (e) => cardMenu(e, r, el));
   return el;
@@ -1085,7 +1088,7 @@ async function cardMenu(e, r, el) {
     ...others.map((x) => act(t("Translation: {language}", { language: t(x.language) }), () => copyText(x.text), "", { raw: true })),
     SEP, act("Everything: reference, texts and grades", () => copyText(whole()))];
   const related = r.related.slice(0, 20).map((x) => act(`${x.book_name} ${x.number}` + (x.kind === "same" ? "" : "  ~"), () => showChain(x.book, x.number), "", { raw: true }));
-  const verses = r.verses.map(([s, a, b]) => act(`${s}:${a}` + (b !== a ? `-${b}` : ""), later(["&View", "Books"]), "", { raw: true }));
+  const verses = r.verses.map(([s, a, b]) => act(`${s}:${a}` + (b !== a ? `-${b}` : ""), () => openVerse(s, a), "", { raw: true }));
   const entries = [...(r.in_book ? [] : [act("In its book", () => openInBook(r.hadith_id))]), act("View chain", () => showChain(r.key, r.number))];
   if (related.length) entries.push(act("Also narrated in", null, "", { submenu: () => related }));
   if (verses.length) entries.push(act("Verses it names", null, "", { submenu: () => verses }));

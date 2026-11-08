@@ -153,6 +153,103 @@ pub fn fill_with(text: &str, width: usize, first: &str, rest: &str) -> String {
     lines.join("\n")
 }
 
+/// `repr(x)` of a float: the shortest text that reads back as x, with ".0" on a whole number and Python's exponent
+/// form below 1e-4 and from 1e16.
+pub fn float_repr(x: f64) -> String {
+    if x.is_nan() {
+        return "nan".into();
+    }
+    if x.is_infinite() {
+        return if x > 0.0 { "inf".into() } else { "-inf".into() };
+    }
+    let a = x.abs();
+    if a != 0.0 && !(1e-4..1e16).contains(&a) {
+        // Rust writes 1e-5 and 1.5e16; Python writes 1e-05 and 1.5e+16
+        let s = format!("{x:e}");
+        let (m, e) = s.split_once('e').unwrap_or((&s, "0"));
+        let e: i32 = e.parse().unwrap_or(0);
+        return format!("{m}e{}{:02}", if e < 0 { '-' } else { '+' }, e.abs());
+    }
+    let s = format!("{x}");
+    if s.contains('.') {
+        s
+    } else {
+        format!("{s}.0")
+    }
+}
+
+/// `float(text)`: a number written as Python reads one ("22", " 1.5 ", "1e3", "inf").
+pub fn parse_float(text: &str) -> Option<f64> {
+    let t = text.trim().replace('_', "");
+    if t.is_empty() {
+        return None;
+    }
+    t.parse::<f64>().ok()
+}
+
+/// `format(x, ".{p}g")`: p significant digits, trailing zeros dropped, the exponent form when the exponent is below
+/// -4 or not below p.
+pub fn fmt_g(x: f64, p: usize) -> String {
+    if x.is_nan() {
+        return "nan".into();
+    }
+    if x.is_infinite() {
+        return if x > 0.0 { "inf".into() } else { "-inf".into() };
+    }
+    let p = p.max(1);
+    if x == 0.0 {
+        return if x.is_sign_negative() {
+            "-0".into()
+        } else {
+            "0".into()
+        };
+    }
+    // the exponent after rounding to p digits
+    let sci = format!("{:.*e}", p - 1, x);
+    let (mant, exp) = sci.split_once('e').unwrap_or((&sci, "0"));
+    let exp: i32 = exp.parse().unwrap_or(0);
+    let strip = |s: &str| -> String {
+        if s.contains('.') {
+            s.trim_end_matches('0').trim_end_matches('.').to_string()
+        } else {
+            s.to_string()
+        }
+    };
+    if exp < -4 || exp >= p as i32 {
+        format!(
+            "{}e{}{:02}",
+            strip(mant),
+            if exp < 0 { '-' } else { '+' },
+            exp.abs()
+        )
+    } else {
+        let decimals = (p as i32 - 1 - exp).max(0) as usize;
+        strip(&format!("{:.*}", decimals, x))
+    }
+}
+
+/// `time.strftime(fmt)`: the local time now.
+pub fn now_local(fmt: &str) -> String {
+    chrono::Local::now().format(fmt).to_string()
+}
+
+/// `time.strftime(fmt, time.localtime(t))` of a file's time.
+pub fn local_time(t: std::time::SystemTime, fmt: &str) -> String {
+    chrono::DateTime::<chrono::Local>::from(t)
+        .format(fmt)
+        .to_string()
+}
+
+/// `round(x)`: to the nearest whole number, halves to the even one.
+pub fn round_even(x: f64) -> f64 {
+    let r = x.round();
+    if (x - x.trunc()).abs() == 0.5 && r % 2.0 != 0.0 {
+        r - x.signum()
+    } else {
+        r
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,5 +267,19 @@ mod tests {
             fill_with("aaa bbb ccc", 10, "  x: ", "    "),
             "  x: aaa\n    bbb\n    ccc"
         );
+    }
+
+    #[test]
+    fn python_numbers() {
+        assert_eq!(float_repr(20.0), "20.0");
+        assert_eq!(float_repr(0.8), "0.8");
+        assert_eq!(float_repr(1e-5), "1e-05");
+        assert_eq!(fmt_g(0.8, 6), "0.8");
+        assert_eq!(fmt_g(48.0, 6), "48");
+        assert_eq!(fmt_g(3.14159e-5, 2), "3.1e-05");
+        assert_eq!(fmt_g(0.000123, 2), "0.00012");
+        assert_eq!(fmt_g(123456.0, 2), "1.2e+05");
+        assert_eq!(round_even(2.5), 2.0);
+        assert_eq!(round_even(3.5), 4.0);
     }
 }
