@@ -383,9 +383,83 @@ def sahaba() -> str:
     return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
 
 
+SIRA = os.path.join(HERE, "..", "crates", "isnady-core", "data", "sira.json")
+
+
+def sira() -> str:
+    """The Sira as a timeline (core.sira): its periods and events as written for isnady."""
+    _import()
+    import json as _json
+
+    from isnady.core import sira as core_sira
+
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "work": core_sira.SIRA_WORK,
+        "periods": [[k, v] for k, v in core_sira.PERIODS.items()],
+        "events": core_sira.EVENTS,
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
+GENEALOGY = os.path.join(HERE, "..", "crates", "isnady-core", "data", "genealogy.json")
+
+
+def genealogy() -> str:
+    """The genealogies (core.genealogy): the two written trees (assets/genealogy/trees.json), the words that name each
+    prophet in a hadith, and the box of each written life in a tree."""
+    _import()
+    import json as _json
+
+    from isnady.core import genealogy as g
+
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "sources": g.sources(),
+        "trees": g._data()["trees"],
+        "written": list(g.WRITTEN),
+        "prophet_words": [[k, v[0], list(v[1])] for k, v in g.PROPHET_WORDS.items()],
+        "honoured": list(g._HONOURED),
+        "road_b_only_own": sorted(g._ROAD_B_ONLY_OWN),
+        "not_him": g._NOT_HIM.pattern,
+        "name_head": list(g._NAME_HEAD),
+        "life_nodes": [[k, v[0], v[1]] for k, v in g.LIFE_NODES.items()],
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
+LEARN = os.path.join(HERE, "..", "crates", "isnady-core", "data", "learn.json")
+
+
+def learn_data() -> str:
+    """Learn (core.learn, core.learn_history): the glossary's terms (assets/learn/terms.json), the articles of History
+    and method (assets/learn/articles.json) and the wordings the live numbers look for."""
+    _import()
+    import json as _json
+    from importlib import resources
+
+    from isnady.core import learn, learn_history as H
+
+    assets = resources.files("isnady") / "assets" / "learn"
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "languages": [[k, v] for k, v in learn.LANGUAGES.items()],
+        "group_term": [[k, v] for k, v in learn.GROUP_TERM.items()],
+        "terms": _json.loads((assets / "terms.json").read_text(encoding="utf-8")),
+        "articles": _json.loads((assets / "articles.json").read_text(encoding="utf-8")),
+        "writing_forms": [list(x) for x in H.WRITING_FORMS],
+        "writing_in_text": [list(x) for x in H.WRITING_IN_TEXT],
+        "akhbarana_books": list(H.AKHBARANA_BOOKS),
+        "hammam_key": H.HAMMAM_KEY,
+        "mutawatir_forms": H.MUTAWATIR_FORMS,
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
 def outputs() -> dict:
     files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives(), HUFFAZ: huffaz_index(),
-             SAHABA: sahaba()}
+             SAHABA: sahaba(), SIRA: sira(),
+             GENEALOGY: genealogy(), LEARN: learn_data()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

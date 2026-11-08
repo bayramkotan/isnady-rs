@@ -642,20 +642,22 @@ async function chapterMenu(e, item) {
 
 // ------------------------------------------------------------------ small dialogs (QInputDialog, QMessageBox)
 
-function askText(title, label, value) {
+// QInputDialog.getText; `lines`: getMultiLineText (Enter makes a new line there)
+function askText(title, label, value, lines) {
   return new Promise((resolve) => {
     const back = document.createElement("div");
     back.className = "dialog-back";
+    const field = lines ? `<textarea class="ask-input" rows="6"></textarea>` : `<input type="text" class="ask-input">`;
     back.innerHTML = `<div class="dialog ask" role="dialog"><div class="pd-title">${esc(title)}</div><div>${esc(label)}</div>
-      <input type="text" class="ask-input"><div class="pd-buttons"><button class="primary small ok">${esc(t("OK"))}</button><button class="pd-cancel">${esc(t("Cancel"))}</button></div></div>`;
+      ${field}<div class="pd-buttons"><button class="primary small ok">${esc(t("OK"))}</button><button class="pd-cancel">${esc(t("Cancel"))}</button></div></div>`;
     document.body.appendChild(back);
-    const input = back.querySelector("input");
+    const input = back.querySelector(".ask-input");
     input.value = value || "";
     const done = (v) => { back.remove(); resolve(v); };
     back.querySelector(".ok").onclick = () => done(input.value);
     back.querySelector(".pd-cancel").onclick = () => done(null);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") done(input.value);
+      if (e.key === "Enter" && !lines) done(input.value);
       if (e.key === "Escape") done(null);
     });
     input.focus();

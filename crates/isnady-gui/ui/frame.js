@@ -13,9 +13,9 @@ let THEME_MODE = "system";          // view.theme
 let CONTENT = [];                   // view.content_languages ([] = all)
 let FOOTER = "";
 
-const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions"]);
+const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "genealogy", "learn", "bookmarks"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
-const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions" };
+const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions", sira: "sira", genealogy: "genealogy", term: "learn" };
 
 function sectionLabel(key) {
   const s = WIN.sections.find((x) => x[0] === key);
@@ -113,13 +113,16 @@ async function goHistory(step) {
     else if (entry[0] === "chain") await openChain(entry[1]);
     else if (entry[0] === "in_book") await openInBook(entry[1]);
     else if (entry[0] === "find") { show("search"); searchFor(entry[1], "narrators"); }
-    else if (entry[0] === "tree") show("genealogy");
+    else if (entry[0] === "tree") await openTreeAt(entry[1], entry[2]);
+    else if (entry[0] === "genealogy") await openGenealogyAt(entry[1], entry[2]);
+    else if (entry[0] === "term") await openTermAt(entry[1]);
     else if (entry[0] === "narrator") await openNarratorPlace(entry[1]);
     else if (entry[0] === "book") await openBookAt(entry[1]);
     else if (entry[0] === "chapter") await openChapterAt(entry[1]);
     else if (entry[0] === "person_in_book") await openPersonInBook(entry[1]);
     else if (entry[0] === "scholar") await openScholarAt(entry[1]);
     else if (entry[0] === "group") await openGroupAt(entry[1]);
+    else if (entry[0] === "sira") await openEventAt(entry[1]);
   } catch (_) {
     // a place that is gone (a book removed): stay where we are
   } finally {

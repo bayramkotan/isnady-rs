@@ -224,6 +224,7 @@ function scholarsClick(e) {
   const a = e.target.closest("a[data-name], a[data-url], [data-person], [data-book-key], [data-act]");
   if (!a) return;
   if (a.dataset.name) return findNarrator(a.dataset.name);
+  if (a.dataset.book) return openBookFromScholars(a.dataset.book);
   if (a.dataset.url) return invoke("open_url", { url: a.dataset.url });
   if (a.dataset.person) return openNarratorFromScholars(Number(a.dataset.person));
   if (a.dataset.bookKey) return openBookFromScholars(a.dataset.bookKey);

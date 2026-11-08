@@ -192,10 +192,18 @@ function show(key) {
   $("page-narrators").hidden = key !== "narrators";
   $("page-scholars").hidden = key !== "scholars";
   $("page-companions").hidden = key !== "companions";
+  $("page-sira").hidden = key !== "sira";
+  $("page-genealogy").hidden = key !== "genealogy";
+  $("page-learn").hidden = key !== "learn";
+  $("page-bookmarks").hidden = key !== "bookmarks";
   if (key === "narrators" && !NARR.loaded) loadNarrators();
   if (key === "books") booksRefresh();
   if (key === "scholars" && !HISTORY.opening) scholarsRefresh();
   if (key === "companions" && !HISTORY.opening) companionsRefresh();
+  if (key === "sira" && !HISTORY.opening) siraRefresh();
+  if (key === "genealogy" && !HISTORY.opening) genealogyRefresh();
+  if (key === "learn" && !HISTORY.opening) learnRefresh();
+  if (key === "bookmarks") bookmarksRefresh();
   $("page-later").hidden = ready;
   if (!ready) {
     $("later-title").textContent = t(sectionLabel(key));
@@ -254,6 +262,19 @@ async function start() {
     await loadNarrators();
     const q = open.slice(9);
     if (/^\d+$/.test(q)) await openNarrator(Number(q)); else { $("nq").value = q; await listNarrators(); }
+  } else if (open.startsWith("term:")) {
+    await openTerm(open.slice(5));
+  } else if (open === "bookmarks") {
+    show("bookmarks");
+  } else if (open.startsWith("tree:")) {
+    const [, which, ...rest] = open.split(":");
+    await openTree(which, rest.join(":"));
+  } else if (open.startsWith("genealogy:")) {
+    const [, person, which] = open.split(":");
+    await openGenealogy(Number(person), which);
+  } else if (open.startsWith("sira:")) {
+    const id = open.slice(5);
+    await place(["sira", id], () => openEventAt(id));
   } else if (open.startsWith("group:")) {
     await openGroup(open.slice(6));
   } else if (open.startsWith("scholar:")) {

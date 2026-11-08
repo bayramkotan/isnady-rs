@@ -522,7 +522,7 @@ function chainsClick(e) {
   if (kind === "narrator") openNarratorFromChain(Number(v));
   else if (kind === "book") openInBookPlace(Number(v));
   else if (kind === "find") findNarrator(v);
-  else if (kind === "tree") place(["tree", "quraysh", v], () => show("genealogy"));
+  else if (kind === "tree") openTree("quraysh", v);
 }
 
 async function openNarratorFromChain(id) {

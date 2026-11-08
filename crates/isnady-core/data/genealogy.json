@@ -1,0 +1,1529 @@
+{
+"about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+"sources": "Genealogies isnady draws (GEN1). Each node: id, parent, names (en, tr, ar), kind (prophet, caliph, imam, person); gap: generations between it and its parent are not known or left out; disputed: the reports differ (with a note). Written for isnady from the Sunni sources, in this order of strength: (1) the Qur'an where it names a relation; (2) al-Bukhari, Sahih, Kitab Manaqib al-Ansar, Bab Mab'ath al-Nabi: the Prophet's lineage up to 'Adnan; (3) the sira and history works: Ibn Hisham, al-Sira al-Nabawiyya; Ibn Sa'd, al-Tabaqat al-Kubra; al-Tabari, Tarikh al-Rusul wa-l-Muluk; Ibn Kathir, Qisas al-Anbiya' and al-Bidaya wa-l-Nihaya; (4) the genealogists: Mus'ab al-Zubayri, Nasab Quraysh; Ibn Hazm, Jamharat Ansab al-'Arab. The names between Adam and Ibrahim and between Isma'il and 'Adnan come only from (3), who took them partly from the People of the Book. Not yet checked node by node against printed pages (TODO GEN1-K).",
+"trees": {
+"prophets": {
+"title": {
+"en": "The prophets",
+"tr": "Peygamberler",
+"ar": "الأنبياء"
+},
+"root": "adam",
+"nodes": [
+{
+"id": "adam",
+"parent": null,
+"en": "Adam",
+"tr": "Âdem",
+"ar": "آدم",
+"kind": "prophet",
+"note": {
+"en": "The first man and the first prophet (al-Baqara 2:30-37). The Qur'an names no son of his.",
+"tr": "İlk insan ve ilk peygamber (Bakara 2:30-37). Kur'an oğullarından birinin adını vermez."
+}
+},
+{
+"id": "shith",
+"parent": "adam",
+"en": "Seth (Shith)",
+"tr": "Şît",
+"ar": "شيث",
+"kind": "prophet",
+"note": {
+"en": "The names from Seth down to Terah are given by Ibn Ishaq (in Ibn Hisham and al-Tabari); Ibn Kathir says they come from the People of the Book: neither confirmed nor denied. The Qur'an and the authentic hadith do not give this line.",
+"tr": "Şît'ten Târah'a kadarki adları İbn İshak verir (İbn Hişâm ve Taberî'de); İbn Kesîr bunların Ehl-i Kitap'tan alındığını söyler: ne doğrulanır ne yalanlanır. Kur'an ve sahih hadisler bu silsileyi vermez."
+}
+},
+{
+"id": "anush",
+"parent": "shith",
+"en": "Enosh (Anush)",
+"tr": "Enûş",
+"ar": "أنوش",
+"kind": "person"
+},
+{
+"id": "qaynan",
+"parent": "anush",
+"en": "Kenan (Qaynan)",
+"tr": "Kaynân",
+"ar": "قينان",
+"kind": "person"
+},
+{
+"id": "mahlail",
+"parent": "qaynan",
+"en": "Mahalalel (Mahla'il)",
+"tr": "Mehlâîl",
+"ar": "مهلائيل",
+"kind": "person"
+},
+{
+"id": "yarid",
+"parent": "mahlail",
+"en": "Jared (Yarid)",
+"tr": "Yerd",
+"ar": "يرد",
+"kind": "person"
+},
+{
+"id": "idris",
+"parent": "yarid",
+"en": "Idris (Enoch, Akhnukh)",
+"tr": "İdrîs (Ahnûh)",
+"ar": "إدريس",
+"kind": "prophet",
+"note": {
+"en": "Most early historians identify Idris with Enoch (Akhnukh); some do not.",
+"tr": "Tarihçilerin çoğu İdrîs'i Ahnûh (Enoch) ile bir sayar; bir kısmı saymaz."
+}
+},
+{
+"id": "matushalakh",
+"parent": "idris",
+"en": "Methuselah (Matushalakh)",
+"tr": "Mettûşelah",
+"ar": "متوشلخ",
+"kind": "person"
+},
+{
+"id": "lamak",
+"parent": "matushalakh",
+"en": "Lamech (Lamak)",
+"tr": "Lemek",
+"ar": "لمك",
+"kind": "person"
+},
+{
+"id": "nuh",
+"parent": "lamak",
+"en": "Noah (Nuh)",
+"tr": "Nûh",
+"ar": "نوح",
+"kind": "prophet"
+},
+{
+"id": "sam",
+"parent": "nuh",
+"en": "Shem (Sam)",
+"tr": "Sâm",
+"ar": "سام",
+"kind": "person"
+},
+{
+"id": "arfakhshad",
+"parent": "sam",
+"en": "Arpachshad (Arfakhshad)",
+"tr": "Erfahşed",
+"ar": "أرفخشذ",
+"kind": "person"
+},
+{
+"id": "shalikh",
+"parent": "arfakhshad",
+"en": "Shelah (Shalikh)",
+"tr": "Şâlah",
+"ar": "شالخ",
+"kind": "person"
+},
+{
+"id": "abir",
+"parent": "shalikh",
+"en": "Eber (Abir)",
+"tr": "Âbir",
+"ar": "عابر",
+"kind": "person"
+},
+{
+"id": "falikh",
+"parent": "abir",
+"en": "Peleg (Falikh)",
+"tr": "Fâliğ",
+"ar": "فالغ",
+"kind": "person"
+},
+{
+"id": "ra'u",
+"parent": "falikh",
+"en": "Reu (Ra'u)",
+"tr": "Râû",
+"ar": "رعو",
+"kind": "person"
+},
+{
+"id": "saruj",
+"parent": "ra'u",
+"en": "Serug (Saruj)",
+"tr": "Sârûğ",
+"ar": "ساروغ",
+"kind": "person"
+},
+{
+"id": "nahur",
+"parent": "saruj",
+"en": "Nahor (Nahur)",
+"tr": "Nâhûr",
+"ar": "ناحور",
+"kind": "person"
+},
+{
+"id": "tarih",
+"parent": "nahur",
+"en": "Terah (Tarih, Azar)",
+"tr": "Târah (Âzer)",
+"ar": "تارح (آزر)",
+"kind": "person",
+"note": {
+"en": "The Qur'an names Ibrahim's father Azar (6:74); many take Azar and Terah to be one man, others an uncle.",
+"tr": "Kur'an İbrâhîm'in babasını Âzer diye anar (En'âm 6:74); çoğu Âzer'i Târah ile bir sayar, bazıları amcası der."
+}
+},
+{
+"id": "hud",
+"parent": "sam",
+"en": "Hud",
+"tr": "Hûd",
+"ar": "هود",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Sent to 'Ad, a people descended from Shem (Iram); some identify Hud with Eber ('Abir). The links between are not known.",
+"tr": "Sâm soyundan Âd kavmine (İrem) gönderildi; bazıları Hûd'u Âbir ile bir sayar. Aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "salih",
+"parent": "sam",
+"en": "Salih",
+"tr": "Sâlih",
+"ar": "صالح",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Sent to Thamud, a people descended from Shem (Iram); the links between are not known.",
+"tr": "Sâm soyundan Semûd kavmine gönderildi; aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "ibrahim",
+"parent": "tarih",
+"en": "Abraham (Ibrahim)",
+"tr": "İbrâhîm",
+"ar": "إبراهيم",
+"kind": "prophet",
+"note": {
+"en": "The Qur'an names his sons Isma'il and Ishaq and his grandson Ya'qub (al-Baqara 2:133, Hud 11:71, Ibrahim 14:39).",
+"tr": "Kur'an oğulları İsmâil ile İshak'ı ve torunu Ya'kûb'u adlarıyla anar (Bakara 2:133, Hûd 11:71, İbrâhîm 14:39)."
+}
+},
+{
+"id": "haran",
+"parent": "tarih",
+"en": "Haran",
+"tr": "Hârân",
+"ar": "هاران",
+"kind": "person"
+},
+{
+"id": "lut",
+"parent": "haran",
+"en": "Lot (Lut)",
+"tr": "Lût",
+"ar": "لوط",
+"kind": "prophet"
+},
+{
+"id": "ismail",
+"parent": "ibrahim",
+"en": "Ishmael (Isma'il)",
+"tr": "İsmâil",
+"ar": "إسماعيل",
+"kind": "prophet"
+},
+{
+"id": "ishaq",
+"parent": "ibrahim",
+"en": "Isaac (Ishaq)",
+"tr": "İshak",
+"ar": "إسحاق",
+"kind": "prophet"
+},
+{
+"id": "madyan",
+"parent": "ibrahim",
+"en": "Midian (Madyan)",
+"tr": "Medyen",
+"ar": "مدين",
+"kind": "person"
+},
+{
+"id": "shuayb",
+"parent": "madyan",
+"en": "Shu'ayb",
+"tr": "Şuayb",
+"ar": "شعيب",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Sent to Madyan; his descent from Madyan son of Ibrahim is reported, the links between are not.",
+"tr": "Medyen'e gönderildi; İbrâhîm'in oğlu Medyen soyundan olduğu rivayet edilir, aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "yaqub",
+"parent": "ishaq",
+"en": "Jacob (Ya'qub, Isra'il)",
+"tr": "Ya'kûb (İsrâil)",
+"ar": "يعقوب",
+"kind": "prophet"
+},
+{
+"id": "is",
+"parent": "ishaq",
+"en": "Esau ('Is)",
+"tr": "Îs",
+"ar": "عيص",
+"kind": "person"
+},
+{
+"id": "ayyub",
+"parent": "is",
+"en": "Job (Ayyub)",
+"tr": "Eyyûb",
+"ar": "أيوب",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Ibn Ishaq gives his descent from Esau son of Isaac; others differ.",
+"tr": "İbn İshak, İshak'ın oğlu Îs soyundan olduğunu söyler; başkaları farklı söyler."
+}
+},
+{
+"id": "dhulkifl",
+"parent": "ayyub",
+"en": "Dhu l-Kifl",
+"tr": "Zülkifl",
+"ar": "ذو الكفل",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Who he was is disputed; one report makes him a son of Ayyub (Bishr).",
+"tr": "Kim olduğu ihtilaflı; bir rivayet onu Eyyûb'un oğlu (Bişr) sayar."
+}
+},
+{
+"id": "yusuf",
+"parent": "yaqub",
+"en": "Joseph (Yusuf)",
+"tr": "Yûsuf",
+"ar": "يوسف",
+"kind": "prophet"
+},
+{
+"id": "lawi",
+"parent": "yaqub",
+"en": "Levi (Lawi)",
+"tr": "Lâvî",
+"ar": "لاوي",
+"kind": "person"
+},
+{
+"id": "yahudha",
+"parent": "yaqub",
+"en": "Judah (Yahudha)",
+"tr": "Yehûdâ",
+"ar": "يهوذا",
+"kind": "person"
+},
+{
+"id": "binyamin",
+"parent": "yaqub",
+"en": "Benjamin (Binyamin)",
+"tr": "Bünyamin",
+"ar": "بنيامين",
+"kind": "person"
+},
+{
+"id": "qahith",
+"parent": "lawi",
+"en": "Kohath (Qahith)",
+"tr": "Kâhis",
+"ar": "قاهث",
+"kind": "person"
+},
+{
+"id": "imran_m",
+"parent": "qahith",
+"en": "Amram ('Imran, father of Musa)",
+"tr": "İmrân (Mûsâ'nın babası)",
+"ar": "عمران",
+"kind": "person"
+},
+{
+"id": "musa",
+"parent": "imran_m",
+"en": "Moses (Musa)",
+"tr": "Mûsâ",
+"ar": "موسى",
+"kind": "prophet"
+},
+{
+"id": "harun",
+"parent": "imran_m",
+"en": "Aaron (Harun)",
+"tr": "Hârûn",
+"ar": "هارون",
+"kind": "prophet"
+},
+{
+"id": "ilyas",
+"parent": "harun",
+"en": "Elijah (Ilyas)",
+"tr": "İlyâs",
+"ar": "إلياس",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Reported to descend from Harun; the links between are not known.",
+"tr": "Hârûn soyundan olduğu rivayet edilir; aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "alyasa",
+"parent": "yusuf",
+"en": "Elisha (al-Yasa')",
+"tr": "Elyesa'",
+"ar": "اليسع",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Reported to descend from Ephraim son of Yusuf; the links between are not known.",
+"tr": "Yûsuf'un oğlu Efrâyim soyundan olduğu rivayet edilir; aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "yunus",
+"parent": "yaqub",
+"en": "Jonah (Yunus b. Matta)",
+"tr": "Yûnus (b. Mettâ)",
+"ar": "يونس بن متى",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Of the Children of Israel; his tribe is disputed (some say Benjamin).",
+"tr": "İsrâiloğullarındandır; kabilesi ihtilaflı (bazıları Bünyamin der)."
+}
+},
+{
+"id": "dawud",
+"parent": "yahudha",
+"en": "David (Dawud)",
+"tr": "Dâvûd",
+"ar": "داود",
+"kind": "prophet",
+"gap": true,
+"note": {
+"en": "Of the tribe of Judah; the generations between are given in the reports, shortened here.",
+"tr": "Yehûdâ kabilesindendir; aradaki nesiller rivayetlerde sayılır, burada kısaltıldı."
+}
+},
+{
+"id": "sulayman",
+"parent": "dawud",
+"en": "Solomon (Sulayman)",
+"tr": "Süleymân",
+"ar": "سليمان",
+"kind": "prophet"
+},
+{
+"id": "zakariyya",
+"parent": "sulayman",
+"en": "Zechariah (Zakariyya)",
+"tr": "Zekeriyyâ",
+"ar": "زكريا",
+"kind": "prophet",
+"gap": true,
+"disputed": {
+"en": "Reported to descend from Dawud through Sulayman; the links between are not known.",
+"tr": "Dâvûd'un Süleymân kolundan olduğu rivayet edilir; aradaki halkalar bilinmiyor."
+}
+},
+{
+"id": "yahya",
+"parent": "zakariyya",
+"en": "John (Yahya)",
+"tr": "Yahyâ",
+"ar": "يحيى",
+"kind": "prophet"
+},
+{
+"id": "imran_y",
+"parent": "dawud",
+"en": "'Imran (father of Maryam)",
+"tr": "İmrân (Meryem'in babası)",
+"ar": "عمران",
+"kind": "person",
+"gap": true,
+"disputed": {
+"en": "The family of 'Imran (Qur'an 3:33); reported to descend from Dawud.",
+"tr": "Âl-i İmrân (Âl-i İmrân 3:33); Dâvûd soyundan olduğu rivayet edilir."
+}
+},
+{
+"id": "maryam",
+"parent": "imran_y",
+"en": "Mary (Maryam)",
+"tr": "Meryem",
+"ar": "مريم",
+"kind": "person"
+},
+{
+"id": "isa",
+"parent": "maryam",
+"en": "Jesus ('Isa)",
+"tr": "Îsâ",
+"ar": "عيسى",
+"kind": "prophet",
+"note": {
+"en": "Born of Maryam without a father (Qur'an 3:47, 19:20).",
+"tr": "Babasız olarak Meryem'den doğdu (Âl-i İmrân 3:47, Meryem 19:20)."
+}
+},
+{
+"id": "adnan",
+"parent": "ismail",
+"en": "'Adnan",
+"tr": "Adnân",
+"ar": "عدنان",
+"kind": "person",
+"gap": true,
+"disputed": {
+"en": "The generations between Isma'il and 'Adnan are not agreed upon; the Prophet's lineage is agreed upon up to 'Adnan.",
+"tr": "İsmâil ile Adnân arasındaki nesiller üzerinde ittifak yoktur; Peygamber'in ﷺ nesebi Adnân'a kadar ittifakla bilinir."
+}
+},
+{
+"id": "maadd",
+"parent": "adnan",
+"en": "Ma'add",
+"tr": "Mead",
+"ar": "معد",
+"kind": "person"
+},
+{
+"id": "nizar",
+"parent": "maadd",
+"en": "Nizar",
+"tr": "Nizâr",
+"ar": "نزار",
+"kind": "person"
+},
+{
+"id": "mudar",
+"parent": "nizar",
+"en": "Mudar",
+"tr": "Mudar",
+"ar": "مضر",
+"kind": "person"
+},
+{
+"id": "ilyas_m",
+"parent": "mudar",
+"en": "Ilyas b. Mudar",
+"tr": "İlyâs b. Mudar",
+"ar": "إلياس بن مضر",
+"kind": "person"
+},
+{
+"id": "mudrika",
+"parent": "ilyas_m",
+"en": "Mudrika",
+"tr": "Müdrike",
+"ar": "مدركة",
+"kind": "person"
+},
+{
+"id": "khuzayma",
+"parent": "mudrika",
+"en": "Khuzayma",
+"tr": "Huzeyme",
+"ar": "خزيمة",
+"kind": "person"
+},
+{
+"id": "kinana",
+"parent": "khuzayma",
+"en": "Kinana",
+"tr": "Kinâne",
+"ar": "كنانة",
+"kind": "person"
+},
+{
+"id": "nadr",
+"parent": "kinana",
+"en": "al-Nadr",
+"tr": "Nadr",
+"ar": "النضر",
+"kind": "person"
+},
+{
+"id": "malik",
+"parent": "nadr",
+"en": "Malik",
+"tr": "Mâlik",
+"ar": "مالك",
+"kind": "person"
+},
+{
+"id": "fihr",
+"parent": "malik",
+"en": "Fihr (Quraysh)",
+"tr": "Fihr (Kureyş)",
+"ar": "فهر (قريش)",
+"kind": "person"
+},
+{
+"id": "ghalib",
+"parent": "fihr",
+"en": "Ghalib",
+"tr": "Gâlib",
+"ar": "غالب",
+"kind": "person"
+},
+{
+"id": "luayy",
+"parent": "ghalib",
+"en": "Lu'ayy",
+"tr": "Lüeyy",
+"ar": "لؤي",
+"kind": "person"
+},
+{
+"id": "kab",
+"parent": "luayy",
+"en": "Ka'b",
+"tr": "Ka'b",
+"ar": "كعب",
+"kind": "person"
+},
+{
+"id": "murra",
+"parent": "kab",
+"en": "Murra",
+"tr": "Mürre",
+"ar": "مرة",
+"kind": "person"
+},
+{
+"id": "kilab",
+"parent": "murra",
+"en": "Kilab",
+"tr": "Kilâb",
+"ar": "كلاب",
+"kind": "person"
+},
+{
+"id": "qusayy",
+"parent": "kilab",
+"en": "Qusayy",
+"tr": "Kusay",
+"ar": "قصي",
+"kind": "person"
+},
+{
+"id": "abdmanaf",
+"parent": "qusayy",
+"en": "'Abd Manaf",
+"tr": "Abdümenâf",
+"ar": "عبد مناف",
+"kind": "person"
+},
+{
+"id": "hashim",
+"parent": "abdmanaf",
+"en": "Hashim",
+"tr": "Hâşim",
+"ar": "هاشم",
+"kind": "person"
+},
+{
+"id": "abdalmuttalib",
+"parent": "hashim",
+"en": "'Abd al-Muttalib",
+"tr": "Abdülmuttalib",
+"ar": "عبد المطلب",
+"kind": "person"
+},
+{
+"id": "abdallah",
+"parent": "abdalmuttalib",
+"en": "'Abd Allah",
+"tr": "Abdullah",
+"ar": "عبد الله",
+"kind": "person"
+},
+{
+"id": "muhammad",
+"parent": "abdallah",
+"en": "Muhammad ﷺ",
+"tr": "Hz. Muhammed ﷺ",
+"ar": "محمد ﷺ",
+"kind": "prophet",
+"note": {
+"en": "His lineage up to 'Adnan is agreed upon: al-Bukhari, Sahih, Manaqib al-Ansar, Bab Mab'ath al-Nabi; Ibn Hisham, al-Sira; Ibn Sa'd, al-Tabaqat. Beyond 'Adnan the genealogists differ.",
+"tr": "Nesebi Adnân'a kadar ittifakla bilinir: Buhârî, Sahîh, Menâkıbü'l-Ensâr, Bâbu Meb'asi'n-Nebî; İbn Hişâm, es-Sîre; İbn Sa'd, et-Tabakât. Adnân'dan ötesinde nesepçiler ayrılır."
+}
+}
+]
+},
+"quraysh": {
+"title": {
+"en": "Quraysh: the Prophet's family ﷺ, the caliphs, the Imams",
+"tr": "Kureyş: Peygamber'in ﷺ ailesi, halifeler, İmamlar",
+"ar": "قريش: آل النبي ﷺ والخلفاء والأئمة"
+},
+"root": "kab",
+"nodes": [
+{
+"id": "kab",
+"parent": null,
+"en": "Ka'b b. Lu'ayy",
+"tr": "Ka'b b. Lüeyy",
+"ar": "كعب بن لؤي",
+"kind": "person",
+"note": {
+"en": "From Ibn Hisham, Ibn Sa'd, Mus'ab al-Zubayri (Nasab Quraysh) and Ibn Hazm (Jamharat Ansab al-'Arab).",
+"tr": "İbn Hişâm, İbn Sa'd, Mus'ab ez-Zübeyrî (Nesebü Kureyş) ve İbn Hazm'dan (Cemheretü ensâbi'l-Arab)."
+}
+},
+{
+"id": "murra",
+"parent": "kab",
+"en": "Murra",
+"tr": "Mürre",
+"ar": "مرة",
+"kind": "person"
+},
+{
+"id": "adi",
+"parent": "kab",
+"en": "'Adi",
+"tr": "Adî",
+"ar": "عدي",
+"kind": "person"
+},
+{
+"id": "kilab",
+"parent": "murra",
+"en": "Kilab",
+"tr": "Kilâb",
+"ar": "كلاب",
+"kind": "person"
+},
+{
+"id": "taym",
+"parent": "murra",
+"en": "Taym",
+"tr": "Teym",
+"ar": "تيم",
+"kind": "person"
+},
+{
+"id": "sad_t",
+"parent": "taym",
+"en": "Sa'd",
+"tr": "Sa'd",
+"ar": "سعد",
+"kind": "person"
+},
+{
+"id": "kab_t",
+"parent": "sad_t",
+"en": "Ka'b",
+"tr": "Ka'b",
+"ar": "كعب",
+"kind": "person"
+},
+{
+"id": "amr_t",
+"parent": "kab_t",
+"en": "'Amr",
+"tr": "Amr",
+"ar": "عمرو",
+"kind": "person"
+},
+{
+"id": "amir_t",
+"parent": "amr_t",
+"en": "'Amir",
+"tr": "Âmir",
+"ar": "عامر",
+"kind": "person"
+},
+{
+"id": "abuquhafa",
+"parent": "amir_t",
+"en": "'Uthman (Abu Quhafa)",
+"tr": "Osman (Ebû Kuhâfe)",
+"ar": "عثمان (أبو قحافة)",
+"kind": "person"
+},
+{
+"id": "abubakr",
+"parent": "abuquhafa",
+"en": "Abu Bakr al-Siddiq",
+"tr": "Hz. Ebû Bekir",
+"ar": "أبو بكر الصديق",
+"kind": "caliph"
+},
+{
+"id": "rizah",
+"parent": "adi",
+"en": "Rizah",
+"tr": "Rezâh",
+"ar": "رزاح",
+"kind": "person"
+},
+{
+"id": "qurt",
+"parent": "rizah",
+"en": "Qurt",
+"tr": "Kurt",
+"ar": "قرط",
+"kind": "person"
+},
+{
+"id": "abdallah_a",
+"parent": "qurt",
+"en": "'Abd Allah",
+"tr": "Abdullah",
+"ar": "عبد الله",
+"kind": "person"
+},
+{
+"id": "riyah",
+"parent": "abdallah_a",
+"en": "Riyah",
+"tr": "Riyâh",
+"ar": "رياح",
+"kind": "person"
+},
+{
+"id": "abdaluzza_a",
+"parent": "riyah",
+"en": "'Abd al-'Uzza",
+"tr": "Abdüluzzâ",
+"ar": "عبد العزى",
+"kind": "person"
+},
+{
+"id": "nufayl",
+"parent": "abdaluzza_a",
+"en": "Nufayl",
+"tr": "Nüfeyl",
+"ar": "نفيل",
+"kind": "person"
+},
+{
+"id": "khattab",
+"parent": "nufayl",
+"en": "al-Khattab",
+"tr": "Hattâb",
+"ar": "الخطاب",
+"kind": "person"
+},
+{
+"id": "umar",
+"parent": "khattab",
+"en": "'Umar b. al-Khattab",
+"tr": "Hz. Ömer",
+"ar": "عمر بن الخطاب",
+"kind": "caliph"
+},
+{
+"id": "qusayy",
+"parent": "kilab",
+"en": "Qusayy",
+"tr": "Kusay",
+"ar": "قصي",
+"kind": "person"
+},
+{
+"id": "abdmanaf",
+"parent": "qusayy",
+"en": "'Abd Manaf",
+"tr": "Abdümenâf",
+"ar": "عبد مناف",
+"kind": "person"
+},
+{
+"id": "hashim",
+"parent": "abdmanaf",
+"en": "Hashim",
+"tr": "Hâşim",
+"ar": "هاشم",
+"kind": "person"
+},
+{
+"id": "abdshams",
+"parent": "abdmanaf",
+"en": "'Abd Shams",
+"tr": "Abdüşems",
+"ar": "عبد شمس",
+"kind": "person"
+},
+{
+"id": "umayya",
+"parent": "abdshams",
+"en": "Umayya",
+"tr": "Ümeyye",
+"ar": "أمية",
+"kind": "person"
+},
+{
+"id": "abulas",
+"parent": "umayya",
+"en": "Abu l-'As",
+"tr": "Ebü'l-Âs",
+"ar": "أبو العاص",
+"kind": "person"
+},
+{
+"id": "affan",
+"parent": "abulas",
+"en": "'Affan",
+"tr": "Affân",
+"ar": "عفان",
+"kind": "person"
+},
+{
+"id": "uthman",
+"parent": "affan",
+"en": "'Uthman b. 'Affan",
+"tr": "Hz. Osman",
+"ar": "عثمان بن عفان",
+"kind": "caliph",
+"note": {
+"en": "Married two daughters of the Prophet ﷺ, Ruqayya and then Umm Kulthum (Dhu l-Nurayn).",
+"tr": "Peygamber'in ﷺ iki kızıyla, önce Rukiyye sonra Ümmü Gülsüm ile evlendi (Zinnûreyn)."
+}
+},
+{
+"id": "harb",
+"parent": "umayya",
+"en": "Harb",
+"tr": "Harb",
+"ar": "حرب",
+"kind": "person"
+},
+{
+"id": "abusufyan",
+"parent": "harb",
+"en": "Abu Sufyan",
+"tr": "Ebû Süfyân",
+"ar": "أبو سفيان",
+"kind": "person"
+},
+{
+"id": "muawiya",
+"parent": "abusufyan",
+"en": "Mu'awiya",
+"tr": "Muâviye",
+"ar": "معاوية",
+"kind": "person"
+},
+{
+"id": "abdalmuttalib",
+"parent": "hashim",
+"en": "'Abd al-Muttalib",
+"tr": "Abdülmuttalib",
+"ar": "عبد المطلب",
+"kind": "person"
+},
+{
+"id": "abdallah",
+"parent": "abdalmuttalib",
+"en": "'Abd Allah",
+"tr": "Abdullah",
+"ar": "عبد الله",
+"kind": "person"
+},
+{
+"id": "abutalib",
+"parent": "abdalmuttalib",
+"en": "Abu Talib",
+"tr": "Ebû Tâlib",
+"ar": "أبو طالب",
+"kind": "person"
+},
+{
+"id": "abbas",
+"parent": "abdalmuttalib",
+"en": "al-'Abbas",
+"tr": "Hz. Abbas",
+"ar": "العباس",
+"kind": "person"
+},
+{
+"id": "hamza",
+"parent": "abdalmuttalib",
+"en": "Hamza",
+"tr": "Hz. Hamza",
+"ar": "حمزة",
+"kind": "person"
+},
+{
+"id": "abulahab",
+"parent": "abdalmuttalib",
+"en": "Abu Lahab",
+"tr": "Ebû Leheb",
+"ar": "أبو لهب",
+"kind": "person"
+},
+{
+"id": "muhammad",
+"parent": "abdallah",
+"en": "Muhammad ﷺ",
+"tr": "Hz. Muhammed ﷺ",
+"ar": "محمد ﷺ",
+"kind": "prophet"
+},
+{
+"id": "qasim",
+"parent": "muhammad",
+"en": "al-Qasim",
+"tr": "Kâsım",
+"ar": "القاسم",
+"kind": "person"
+},
+{
+"id": "zaynab",
+"parent": "muhammad",
+"en": "Zaynab",
+"tr": "Zeyneb",
+"ar": "زينب",
+"kind": "person"
+},
+{
+"id": "ruqayya",
+"parent": "muhammad",
+"en": "Ruqayya",
+"tr": "Rukiyye",
+"ar": "رقية",
+"kind": "person"
+},
+{
+"id": "ummkulthum",
+"parent": "muhammad",
+"en": "Umm Kulthum",
+"tr": "Ümmü Gülsüm",
+"ar": "أم كلثوم",
+"kind": "person"
+},
+{
+"id": "fatima",
+"parent": "muhammad",
+"en": "Fatima al-Zahra'",
+"tr": "Hz. Fâtıma",
+"ar": "فاطمة الزهراء",
+"kind": "person"
+},
+{
+"id": "abdallah_p",
+"parent": "muhammad",
+"en": "'Abd Allah",
+"tr": "Abdullah",
+"ar": "عبد الله",
+"kind": "person"
+},
+{
+"id": "ibrahim_p",
+"parent": "muhammad",
+"en": "Ibrahim",
+"tr": "İbrâhîm",
+"ar": "إبراهيم",
+"kind": "person"
+},
+{
+"id": "abdallah_ibnabbas",
+"parent": "abbas",
+"en": "'Abd Allah b. 'Abbas",
+"tr": "Abdullah b. Abbas",
+"ar": "عبد الله بن عباس",
+"kind": "person"
+},
+{
+"id": "fadl",
+"parent": "abbas",
+"en": "al-Fadl b. 'Abbas",
+"tr": "Fadl b. Abbas",
+"ar": "الفضل بن عباس",
+"kind": "person"
+},
+{
+"id": "aqil",
+"parent": "abutalib",
+"en": "'Aqil",
+"tr": "Akîl",
+"ar": "عقيل",
+"kind": "person"
+},
+{
+"id": "jafar",
+"parent": "abutalib",
+"en": "Ja'far al-Tayyar",
+"tr": "Ca'fer-i Tayyâr",
+"ar": "جعفر الطيار",
+"kind": "person"
+},
+{
+"id": "ali",
+"parent": "abutalib",
+"en": "'Ali b. Abi Talib",
+"tr": "Hz. Ali",
+"ar": "علي بن أبي طالب",
+"kind": "caliph",
+"note": {
+"en": "The fourth caliph; the first Imam of the Shia. Married Fatima, the Prophet's daughter ﷺ.",
+"tr": "Dördüncü halife; Şîa'nın ilk İmamı. Peygamber'in ﷺ kızı Fâtıma ile evlendi."
+}
+},
+{
+"id": "hasan",
+"parent": "ali",
+"en": "al-Hasan",
+"tr": "Hz. Hasan",
+"ar": "الحسن",
+"kind": "imam",
+"note": {
+"en": "Son of 'Ali and Fatima.",
+"tr": "Ali ile Fâtıma'nın oğlu."
+}
+},
+{
+"id": "husayn",
+"parent": "ali",
+"en": "al-Husayn",
+"tr": "Hz. Hüseyin",
+"ar": "الحسين",
+"kind": "imam",
+"note": {
+"en": "Son of 'Ali and Fatima.",
+"tr": "Ali ile Fâtıma'nın oğlu."
+}
+},
+{
+"id": "ibnalhanafiyya",
+"parent": "ali",
+"en": "Muhammad b. al-Hanafiyya",
+"tr": "Muhammed b. el-Hanefiyye",
+"ar": "محمد بن الحنفية",
+"kind": "person"
+},
+{
+"id": "sajjad",
+"parent": "husayn",
+"en": "'Ali Zayn al-'Abidin",
+"tr": "Ali Zeynelâbidîn",
+"ar": "علي زين العابدين",
+"kind": "imam"
+},
+{
+"id": "baqir",
+"parent": "sajjad",
+"en": "Muhammad al-Baqir",
+"tr": "Muhammed el-Bâkır",
+"ar": "محمد الباقر",
+"kind": "imam"
+},
+{
+"id": "sadiq",
+"parent": "baqir",
+"en": "Ja'far al-Sadiq",
+"tr": "Ca'fer es-Sâdık",
+"ar": "جعفر الصادق",
+"kind": "imam"
+},
+{
+"id": "kazim",
+"parent": "sadiq",
+"en": "Musa al-Kazim",
+"tr": "Mûsâ el-Kâzım",
+"ar": "موسى الكاظم",
+"kind": "imam"
+},
+{
+"id": "rida",
+"parent": "kazim",
+"en": "'Ali al-Rida",
+"tr": "Ali er-Rızâ",
+"ar": "علي الرضا",
+"kind": "imam"
+},
+{
+"id": "jawad",
+"parent": "rida",
+"en": "Muhammad al-Jawad",
+"tr": "Muhammed el-Cevâd",
+"ar": "محمد الجواد",
+"kind": "imam"
+},
+{
+"id": "hadi",
+"parent": "jawad",
+"en": "'Ali al-Hadi",
+"tr": "Ali el-Hâdî",
+"ar": "علي الهادي",
+"kind": "imam"
+},
+{
+"id": "askari",
+"parent": "hadi",
+"en": "al-Hasan al-'Askari",
+"tr": "Hasan el-Askerî",
+"ar": "الحسن العسكري",
+"kind": "imam"
+},
+{
+"id": "mahdi",
+"parent": "askari",
+"en": "Muhammad al-Mahdi",
+"tr": "Muhammed el-Mehdî",
+"ar": "محمد المهدي",
+"kind": "imam",
+"note": {
+"en": "The twelfth Imam of the Twelver Shia, in occultation in their belief.",
+"tr": "On İki İmam Şîası'na göre on ikinci İmam; onların inancında gaybettedir."
+},
+"disputed": {
+"en": "Most Sunni historians and genealogists record that al-Hasan al-'Askari left no son; the Twelver Shia hold that this son was born and is in occultation.",
+"tr": "Sünnî tarihçi ve nesepçilerin çoğu Hasan el-Askerî'nin oğul bırakmadığını kaydeder; On İki İmam Şîası bu oğlun doğduğunu ve gaybette olduğunu kabul eder."
+}
+},
+{
+"id": "zayd_b_ali",
+"parent": "sajjad",
+"en": "Zayd b. 'Ali",
+"tr": "Zeyd b. Ali",
+"ar": "زيد بن علي",
+"kind": "person",
+"note": {
+"en": "The Imam of the Zaydiyya.",
+"tr": "Zeydiyye'nin imamı."
+}
+}
+]
+}
+},
+"written": [
+"prophets",
+"quraysh"
+],
+"prophet_words": [
+[
+"adam",
+"آدم",
+[
+"خلق الله آدم",
+"خلق آدم",
+"يا آدم",
+"احتج آدم",
+"فيأتون آدم",
+"أبو البشر",
+"أبونا آدم",
+"آدم وموسى",
+"حاج آدم"
+]
+],
+[
+"shith",
+"شيث",
+[]
+],
+[
+"idris",
+"إدريس",
+[
+"مرحبا بالنبي الصالح والأخ الصالح ثم مررت بإدريس",
+"بإدريس"
+]
+],
+[
+"nuh",
+"نوح",
+[
+"يا نوح",
+"فيأتون نوحا",
+"أول الرسل",
+"قوم نوح",
+"نوحا"
+]
+],
+[
+"hud",
+"هود",
+[
+"قوم هود",
+"عاد قوم هود"
+]
+],
+[
+"salih",
+"صالح النبي",
+[
+"ناقة صالح",
+"قوم صالح",
+"نبي الله صالح"
+]
+],
+[
+"ibrahim",
+"إبراهيم",
+[
+"خليل الرحمن",
+"خليل الله",
+"ملة إبراهيم",
+"آل إبراهيم",
+"فيأتون إبراهيم",
+"أبينا إبراهيم",
+"اختتن إبراهيم",
+"إبراهيم خليل"
+]
+],
+[
+"lut",
+"لوط",
+[
+"قوم لوط",
+"يرحم الله لوطا",
+"آل لوط"
+]
+],
+[
+"ismail",
+"إسماعيل",
+[
+"أبيكم إسماعيل",
+"بني إسماعيل",
+"ولد إسماعيل",
+"أم إسماعيل"
+]
+],
+[
+"ishaq",
+"إسحاق",
+[
+"بني إسحاق"
+]
+],
+[
+"yaqub",
+"يعقوب",
+[
+"إسرائيل يعقوب"
+]
+],
+[
+"yusuf",
+"يوسف",
+[
+"صواحب يوسف",
+"إخوة يوسف",
+"الكريم ابن الكريم ابن الكريم",
+"شطر الحسن"
+]
+],
+[
+"ayyub",
+"أيوب",
+[
+"بينا أيوب",
+"أيوب يغتسل"
+]
+],
+[
+"shuayb",
+"شعيب",
+[
+"قوم شعيب",
+"خطيب الأنبياء"
+]
+],
+[
+"dhulkifl",
+"ذو الكفل",
+[
+"ذا الكفل",
+"ذي الكفل"
+]
+],
+[
+"musa",
+"موسى",
+[
+"موسى بن عمران",
+"يا موسى",
+"فيأتون موسى",
+"نبي الله موسى",
+"كليم الله",
+"لقي آدم موسى",
+"احتج آدم وموسى",
+"صلاة موسى",
+"صوم موسى",
+"نجى الله موسى"
+]
+],
+[
+"harun",
+"هارون",
+[
+"هارون من موسى",
+"هارون أخي",
+"هارون أخو موسى"
+]
+],
+[
+"ilyas",
+"إلياس",
+[]
+],
+[
+"alyasa",
+"اليسع",
+[]
+],
+[
+"yunus",
+"يونس",
+[
+"يونس بن متى",
+"ذا النون",
+"ذو النون",
+"دعوة ذي النون",
+"صاحب الحوت"
+]
+],
+[
+"dawud",
+"داود",
+[
+"صيام داود",
+"صوم داود",
+"صلاة داود",
+"نبي الله داود",
+"آل داود",
+"مزامير آل داود",
+"داود النبي",
+"زبور"
+]
+],
+[
+"sulayman",
+"سليمان",
+[
+"نبي الله سليمان",
+"سليمان بن داود عليهما السلام"
+]
+],
+[
+"zakariyya",
+"زكريا",
+[
+"كان زكريا نجارا",
+"زكريا نجارا"
+]
+],
+[
+"yahya",
+"يحيى",
+[
+"يحيى بن زكريا عليهما السلام",
+"ابني الخالة"
+]
+],
+[
+"isa",
+"عيسى",
+[
+"ابن مريم",
+"عيسى ابن مريم",
+"عيسى بن مريم",
+"المسيح ابن مريم",
+"روح الله",
+"فيأتون عيسى",
+"ينزل عيسى",
+"نزول عيسى"
+]
+]
+],
+"honoured": [
+"عليه السلام",
+"عليه الصلاة والسلام",
+"صلى الله عليه وسلم",
+"صلوات الله عليه"
+],
+"road_b_only_own": [
+"musa"
+],
+"not_him": "(?:^|\\s)(?:بن|ابن|ابو|ابي|ابا|ام|عبد|الحسن|جعفر)\\s+$",
+"name_head": [
+"عبد",
+"عبيد",
+"أبو",
+"أبي",
+"أبا",
+"أم"
+],
+"life_nodes": [
+[
+"muhammad",
+"quraysh",
+"muhammad"
+],
+[
+"abu-bakr",
+"quraysh",
+"abubakr"
+],
+[
+"umar",
+"quraysh",
+"umar"
+],
+[
+"uthman",
+"quraysh",
+"uthman"
+],
+[
+"ali",
+"quraysh",
+"ali"
+],
+[
+"fatima",
+"quraysh",
+"fatima"
+],
+[
+"hasan-b-ali",
+"quraysh",
+"hasan"
+],
+[
+"husayn-b-ali",
+"quraysh",
+"husayn"
+],
+[
+"ibn-abbas",
+"quraysh",
+"abdallah_ibnabbas"
+],
+[
+"muawiya",
+"quraysh",
+"muawiya"
+]
+]
+}

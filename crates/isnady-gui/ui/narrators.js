@@ -321,8 +321,8 @@ async function rowMenu(e, id) {
   if (!r) return;
   popupAt(e, [
     act("Open", () => { markRow(id); openNarrator(id); }),
-    act("His family", () => show("genealogies")),
-    act("His line of learning", () => show("genealogies")),
+    act("His family", () => openGenealogy(id, "family")),
+    act("His line of learning", () => openGenealogy(id, "learning")),
     act("His entry in the rijal work", () => openInBookOf(id)),
     SEP,
     bookmarkAct("narrator", r.key, r.title, r.arabic, r.marked),
@@ -622,7 +622,8 @@ function wireNarratorView() {
     if (h) { showChain(h.dataset.book, h.dataset.number); return; }
     const m = e.target.closest(".n-mark.go");
     if (m) { openBookAt(m.dataset.key); return; }
-    if (e.target.closest("[data-tree]")) { show("genealogies"); return; }
+    const tr = e.target.closest("[data-tree]");
+    if (tr) { openGenealogy(NARR.id, tr.dataset.tree); return; }
     const name = e.target.closest("a[data-name]");
     if (name) {
       // a teacher or student named in his life: looked for among the narrators

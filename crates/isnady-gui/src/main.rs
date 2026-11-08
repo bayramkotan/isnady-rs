@@ -6,8 +6,9 @@
 
 use isnady_core::narrators::Person;
 use isnady_core::{
-    bookmarks, books, config, db, huffaz, i18n, isnad, lives, name_parts, names, narrators, paths,
-    people, py, quran, readmarks, sahaba, scholars, search, tables, works, VERSION,
+    bookmarks, books, config, db, genealogy, huffaz, i18n, isnad, learn, lives, name_parts, names,
+    narrators, paths, people, py, quran, readmarks, sahaba, scholars, search, sira, tables, works,
+    VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -2085,6 +2086,487 @@ fn hadith_cards(
     })
 }
 
+// ------------------------------------------------------------------ Sira (gui/sira_page.py)
+
+fn sira_event_json(e: &sira::Event, lang: &str) -> Value {
+    json!({"id": e.id, "period": e.period, "year": e.year, "title": sira::text(&e.title, lang),
+           "year_label": sira::year_label(e, lang)})
+}
+
+/// Sira: the periods and the events, for the timeline and the list.
+#[tauri::command]
+fn sira_events() -> Value {
+    let lang = i18n::ui_language();
+    json!({
+        "periods": sira::periods().iter().map(|(k, v)| json!({"key": k, "name": sira::text(v, &lang)})).collect::<Vec<_>>(),
+        "events": sira::all().iter().map(|e| sira_event_json(e, &lang)).collect::<Vec<_>>(),
+    })
+}
+
+/// Sira: one event (sira_page.show_event) — its date, place, age, text, where reports differ, the verses, Ibn Hisham's
+/// chapter (when imported) and how many hadith of the Sunni books say its phrase.
+#[tauri::command]
+fn sira_event(state: tauri::State<Data>, id: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let Some(e) = sira::find(&id) else {
+        return Ok(json!({"error": "no_event"}));
+    };
+    let (chapter, count) = with_db(&state, |conn| {
+        let count = if e.phrase.is_empty() {
+            None
+        } else {
+            sira::hadith_counts(conn)
+                .ok()
+                .and_then(|c| c.get(&e.id).copied())
+        };
+        Ok((sira::sira_chapter(conn, e), count))
+    })
+    .unwrap_or((None, None));
+    let mut out = sira_event_json(e, &lang);
+    out["arabic"] = json!(e.title.get("ar").cloned().unwrap_or_default());
+    out["period_name"] = json!(sira::period_name(&e.period, &lang));
+    out["when"] = json!(sira::text(&e.when, &lang));
+    out["place"] = json!(sira::text(&e.place, &lang));
+    out["age"] = json!(sira::age(e));
+    out["text"] = json!(sira::text(&e.text, &lang));
+    out["differ"] = json!(e.differ.as_ref().map(|d| sira::text(d, &lang)));
+    out["quran"] = json!(e
+        .quran
+        .iter()
+        .map(|(s, a, b)| json!({"sura": s, "aya": a, "label": quran::label(*s, *a, *b, &lang)}))
+        .collect::<Vec<_>>());
+    out["sira"] = json!(e.sira);
+    out["chapter"] = json!(chapter);
+    out["phrase"] = json!(e.phrase);
+    out["count"] = json!(count);
+    Ok(out)
+}
+
+// ------------------------------------------------------------------ Genealogies (gui/genealogy_page.py)
+
+fn tree_json(tree: &genealogy::Tree, lang: &str) -> Value {
+    let nodes: serde_json::Map<String, Value> = tree
+        .order
+        .iter()
+        .map(|id| {
+            let n = &tree.nodes[id];
+            (id.clone(), json!({"id": n.id, "name": n.name(lang), "arabic": n.names.get("ar").cloned().unwrap_or_default(),
+                "en": n.names.get("en"), "tr": n.names.get("tr"),
+                "kind": n.kind, "parent": n.parent, "gap": n.gap, "disputed": n.disputed.is_some().then(|| n.text("disputed", lang)),
+                "note": n.note.is_some().then(|| n.text("note", lang)), "person": n.person_id, "count": n.count,
+                "children": n.children}))
+        })
+        .collect();
+    json!({"key": tree.key, "title": tree.title, "root": tree.root, "up": tree.up, "nodes": nodes})
+}
+
+/// The narrator most often in the imported chains: the one the family and learning views open with.
+fn first_narrator(conn: &db::Connection) -> Option<i64> {
+    conn.query_row(
+        "SELECT person_id FROM isnad_links WHERE person_id IS NOT NULL GROUP BY person_id ORDER BY COUNT(*) DESC LIMIT 1",
+        [],
+        |r| r.get(0),
+    )
+    .ok()
+}
+
+/// Genealogies: one tree (genealogy_page.show_view) — a written one, or a narrator's family or line of learning.
+#[tauri::command]
+fn genealogy_view(
+    state: tauri::State<Data>,
+    key: String,
+    person: Option<i64>,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    if genealogy::is_written(&key) {
+        let tree = genealogy::written(&key, &lang).ok_or("no tree")?;
+        return Ok(json!({"key": key, "tree": tree_json(&tree, &lang)}));
+    }
+    with_db(&state, |conn| {
+        let langs = page_langs(&lang);
+        let Some(pid) = person.or_else(|| first_narrator(conn)) else {
+            return Ok(json!({"key": key, "none": true}));
+        };
+        if key == "family" {
+            let count = genealogy::family_count(conn);
+            return match genealogy::family(conn, pid, langs).map_err(err)? {
+                Some(tree) => Ok(
+                    json!({"key": key, "person": pid, "tree": tree_json(&tree, &lang), "family_count": count}),
+                ),
+                None => Ok(
+                    json!({"key": key, "person": pid, "no_kin": genealogy::person_name(conn, pid, langs),
+                                  "family_count": count}),
+                ),
+            };
+        }
+        let tree = genealogy::learning(conn, pid, 2, 4, langs).map_err(err)?;
+        Ok(json!({"key": key, "person": pid, "tree": tree_json(&tree, &lang)}))
+    })
+}
+
+/// Genealogies: what the side panel shows of a box beyond the tree itself — his life (written for isnady), the hadith
+/// that name a prophet, his entry as a narrator, the stars.
+#[tauri::command]
+fn genealogy_node(
+    state: tauri::State<Data>,
+    key: String,
+    node: String,
+    person: Option<i64>,
+    current: Option<i64>,
+) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let written = genealogy::is_written(&key);
+    let mut out = json!({});
+    let life_id = if !written {
+        None
+    } else if node == "muhammad" {
+        Some("muhammad")
+    } else {
+        genealogy::node_life(&key, &node)
+    };
+    let db_part = with_db(&state, |conn| {
+        let mut extra = json!({});
+        if let Some(l) = life_id.and_then(genealogy::life_by_id) {
+            extra["life"] = json!(lives::view(l, &lang));
+            if node != "muhammad" {
+                extra["life_person"] = json!(lives::person_of(conn, l));
+            }
+        } else if written && genealogy::has_prophet_words(&node) {
+            let found = genealogy::prophet_hadith(conn, &node, 40).map_err(err)?;
+            let named = |items: &[genealogy::Named]| -> Vec<Value> {
+                items
+                    .iter()
+                    .map(|i| {
+                        let title = works::book_title(&i.book, &i.book, &lang);
+                        json!({"hadith": i.hadith_id, "label": format!("{title} {}", i.number)})
+                    })
+                    .collect()
+            };
+            extra["prophet"] = json!({"total": found.total, "sunni": named(&found.sunni), "shia": named(&found.shia),
+                                      "count_sunni": found.count_sunni, "count_shia": found.count_shia});
+        }
+        if let Some(pid) = person {
+            extra["narrator"] = narrator_ref(conn, pid, &lang).unwrap_or(Value::Null);
+        }
+        // ☆ for this place in the genealogy (BM2): a box of a written tree, or the family / line of learning shown
+        let tree_ref = if written {
+            genealogy::written(&key, &lang).and_then(|t| {
+                t.nodes.get(&node).map(|n| {
+                    json!({"ref": format!("{key}:{}", n.id), "title": n.name(&lang),
+                           "subtitle": n.names.get("ar").cloned().unwrap_or_default()})
+                })
+            })
+        } else if person.is_some() && person == current {
+            narrator_ref(conn, person.expect("person"), &lang).map(|r| {
+                json!({"ref": format!("{key}:{}", r["key"].as_str().unwrap_or("")), "title": r["title"],
+                       "subtitle": r["arabic"]})
+            })
+        } else {
+            None
+        };
+        if let Some(mut r) = tree_ref {
+            r["marked"] = json!(bookmarks::is_marked(
+                "tree",
+                r["ref"].as_str().unwrap_or("")
+            ));
+            extra["tree_star"] = r;
+        }
+        Ok(extra)
+    });
+    if let Ok(extra) = db_part {
+        out = extra;
+    } else if let Some(l) = life_id.and_then(genealogy::life_by_id) {
+        out["life"] = json!(lives::view(l, &lang));
+    }
+    Ok(out)
+}
+
+/// Genealogies: where a narrator's written life stands in a written tree — (tree, box) — for "his place in the tree".
+#[tauri::command]
+fn genealogy_place_of(state: tauri::State<Data>, person: i64) -> Result<Value, String> {
+    with_db(&state, |conn| {
+        Ok(lives::of_person(conn, person)
+            .and_then(|l| l["id"].as_str())
+            .and_then(genealogy::life_node)
+            .map(|(t, n)| json!([t, n]))
+            .unwrap_or(Value::Null))
+    })
+}
+
+/// Genealogies: the boxes of a written tree whose names hold every word, the closest name first.
+#[tauri::command]
+fn genealogy_find_in_tree(key: String, text: String) -> Vec<String> {
+    genealogy::written(&key, "en")
+        .map(|t| {
+            genealogy::find(&t, &text)
+                .iter()
+                .map(|n| n.id.clone())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Genealogies: the narrators found for the words typed (the family and learning views).
+#[tauri::command]
+fn genealogy_find_narrators(state: tauri::State<Data>, text: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    with_db(&state, |conn| {
+        let (rows, _n) = narrators::find(conn, &text, None, page_langs(&lang)).map_err(err)?;
+        Ok(json!(rows.into_iter().take(30).collect::<Vec<_>>()))
+    })
+}
+
+// ------------------------------------------------------------------ Bookmarks (gui/bookmarks_page.py)
+
+/// Bookmarks: the folders as a tree and the items of the folder chosen (bookmarks_page.refresh, _fill).
+#[tauri::command]
+fn bookmarks_page(state: tauri::State<Data>, folder: String) -> Result<Value, String> {
+    let lang = i18n::ui_language();
+    let store = bookmarks::Store::load();
+    let folder =
+        if folder != "__all__" && folder != "__unfiled__" && store.folder(&folder).is_none() {
+            "__all__".to_string()
+        } else {
+            folder
+        };
+    fn tree(store: &bookmarks::Store, parent: Option<&str>) -> Vec<Value> {
+        store
+            .children(parent)
+            .into_iter()
+            .map(|f| {
+                json!({"id": f.id, "name": f.name, "path": store.path_of(&f.id), "count": store.in_folder(Some(&f.id)).len(),
+                       "children": tree(store, Some(&f.id))})
+            })
+            .collect()
+    }
+    let items: Vec<&bookmarks::Item> = match folder.as_str() {
+        "__all__" => store.items.iter().collect(),
+        "__unfiled__" => store.unfiled(),
+        f => store.in_folder(Some(f)),
+    };
+    let conn = with_db(&state, |_| Ok(())).ok();
+    let guard = state.0.lock().map_err(err)?;
+    let db = if conn.is_some() { guard.as_ref() } else { None };
+    let rows: Vec<Value> = items
+        .iter()
+        .map(|i| {
+            json!({"id": i.id, "kind": i.kind, "ref": i.reference, "title": i.title, "subtitle": i.subtitle, "note": i.note,
+                   "detail": bookmarks::detail(db, i, &lang),
+                   "folders": i.folders.iter().filter(|f| store.folder(f).is_some()).map(|f| json!({"id": f, "path": store.path_of(f)})).collect::<Vec<_>>()})
+        })
+        .collect();
+    Ok(json!({"folder": folder, "heading": match folder.as_str() {
+                  "__all__" | "__unfiled__" => Value::Null, f => json!(store.path_of(f)) },
+              "total": store.items.len(), "unfiled": store.unfiled().len(), "tree": tree(&store, None),
+              "folders": store.folders.iter().map(|f| json!({"id": f.id, "path": store.path_of(&f.id)})).collect::<Vec<_>>(),
+              "items": rows}))
+}
+
+/// Bookmarks: one change to the store (the page's buttons and menus); the page draws itself again after.
+#[tauri::command]
+fn bookmarks_change(
+    action: String,
+    item: Option<String>,
+    folder: Option<String>,
+    name: Option<String>,
+    on: Option<bool>,
+) -> Result<Value, String> {
+    let mut store = bookmarks::Store::load();
+    let item = item.unwrap_or_default();
+    let name = name.unwrap_or_default();
+    let mut made: Option<String> = None;
+    match action.as_str() {
+        "remove" => {
+            store.remove(&item);
+        }
+        "note" => store.set_note(&item, &name),
+        "file" => {
+            let f = folder.unwrap_or_default();
+            if on.unwrap_or(true) {
+                store.file_in(&item, &f);
+            } else {
+                store.take_out(&item, &f);
+            }
+        }
+        "new_folder" => {
+            if name.trim().is_empty() {
+                return Ok(Value::Null);
+            }
+            let f = match folder.as_deref() {
+                Some(parent) => Some(store.new_folder(&name, Some(parent))),
+                None => store.ensure_path(&name),
+            };
+            if let Some(f) = f {
+                if !item.is_empty() {
+                    store.file_in(&item, &f.id);
+                }
+                made = Some(f.id);
+            }
+        }
+        "rename" => store.rename_folder(folder.as_deref().unwrap_or(""), &name),
+        "move" => store.move_folder(
+            folder.as_deref().unwrap_or(""),
+            Some(name.as_str()).filter(|n| !n.is_empty()),
+        ),
+        "delete" => store.delete_folder(folder.as_deref().unwrap_or("")),
+        _ => return Err(format!("unknown action {action}")),
+    }
+    store.save().map_err(err)?;
+    Ok(json!(made))
+}
+
+/// Bookmarks: where a bookmark leads — (kind, target) to open, or null when it is not in the database now.
+#[tauri::command]
+fn bookmark_target(state: tauri::State<Data>, id: String) -> Result<Value, String> {
+    let store = bookmarks::Store::load();
+    let Some(item) = store.item(&id).cloned() else {
+        return Ok(Value::Null);
+    };
+    if item.kind == "scholar" || item.kind == "term" {
+        return Ok(json!({"kind": item.kind, "target": item.reference, "title": item.title}));
+    }
+    with_db(&state, |conn| {
+        let target = match item.kind.as_str() {
+            "tree" => {
+                bookmarks::resolve_tree(Some(conn), &item.reference).map(|(w, t)| json!([w, t]))
+            }
+            "hadith" => bookmarks::resolve_hadith(conn, &item.reference).map(|x| json!(x)),
+            "narrator" => bookmarks::resolve_narrator(conn, &item.reference).map(|x| json!(x)),
+            _ => bookmarks::resolve_chapter(conn, &item.reference).map(|x| json!(x)),
+        };
+        Ok(json!({"kind": item.kind, "target": target, "title": item.title}))
+    })
+}
+
+// ------------------------------------------------------------------ Learn (gui/learn_page.py)
+
+fn learn_lang(lang: Option<String>) -> String {
+    if let Some(l) = lang.filter(|l| learn::languages().iter().any(|(c, _)| c == l)) {
+        return l;
+    }
+    let ui = i18n::ui_language();
+    if learn::languages().iter().any(|(c, _)| *c == ui) {
+        return ui;
+    }
+    config::state_get("learn.language")
+        .and_then(|v| v.as_str().map(String::from))
+        .filter(|l| learn::languages().iter().any(|(c, _)| c == l))
+        .unwrap_or_else(|| "en".into())
+}
+
+/// Learn: the list — the articles of History and method and the terms by category, those that hold the words typed.
+#[tauri::command]
+fn learn_list(lang: Option<String>, query: String) -> Value {
+    let lang = learn_lang(lang);
+    let found: std::collections::HashSet<String> = learn::search(&query)
+        .iter()
+        .map(|t| learn::field(t, "id"))
+        .collect();
+    let cats: Vec<Value> = learn::categories()
+        .keys()
+        .map(|k| {
+            let members: Vec<Value> = learn::terms()
+                .iter()
+                .filter(|t| learn::field(t, "cat") == *k && found.contains(&learn::field(t, "id")))
+                .map(|t| {
+                    json!({"id": learn::field(t, "id"), "name": learn::name(t, &lang), "ar": learn::field(t, "ar"),
+                           "en": learn::field(t, "en"), "short": learn::text(t, "short", &lang)})
+                })
+                .collect();
+            json!({"key": k, "name": learn::category(k, &lang), "terms": members})
+        })
+        .collect();
+    let arts: Vec<Value> = learn::search_articles(&query, &lang)
+        .iter()
+        .map(|a| json!({"id": a["id"], "title": learn::say_text(&a["title"], &lang), "lead": learn::say_text(&a["lead"], &lang)}))
+        .collect();
+    json!({"lang": lang, "languages": learn::languages(), "count": learn::terms().len(),
+           "history": learn::label("category", &lang), "articles": arts, "categories": cats,
+           "category_names": learn::categories().keys().map(|k| json!([k, learn::category(k, &lang)])).collect::<Vec<_>>()})
+}
+
+/// Learn: the language chosen on the page (kept for the session and the next start, learn.language).
+#[tauri::command]
+fn learn_set_language(lang: String) {
+    config::state_set("learn.language", json!(lang));
+}
+
+/// Learn: one term's card (learn_page.show_term).
+#[tauri::command]
+fn learn_term(lang: Option<String>, id: String) -> Value {
+    let lang = learn_lang(lang);
+    let Some(t) = learn::get(&id) else {
+        return Value::Null;
+    };
+    let cat = learn::field(t, "cat");
+    let others: Vec<Value> = learn::languages()
+        .iter()
+        .filter(|(c, _)| *c != lang && c != "ar")
+        .map(|(c, n)| json!([n, learn::name(t, c)]))
+        .collect();
+    let related: Vec<Value> = t["related"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|r| learn::get(r.as_str().unwrap_or("")))
+        .map(|r| {
+            json!({"id": learn::field(r, "id"), "cat": learn::field(r, "cat"), "name": learn::name(r, &lang),
+                   "ar": learn::field(r, "ar"), "category": learn::category(&learn::field(r, "cat"), &lang),
+                   "short": learn::text(r, "short", &lang)})
+        })
+        .collect();
+    let same: Vec<Value> = learn::terms()
+        .iter()
+        .filter(|x| learn::field(x, "cat") == cat && learn::field(x, "id") != id)
+        .map(|x| json!({"id": learn::field(x, "id"), "name": learn::name(x, &lang), "short": learn::text(x, "short", &lang)}))
+        .collect();
+    json!({"id": id, "lang": lang, "cat": cat, "category": learn::category(&cat, &lang), "name": learn::name(t, &lang),
+           "name_en": learn::name(t, "en"), "ar": learn::field(t, "ar"), "others": others,
+           "short": learn::text(t, "short", &lang), "long": learn::text(t, "long", &lang),
+           "source": learn::field(t, "source"), "related": related, "same": same,
+           "marked": bookmarks::is_marked("term", &id)})
+}
+
+/// Learn: one article of History and method (learn_page.show_article): its texts; the blocks are counted apart.
+#[tauri::command]
+fn learn_article(lang: Option<String>, id: String) -> Value {
+    let lang = learn_lang(lang);
+    let Some(a) = learn::article(&id) else {
+        return Value::Null;
+    };
+    let sections: Vec<Value> = a["sections"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|s| json!({"heading": learn::say_text(&s["heading"], &lang), "text": learn::say_list(&s["text"], &lang),
+                        "block": s["block"]}))
+        .collect();
+    json!({"id": id, "lang": lang, "title": learn::say_text(&a["title"], &lang), "lead": learn::say_text(&a["lead"], &lang),
+           "sections": sections, "sources": (!a["sources"].is_null()).then(|| learn::say_text(&a["sources"], &lang)),
+           "labels": {"history": learn::label("category", &lang), "sources": learn::label("sources", &lang),
+                      "more": learn::label("more", &lang), "counting": learn::label("counting", &lang),
+                      "no_data": learn::label("no_data", &lang), "live": learn::label("live", &lang)},
+           "others": learn::articles().iter().filter(|x| x["id"] != a["id"])
+               .map(|x| json!({"id": x["id"], "title": learn::say_text(&x["title"], &lang)})).collect::<Vec<_>>()})
+}
+
+/// Learn: one block of live numbers (counted once per change of the database, in a thread of its own).
+#[tauri::command]
+async fn learn_block(kind: String, lang: Option<String>) -> Value {
+    let lang = learn_lang(lang);
+    tauri::async_runtime::spawn_blocking(move || {
+        let conn = if kind == "timeline" {
+            None
+        } else {
+            db::connect(None).ok()
+        };
+        learn::block(conn.as_ref(), &kind, &lang).unwrap_or_default()
+    })
+    .await
+    .map(|rows| json!(rows))
+    .unwrap_or(Value::Null)
+}
+
 /// A number of the book chosen at random, of a hadith whose chain was read.
 #[tauri::command]
 fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<String>, String> {
@@ -2109,6 +2591,21 @@ fn main() {
             contents_chapter,
             random_number,
             scholars_list,
+            sira_events,
+            bookmarks_page,
+            bookmarks_change,
+            bookmark_target,
+            learn_list,
+            learn_set_language,
+            learn_term,
+            learn_article,
+            learn_block,
+            genealogy_view,
+            genealogy_node,
+            genealogy_place_of,
+            genealogy_find_narrators,
+            genealogy_find_in_tree,
+            sira_event,
             companions_groups,
             companion_group,
             hadith_cards,

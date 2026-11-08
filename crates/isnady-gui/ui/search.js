@@ -915,10 +915,15 @@ function starHtml(marked, kind, what) {
 
 const KIND_NAMES = { hadith: "Hadith", narrator: "Narrator", scholar: "Scholar", term: "Term", chapter: "Chapter", tree: "Genealogy" };
 
+// what the ☆ of each kind adds, said on the star itself (BM2)
+const KIND_ADD = { hadith: "Add this hadith to your bookmarks", narrator: "Add this narrator to your bookmarks",
+  scholar: "Add this scholar to your bookmarks", term: "Add this term to your bookmarks",
+  chapter: "Add this chapter to your bookmarks", tree: "Add this place in the genealogy to your bookmarks" };
+
 function starTip(marked, kind, title) {
   const what = `${t(KIND_NAMES[kind] || "")}: ${title}`;
   return marked ? t("In your bookmarks — click to take it out") + `\n${what}`
-    : t("Add this hadith to your bookmarks") + `\n${what}\n` + t("Bookmarks in the sidebar keeps them, in folders of your own.");
+    : t(KIND_ADD[kind] || "Add to your bookmarks") + `\n${what}\n` + t("Bookmarks in the sidebar keeps them, in folders of your own.");
 }
 
 function wireStar(button, kind, reference, title, subtitle) {
@@ -1024,7 +1029,7 @@ function wireStrip(el) {
     c.onclick = () => {
       if (c.dataset.act === "person") openNarratorPlace(Number(c.dataset.v));
       else if (c.dataset.act === "name") findNarrator(c.dataset.v);
-      else if (c.dataset.act === "end") later(["&View", "Genealogies"])();
+      else if (c.dataset.act === "end") openTree("quraysh", c.dataset.v);
     };
     c.addEventListener("contextmenu", (e) => {
       e.preventDefault();

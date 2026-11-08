@@ -5,6 +5,52 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Four pages more at once (Bayram: "Devam et. Önce ne kaldı onları listele sonra yukarıdaki gibi birçoğunu çöz").**
+  Sira, Genealogies, Bookmarks and Learn, each built again from its Python page and compared with the Python window
+  side by side; their commands print what `iy` prints, word for word.
+- **Sira as the Python window has it (RS8).** From gui/sira_page.py: the life of the Prophet ﷺ on one line — the three
+  periods as bands, every event a dot (stacked in the same year), the one chosen named above the line —, the events by
+  period in the list, an event (its period, date, time of year, place, his age; the text; where the reports differ;
+  the verses revealed about it; Read it in Ibn Hisham's Sira, when imported; the hadith that say its phrase, opening
+  Search with the words in that order), ‹ › to the event before and after, Back and Forward. The verses open the
+  Qur'an reader, which comes with RS10 (it says so). **`iy-rs sira [EVENT] [--lang] [--width]`** word for word as
+  `iy sira`. New in the core: `sira.rs`; gen_tables writes data/sira.json.
+- **Genealogies as the Python window has it (RS11).** From gui/genealogy_page.py: the prophets from Adam to Muhammad ﷺ,
+  Quraysh and the Prophet's family, a narrator's family read from the narrators' names, a narrator's line of learning
+  (teachers above, students below) — drawn as trees to drag, zoom (the wheel, − +, Whole tree) and click; dashed lines
+  where generations are not known, dashed boxes where the reports differ; the box chosen: its names, kind, whose son,
+  the children shown, how many generations from the root, the notes, his life (written for isnady), the hadith that
+  name a prophet (the Sunni and the Shia books apart, each opening in its book), Open in Narrators, His family, His line
+  of learning, ☆ the narrator and ☆ this place in the tree; find in a tree or a narrator, ★ the famous Companions. The
+  links that waited for this page now open it: the Narrators page (his family, his line of learning, his place in the
+  tree of Quraysh, and its right-click menu), the end of a chain on Isnad Chains and on Search, a member on Companions.
+  **`iy-rs tree prophets|quraysh|family|learning [NAME] [--depth] [--width] [--hadith]`** word for word as `iy tree`.
+  New in the core: `genealogy.rs` (the written trees, find, the families read from the names — kept while the
+  database is unchanged —, the lines of learning, the hadith that name a prophet); gen_tables writes
+  data/genealogy.json.
+- **Bookmarks as the Python window has it (RS13).** From gui/bookmarks_page.py: the folders as a tree (All bookmarks,
+  Not in a folder, folders inside folders, with their counts), a bookmark dragged onto a folder (or many, chosen with
+  Ctrl), every kind with its colour and sign, the detail line (a narrator's road, generation, death and verdict; a
+  genealogy's tree), the subtitle, its folders and its note; Open, Folders (ticks), Note, Remove; the right-click
+  menus of a bookmark and of a folder (new folder inside, rename, move into, delete); a bookmark opens where it
+  belongs (a hadith in its book, a narrator, a scholar, a term, a chapter, a place in a genealogy). Export and import
+  go with File → Export / Import, which come later (they say so). **`iy-rs bookmark list|folders|add|remove|export|
+  import`** as `iy bookmark`, on the same bookmarks.json. New in the core: the whole `bookmarks.Store` (folders,
+  paths, filing, merging) and the references of every kind. The ☆ of every kind now says what it adds (it said "this
+  hadith" on all of them).
+- **Learn as the Python window has it (RS13).** From gui/learn_page.py: the glossary in colour (each category its
+  colour and sign: the chips, the list, the band of a term's card, its short definition, its related terms), in
+  English, Türkçe or العربية, a search, a category alone; a term (its names, In short, In detail, the source, ☆, the
+  related terms, more of its category); History and method: the four articles with their blocks of numbers counted
+  live from this database (the corpus, the traces of writing, the mutawatir hadith, the timeline), each counted once
+  in a thread of its own. **`iy-rs term`** and **`iy-rs learn`** word for word as `iy term` and `iy learn`. New in the
+  core: `learn.rs`; gen_tables writes data/learn.json. The wordings are looked for as plain words between word
+  boundaries (the same matches as Python's regular expressions, in about a second instead of minutes).
+- **Fixed: Isnad Chains.** The Companions page (RS7) named some of its classes as Isnad Chains names its own
+  (`cp-row`, `cp-title` …): the rows of Isnad Chains took the Companions' height and line. The Companions' are now
+  `cmp-…`.
+- 32 more parity cases (164 in all).
+
 - **Three pages at once (Bayram: "bir sonraki evreye geç ama biraz çok yap. tek tek gitmeyelim").** Books, Hadith
   Scholars and Companions and the Household, each built again from its Python page and compared with the Python window
   side by side.

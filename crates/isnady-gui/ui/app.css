@@ -551,20 +551,166 @@ button.nlink.wide { white-space: pre; }
 .sb-num { width: 82px; flex: none; padding-inline-start: 8px; color: var(--muted); white-space: pre; }
 
 /* ------------------------------------------------------------------ Companions and the Household (gui/companions_page.py) */
-.cp-left { width: 340px; }
-.cp-row { min-height: 46px; box-sizing: border-box; display: flex; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--ink); line-height: normal; }
-.cp-row:hover, .cp-row.on { background: var(--lapis-soft); }
-.cp-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; }
-.cp-card-title { font-size: calc(15pt * var(--scale)); }
-.cp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
-.cp-member {
+.cmp-left { width: 340px; }
+.cmp-row { min-height: 46px; box-sizing: border-box; display: flex; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--ink); line-height: normal; }
+.cmp-row:hover, .cmp-row.on { background: var(--lapis-soft); }
+.cmp-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; }
+.cmp-card-title { font-size: calc(15pt * var(--scale)); }
+.cmp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.cmp-member {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 12px 16px;
   display: flex; flex-direction: column; gap: 3px; line-height: normal;
 }
-.cp-member:hover { border-color: var(--lapis); background: var(--lapis-soft); }
-.cp-member .lead { white-space: normal; }
-.cp-name { font-family: var(--heading); font-weight: 700; font-size: calc(14pt * var(--scale)); color: var(--ink); }
-.cp-ar { text-align: right; }
+.cmp-member:hover { border-color: var(--lapis); background: var(--lapis-soft); }
+.cmp-member .lead { white-space: normal; }
+.cmp-name { font-family: var(--heading); font-weight: 700; font-size: calc(14pt * var(--scale)); color: var(--ink); }
+.cmp-ar { text-align: right; }
+
+/* ------------------------------------------------------------------ Sira (gui/sira_page.py) */
+.page.sira-page { max-width: none; margin: 0; height: 100%; padding: 22px 24px; box-sizing: border-box; }
+.sr { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
+.sr-head { flex: none; gap: 4px; padding: 14px 20px 10px; }
+.sr-line { height: 118px; width: 100%; }
+.sr-line svg { display: block; }
+.sr-period { fill: var(--muted); font-size: calc(8pt * var(--scale)); text-anchor: middle; }
+.sr-mark { fill: var(--muted); font-size: calc(7.5pt * var(--scale)); text-anchor: middle; }
+.sr-tick { stroke: var(--muted); stroke-width: 1; }
+.sr-dot { stroke: var(--surface); stroke-width: 1.5; cursor: pointer; }
+.sr-dot.on { stroke: var(--ink); }
+.sr-current { fill: var(--ink); font-weight: 700; text-anchor: middle; }
+.sr-body { flex: 1; min-height: 0; display: flex; gap: 18px; }
+.sr-left {
+  position: relative; width: 340px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; min-height: 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r14); padding: 12px 14px;
+}
+.sr-period-head { font-weight: 700; padding: 6px 4px 2px; }
+.sr-row { min-height: 48px; box-sizing: border-box; padding: 4px 6px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--ink); line-height: normal; display: flex; flex-direction: column; justify-content: center; }
+.sr-row:hover, .sr-row.on { background: var(--lapis-soft); }
+.sr-card { padding: 12px 22px; }
+.sr-card:first-child { padding: 16px 22px; }
+.sr-top { display: flex; align-items: center; gap: 10px; }
+.sr-title { flex: 1; font-family: var(--heading); font-weight: 700; font-size: calc(22pt * var(--scale)); color: var(--ink); }
+.sr-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sr-stripe { height: 3px; border-radius: 1px; }
+.sr-ctitle { color: var(--ink); }
+.sr-differ { border-left: 3px solid var(--gold); padding-left: 8px; }
+.sr-nav { display: flex; justify-content: space-between; }
+.tag-lapis {
+  background: var(--lapis-soft); color: var(--lapis); border: 1px solid var(--lapis); border-radius: 8px;
+  padding: 1px 9px; font-size: calc(8.5pt * var(--scale)); font-weight: 600;
+}
+button.linkbtn { background: transparent; color: var(--lapis); border: none; padding: 2px 4px; font-weight: 600; cursor: pointer; text-align: start; }
+button.linkbtn:hover { color: var(--gold); }
+button.linkbtn:disabled { color: var(--muted); cursor: default; }
+
+/* ------------------------------------------------------------------ Genealogies (gui/genealogy_page.py) */
+.page.genealogy-page { max-width: none; margin: 0; height: 100%; padding: 20px 24px 18px; box-sizing: border-box; }
+.gt { display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
+.gt-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; white-space: nowrap; }
+.gt-top button.seg { padding: var(--p5) var(--p12); flex: none; }
+.gt-title { font-family: var(--heading); font-weight: 700; font-size: calc(22pt * var(--scale)); color: var(--ink); margin-inline-end: 16px; line-height: normal; }
+.gt-find { display: flex; gap: 6px; align-items: center; }
+#gt-q {
+  flex: 1; min-width: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
+  padding: var(--p5) var(--p8); font-size: inherit;
+}
+#gt-q:focus { outline: none; border-color: var(--lapis); }
+.gt-results { overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r7); flex: none; }
+.gt-results[hidden] { display: none; }
+.gt-result { padding: 3px 8px; cursor: pointer; color: var(--ink); line-height: normal; }
+.gt-result:hover { background: var(--lapis-soft); }
+.gt-result-head { padding: 3px 8px; font-weight: 700; color: var(--gold); }
+.gt-middle { flex: 1; min-height: 0; display: flex; gap: 14px; }
+.gt-board {
+  flex: 1; min-width: 0; position: relative; overflow: hidden; cursor: grab; background: var(--window);
+  border: 1px solid var(--border); border-radius: var(--r14);
+}
+.gt-board.dragging { cursor: grabbing; }
+.gt-board svg { width: 100%; height: 100%; display: block; user-select: none; }
+.gt-edge { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+.gt-gap { fill: none; stroke: var(--gold); stroke-width: 1.6; stroke-dasharray: 5 4; }
+.gt-box { cursor: pointer; }
+.gt-sel { fill: none; stroke: none; }
+.gt-box.on .gt-sel { stroke: var(--lapis); stroke-width: 3.2; }
+.gt-name { fill: var(--ink); text-anchor: middle; }
+.gt-ar { text-anchor: middle; direction: rtl; }
+.gt-side {
+  width: 380px; flex: none; box-sizing: border-box; overflow-y: auto; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r14); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; line-height: normal;
+}
+.gt-side > * { flex: none; }
+.gt-side .lead { white-space: normal; }
+.gt-name-big { font-family: var(--heading); font-weight: 700; font-size: calc(17pt * var(--scale)); color: var(--ink); }
+.gt-ar-big { text-align: right; font-weight: 700; }
+.gt-sub { font-family: var(--heading); font-weight: 700; font-size: calc(14pt * var(--scale)); color: var(--ink); }
+.gt-disputed { background: var(--gilt); color: var(--ink); border-radius: 8px; padding: 6px 8px; }
+.gt-links { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.gt-star { display: flex; align-items: center; gap: 6px; }
+.gt-caption { flex: none; line-height: normal; }
+
+/* ------------------------------------------------------------------ Learn (gui/learn_page.py) */
+.ln-left { width: 400px; }
+.ln-title { font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); line-height: normal; }
+#ln-q {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
+  padding: var(--p5) var(--p8); font-size: inherit; flex: none;
+}
+#ln-q:focus { outline: none; border-color: var(--lapis); }
+.ln-chips, .ln-flow { display: flex; flex-wrap: wrap; gap: 5px; flex: none; }
+.ln-flow { gap: 8px; }
+button.ln-chip { border-radius: 11px; padding: 3px 10px; cursor: pointer; font-size: inherit; }
+.ln-head { font-weight: 700; padding: 4px 2px 2px; }
+.ln-row { padding: 2px 4px 2px 18px; cursor: pointer; color: var(--ink); line-height: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln-row:hover, .ln-row.on { background: var(--lapis-soft); }
+.ln-right { gap: 14px; }
+.ln-card { padding: 0 0 22px; gap: 12px; overflow: hidden; }
+.ln-band { color: white; font-weight: 600; padding: 7px 14px; white-space: pre; }
+.ln-inner { padding: 4px 28px 0; display: flex; flex-direction: column; gap: 12px; }
+.ln-top { display: flex; align-items: center; gap: 10px; }
+.ln-name { flex: 1; font-family: var(--heading); font-weight: 700; font-size: calc(30pt * var(--scale)); line-height: normal; }
+.ln-article-title { font-size: calc(26pt * var(--scale)); }
+.ln-top .star { align-self: flex-start; }
+.ln-short { border-left: 5px solid; border-radius: 8px; padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+.ln-short-text { font-family: var(--heading); font-weight: 700; font-size: 11pt; color: var(--ink); line-height: normal; }
+.ln-long { font-family: var(--heading); font-size: 11pt; color: var(--ink); line-height: normal; white-space: pre-line; }
+.ln-heading { font-weight: 700; letter-spacing: 1px; font-size: 11px; }
+.ln-gap { height: 6px; }
+.ln-source { background: var(--pill); border-radius: 8px; padding: 6px 10px; }
+.ln-more { padding: 14px 24px 16px; }
+.ln-numbers { border: 1px solid; border-radius: 10px; background: var(--surface); padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ln-grid { display: grid; grid-template-columns: minmax(240px, 2fr) auto minmax(0, 3fr); column-gap: 18px; row-gap: 5px; align-items: baseline; }
+.ln-grid.timeline { grid-template-columns: minmax(150px, auto) 1fr; }
+.ln-road { grid-column: 1 / -1; font-weight: 700; padding-top: 8px; }
+.ln-value.big { font-family: var(--heading); font-size: calc(15pt * var(--scale)); }
+.ln-what { color: var(--ink); }
+
+/* ------------------------------------------------------------------ Bookmarks (gui/bookmarks_page.py) */
+.bm-left { width: 330px; }
+.bm-buttons { display: flex; gap: 6px; flex: none; }
+.bm-folder { padding: 4px 6px; cursor: pointer; color: var(--ink); line-height: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 6px; }
+.bm-folder:hover, .bm-folder.on { background: var(--lapis-soft); }
+.bm-folder.drop { outline: 2px solid var(--lapis); }
+.bm-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.bm-bar { display: flex; align-items: center; gap: 8px; flex: none; }
+.bm-heading { flex: 1; font-family: var(--heading); font-weight: 700; font-size: calc(20pt * var(--scale)); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: normal; }
+#bm-q {
+  width: 240px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--r7);
+  padding: var(--p5) var(--p8); font-size: inherit;
+}
+#bm-q:focus { outline: none; border-color: var(--lapis); }
+.bm-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.bm-list > * { flex: none; }
+.bm-item {
+  background: var(--surface); border: 1px solid var(--border); border-inline-start: 5px solid; border-radius: var(--r14);
+  padding: 10px 12px 10px 16px; display: flex; flex-direction: column; gap: 4px; line-height: normal; cursor: default;
+}
+.bm-item.on { background: var(--lapis-soft); }
+.bm-top { display: flex; align-items: center; gap: 6px; }
+.bm-pill { background: var(--pill); border-radius: 9px; padding: 1px 8px; font-weight: 600; white-space: nowrap; }
+.bm-title { flex: 1; min-width: 0; font-family: var(--heading); font-weight: 700; font-size: calc(14pt * var(--scale)); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-ar { text-align: right; }
+.bm-note { color: var(--ink); background: var(--gilt); border-radius: 6px; padding: 4px 8px; white-space: pre-line; }
+.bm-empty[hidden] { display: none; }
 
 /* ------------------------------------------------------------------ Isnad Chains (gui/isnad_page.py) */
 #main:has(> .chains-page:not([hidden])) { padding: 0; overflow: hidden; }

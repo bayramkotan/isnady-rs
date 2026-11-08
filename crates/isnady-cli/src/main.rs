@@ -4,8 +4,8 @@
 
 use clap::{Parser, Subcommand};
 use isnady_core::{
-    db, grades, huffaz, i18n, isnad, lives, narrators, paths, people, py, readmarks, sahaba,
-    scholars, search, tables, works, VERSION,
+    bookmarks, db, genealogy, grades, huffaz, i18n, isnad, learn, lives, narrators, paths, people,
+    py, quran, readmarks, sahaba, scholars, search, sira, tables, works, VERSION,
 };
 use std::collections::HashMap;
 use std::process::ExitCode;
@@ -56,6 +56,90 @@ enum Command {
     /// The ten promised Paradise, the people of the cloak, the Mothers of the Believers; the Fourteen Infallibles on the
     /// Shia road
     Group(GroupArgs),
+    /// The life of the Prophet as a timeline: events, dates, verses, Ibn Hisham's chapter and the hadith that name each
+    Sira(SiraArgs),
+    /// Genealogies: the prophets, Quraysh, a narrator's family, his line of learning
+    Tree(TreeArgs),
+    /// Bookmarks in folders: list, folders, add, remove, export, import
+    Bookmark(BookmarkArgs),
+    /// The glossary: a term of hadith and its sciences, or a search
+    Term(TermArgs),
+    /// History and method of hadith: how they were written down and gathered, the logic of verification, the numbers
+    /// of the books imported (counted live)
+    Learn(LearnArgs),
+}
+
+#[derive(clap::Args)]
+struct BookmarkArgs {
+    #[arg(value_parser = ["list", "folders", "add", "remove", "export", "import"])]
+    action: String,
+    /// add: hadith | narrator | scholar | term | chapter | tree; list: only that kind; remove: the id;
+    /// export/import: the file
+    kind: Option<String>,
+    /// add: bukhari:1, a narrator's key, a scholar's or term's id, bukhari:3, prophets:musa
+    #[arg(name = "ref")]
+    reference: Option<String>,
+    /// A folder, Prayer or Prayer/Friday (made if missing)
+    #[arg(long)]
+    folder: Option<String>,
+    /// The title to keep (default: isnady's)
+    #[arg(long)]
+    title: Option<String>,
+    /// A note of your own
+    #[arg(long)]
+    note: Option<String>,
+}
+
+#[derive(clap::Args)]
+struct TermArgs {
+    /// e.g. sahih, mursal, tadlis, kunya
+    name: Option<String>,
+    /// Words to look for in names and definitions
+    #[arg(long)]
+    search: Option<String>,
+    #[arg(long, default_value = "en", value_parser = ["en", "tr", "ar"])]
+    lang: String,
+}
+
+#[derive(clap::Args)]
+struct LearnArgs {
+    /// tadwin, writing, method or numbers (none: the list)
+    article: Option<String>,
+    /// The language (default: the interface language)
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// Characters per line
+    #[arg(long, default_value_t = 100)]
+    width: usize,
+}
+
+#[derive(clap::Args)]
+struct TreeArgs {
+    #[arg(value_parser = ["prophets", "quraysh", "family", "learning"])]
+    which: String,
+    /// A narrator (family, learning) or someone to find in the tree
+    name: Option<String>,
+    /// Learning: steps of teachers and of students (default 2)
+    #[arg(long, default_value_t = 2)]
+    depth: usize,
+    /// Learning: how many at each step (default 4)
+    #[arg(long, default_value_t = 4)]
+    width: usize,
+    /// Prophets: the hadith that speak of the prophet found (e.g. iy tree prophets Musa --hadith)
+    #[arg(long)]
+    hadith: bool,
+}
+
+#[derive(clap::Args)]
+struct SiraArgs {
+    /// badr, uhud, hijra, revelation …; none = the timeline
+    event: Option<String>,
+    /// The language (default: the interface language)
+    #[arg(long, value_parser = ["en", "tr", "ar"])]
+    lang: Option<String>,
+    /// Characters per line
+    #[arg(long, default_value_t = 100)]
+    width: usize,
 }
 
 #[derive(clap::Args)]
@@ -245,7 +329,7 @@ fn main() -> ExitCode {
     }
     match cli.command {
         None => {
-            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs scholar, iy-rs group, iy-rs sources, iy-rs datadir, iy-rs --help");
+            println!("isnady-rs {VERSION} — iy-rs search WORDS, iy-rs chain BOOK NUMBER, iy-rs isnads, iy-rs book, iy-rs narrator NAME, iy-rs life NAME, iy-rs scholar, iy-rs group, iy-rs sira, iy-rs tree, iy-rs bookmark, iy-rs term, iy-rs learn, iy-rs sources, iy-rs datadir, iy-rs --help");
             ExitCode::SUCCESS
         }
         Some(Command::Version) => version(),
@@ -270,6 +354,11 @@ fn main() -> ExitCode {
         Some(Command::Life(a)) => life_cmd(a),
         Some(Command::Scholar(a)) => scholar_cmd(a),
         Some(Command::Group(a)) => group_cmd(a),
+        Some(Command::Sira(a)) => sira_cmd(a),
+        Some(Command::Tree(a)) => tree_cmd(a),
+        Some(Command::Bookmark(a)) => bookmark_cmd(a),
+        Some(Command::Term(a)) => term_cmd(a),
+        Some(Command::Learn(a)) => learn_cmd(a),
     }
 }
 
@@ -451,6 +540,545 @@ fn group_cmd(a: GroupArgs) -> ExitCode {
             .map(|(b, n, _)| format!("   (iy chain {b} {n})"))
             .unwrap_or_default();
         println!("\nThe hadith that name them: {listed}{first}");
+    }
+    ExitCode::SUCCESS
+}
+
+/// iy-rs sira [EVENT] (SIY1): the life of the Prophet ﷺ as a timeline, or one event with its place, verses, Ibn Hisham's
+/// chapter and the hadith that name it (`cli.cmd_sira`).
+fn sira_cmd(a: SiraArgs) -> ExitCode {
+    let lang = a.lang.clone().unwrap_or_else(i18n::ui_language);
+    let Some(id) = &a.event else {
+        for (key, name) in sira::periods() {
+            println!("\n{}", sira::text(name, &lang));
+            for e in sira::events(Some(key)) {
+                println!(
+                    "  {:12} {:38} {}",
+                    e.id,
+                    sira::year_label(e, &lang),
+                    sira::text(&e.title, &lang)
+                );
+            }
+        }
+        println!("\n(iy sira EVENT: its date, place, verses, Ibn Hisham's chapter and the hadith that name it)");
+        return ExitCode::SUCCESS;
+    };
+    let Some(e) = sira::find(id) else {
+        eprintln!("No event '{id}'. See: iy sira");
+        return ExitCode::from(1);
+    };
+    println!(
+        "{}   {}",
+        sira::text(&e.title, &lang),
+        e.title.get("ar").map(String::as_str).unwrap_or("")
+    );
+    println!(
+        "{} · {} · {} · age {}\n",
+        sira::year_label(e, &lang),
+        sira::text(&e.when, &lang),
+        sira::text(&e.place, &lang),
+        sira::age(e)
+    );
+    println!("{}", py::fill(&sira::text(&e.text, &lang), a.width, ""));
+    if let Some(d) = &e.differ {
+        println!(
+            "{}",
+            py::fill(
+                &format!("Reports differ: {}", sira::text(d, &lang)),
+                a.width,
+                ""
+            )
+        );
+    }
+    if !e.quran.is_empty() {
+        let verses: Vec<String> = e
+            .quran
+            .iter()
+            .map(|(s, x, y)| quran::label(*s, *x, *y, &lang))
+            .collect();
+        println!("\nVerses: {}", verses.join(", "));
+    }
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    let chapter = sira::sira_chapter(&conn, e);
+    let order = chapter
+        .and_then(|_| works::find_work(&conn, sira::work(), &lang).ok().flatten())
+        .and_then(|w| works::reading_order(&conn, w.id).ok())
+        .unwrap_or_default();
+    if !e.sira.is_empty() {
+        let at = chapter.and_then(|c| order.iter().position(|x| *x == c));
+        let tail = match at {
+            Some(i) => format!("  (iy book sira {})", i + 1),
+            None => "  (import it: iy catalog import sira)".to_string(),
+        };
+        println!("Ibn Hisham: {}{tail}", e.sira);
+    }
+    if !e.phrase.is_empty() {
+        let n = match sira::hadith_counts(&conn) {
+            Ok(c) => c.get(&e.id).copied().unwrap_or(0),
+            Err(err) => {
+                eprintln!("{err}");
+                return ExitCode::from(1);
+            }
+        };
+        println!(
+            "Hadith that say \"{}\": about {} in the Sunni books (iy search \"{}\" --mode phrase)",
+            e.phrase,
+            py::thousands(n),
+            e.phrase
+        );
+    }
+    ExitCode::SUCCESS
+}
+
+/// iy-rs tree WHICH [NAME] (GEN1): the prophets, Quraysh, a narrator's family, a narrator's line of learning
+/// (`cli.cmd_tree`).
+fn tree_cmd(a: TreeArgs) -> ExitCode {
+    let ui = i18n::ui_language();
+    let langs = narrators::Langs {
+        reading: &ui,
+        words: &ui,
+    };
+    if genealogy::is_written(&a.which) {
+        let tree = genealogy::written(&a.which, "en").expect("written tree");
+        if let Some(name) = &a.name {
+            let hits = genealogy::find(&tree, name);
+            if hits.is_empty() {
+                eprintln!("No one named '{name}' in this tree.");
+                return ExitCode::from(1);
+            }
+            for n in hits.iter().take(5) {
+                let line: Vec<String> = genealogy::path_to(&tree, &n.id)
+                    .iter()
+                    .map(|x| x.name("en"))
+                    .collect();
+                println!("{}", line.join(" → "));
+                if n.note.is_some() {
+                    println!("  note: {}", n.text("note", "en"));
+                }
+                if n.disputed.is_some() {
+                    println!("  disputed: {}", n.text("disputed", "en"));
+                }
+            }
+            if a.hadith {
+                let n = hits[0];
+                if n.id == "muhammad" {
+                    println!("\nHis life ﷺ: iy life muhammad");
+                    return ExitCode::SUCCESS;
+                }
+                let conn = match open() {
+                    Ok(c) => c,
+                    Err(code) => return code,
+                };
+                let found = match genealogy::prophet_hadith(&conn, &n.id, a.width * 10) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        eprintln!("{e}");
+                        return ExitCode::from(1);
+                    }
+                };
+                println!(
+                    "\nHadith that speak of {}: {}{}",
+                    n.name("en"),
+                    py::thousands(found.total as i64),
+                    if found.total > 0 {
+                        ""
+                    } else {
+                        " (none names him in words that can only mean him)"
+                    }
+                );
+                for (road, items, count) in [
+                    ("Sunni", &found.sunni, found.count_sunni),
+                    ("Shia", &found.shia, found.count_shia),
+                ] {
+                    if !items.is_empty() {
+                        let refs: Vec<String> = items
+                            .iter()
+                            .map(|i| format!("{} {}", i.book, i.number))
+                            .collect();
+                        println!(
+                            "  {road} books ({}): {}",
+                            py::thousands(count as i64),
+                            refs.join(", ")
+                        );
+                    }
+                }
+            }
+            return ExitCode::SUCCESS;
+        }
+        println!("{}", genealogy::as_text(&tree, "en", &ui));
+        return ExitCode::SUCCESS;
+    }
+    let Some(name) = &a.name else {
+        eprintln!("Give a narrator's name: iy tree family \"Ibn Umar\"");
+        return ExitCode::from(2);
+    };
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    let run = || -> rusqlite_conn::Result<ExitCode> {
+        let (rows, _total) = narrators::find(&conn, name, None, langs)?;
+        let Some(first) = rows.first() else {
+            eprintln!("No narrator found for '{name}'.");
+            return Ok(ExitCode::from(1));
+        };
+        let pid = first.id;
+        let tree = if a.which == "family" {
+            match genealogy::family(&conn, pid, langs)? {
+                Some(t) => t,
+                None => {
+                    println!("No kin among the narrators: no narrator's name makes him a father or a son.");
+                    return Ok(ExitCode::SUCCESS);
+                }
+            }
+        } else {
+            genealogy::learning(&conn, pid, a.depth, a.width, langs)?
+        };
+        println!("{}", genealogy::as_text(&tree, "en", &ui));
+        if a.which == "family" {
+            println!(
+                "\n(read from the narrators' names: \"X b. Y b. Z\" is the son of \"Y b. Z\" when exactly one narrator \
+                 of that name and of an earlier or the same generation is found)"
+            );
+        }
+        Ok(ExitCode::SUCCESS)
+    };
+    run().unwrap_or_else(|e| {
+        eprintln!("{e}");
+        ExitCode::from(1)
+    })
+}
+
+/// iy-rs bookmark ACTION (BM1): list, add, remove, folders, export, import — the same file as the Bookmarks page
+/// (`cli.cmd_bookmark`).
+fn bookmark_cmd(a: BookmarkArgs) -> ExitCode {
+    let ui = i18n::ui_language();
+    let langs = narrators::Langs {
+        reading: &ui,
+        words: &ui,
+    };
+    let mut store = bookmarks::Store::load();
+    let save = |s: &bookmarks::Store| -> ExitCode {
+        match s.save() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        }
+    };
+    match a.action.as_str() {
+        "list" => {
+            let folder = a.folder.as_deref().map(|f| store.folder_named(f));
+            if let Some(None) = folder {
+                eprintln!("No folder '{}'.", a.folder.as_deref().unwrap_or(""));
+                return ExitCode::from(1);
+            }
+            let mut items: Vec<&bookmarks::Item> = match folder.flatten() {
+                Some(f) => store.in_folder(Some(&f.id)),
+                None => store.items.iter().collect(),
+            };
+            if let Some(k) = &a.kind {
+                items.retain(|i| &i.kind == k);
+            }
+            let conn = if items.iter().any(|i| i.kind == "narrator") {
+                db::connect(None).ok()
+            } else {
+                None
+            };
+            for i in &items {
+                let place: Vec<String> = i.folders.iter().map(|f| store.path_of(f)).collect();
+                let more = bookmarks::detail(conn.as_ref(), i, &ui);
+                let mut line = format!(
+                    "  {}  [{}] {}",
+                    i.id,
+                    bookmarks::kind_name(&i.kind),
+                    i.title
+                );
+                if !more.is_empty() {
+                    line += &format!("  · {more}");
+                }
+                if !place.is_empty() {
+                    line += &format!("   — {}", place.join(", "));
+                }
+                if !i.note.is_empty() {
+                    line += &format!("\n      ✎ {}", i.note);
+                }
+                println!("{line}");
+            }
+            println!("{} bookmark(s)", items.len());
+            ExitCode::SUCCESS
+        }
+        "folders" => {
+            fn show(store: &bookmarks::Store, parent: Option<&str>, depth: usize) {
+                for f in store.children(parent) {
+                    println!(
+                        "  {}📁 {}  ({})",
+                        "  ".repeat(depth),
+                        f.name,
+                        store.in_folder(Some(&f.id)).len()
+                    );
+                    show(store, Some(&f.id), depth + 1);
+                }
+            }
+            show(&store, None, 0);
+            ExitCode::SUCCESS
+        }
+        "add" => {
+            let (Some(kind), Some(reference)) = (&a.kind, &a.reference) else {
+                eprintln!(
+                    "iy bookmark add KIND REF — kinds: hadith (bukhari:1), narrator (his key), scholar, term, chapter, \
+                     tree (prophets:musa, quraysh:ali, family:<narrator's key>, learning:<narrator's key>)"
+                );
+                return ExitCode::from(2);
+            };
+            if !bookmarks::KINDS.contains(&kind.as_str()) {
+                eprintln!(
+                    "unknown kind '{kind}'; one of {}",
+                    bookmarks::KINDS.join(", ")
+                );
+                return ExitCode::from(1);
+            }
+            let (mut made_ref, mut title, mut subtitle) = (
+                reference.clone(),
+                a.title.clone().unwrap_or_else(|| reference.clone()),
+                String::new(),
+            );
+            if ["hadith", "narrator", "chapter", "tree"].contains(&kind.as_str()) {
+                let conn = match open() {
+                    Ok(c) => c,
+                    Err(code) => return code,
+                };
+                let made = match kind.as_str() {
+                    "hadith" => bookmarks::resolve_hadith(&conn, reference)
+                        .and_then(|h| bookmarks::hadith_ref(&conn, h, &ui)),
+                    "narrator" => bookmarks::resolve_narrator(&conn, reference)
+                        .and_then(|p| bookmarks::narrator_ref(&conn, p, langs)),
+                    "chapter" => bookmarks::resolve_chapter(&conn, reference)
+                        .and_then(|c| bookmarks::chapter_ref(&conn, c, &ui)),
+                    _ => bookmarks::resolve_tree(Some(&conn), reference).and_then(
+                        |(which, target)| {
+                            if genealogy::is_written(&which) {
+                                bookmarks::tree_ref(Some(&conn), &which, Some(&target), None, langs)
+                            } else {
+                                bookmarks::tree_ref(
+                                    Some(&conn),
+                                    &which,
+                                    None,
+                                    target.parse().ok(),
+                                    langs,
+                                )
+                            }
+                        },
+                    ),
+                };
+                let Some((r, t, sub)) = made else {
+                    if kind == "tree" {
+                        eprintln!("No place '{reference}' in the genealogies (e.g. prophets:musa, family:taqrib:6340).");
+                    } else {
+                        eprintln!("No {kind} '{reference}' in the database.");
+                    }
+                    return ExitCode::from(1);
+                };
+                (made_ref, title, subtitle) = (r, t, sub);
+            }
+            let folder = a
+                .folder
+                .as_deref()
+                .and_then(|f| store.ensure_path(f))
+                .map(|f| f.id);
+            let title = a.title.clone().unwrap_or(title);
+            let item = store.add(
+                kind,
+                &made_ref,
+                &title,
+                &subtitle,
+                folder.as_deref(),
+                a.note.as_deref().unwrap_or(""),
+            );
+            let code = save(&store);
+            println!("Bookmarked: {}  ({})", item.title, item.id);
+            code
+        }
+        "remove" => {
+            let ok = store.remove(a.kind.as_deref().unwrap_or(""));
+            save(&store);
+            println!(
+                "{}",
+                if ok {
+                    "Removed."
+                } else {
+                    "No bookmark with that id (iy bookmark list shows the ids)."
+                }
+            );
+            if ok {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            }
+        }
+        "export" => {
+            let file = a
+                .kind
+                .clone()
+                .unwrap_or_else(|| "isnady_bookmarks.json".into());
+            if let Err(e) = store.save_to(std::path::Path::new(&file)) {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+            println!("Written: {file}");
+            ExitCode::SUCCESS
+        }
+        _ => {
+            let file = a.kind.clone().unwrap_or_default();
+            let other = bookmarks::Store::load_from(std::path::Path::new(&file));
+            let (items, folders) = store.merge(&other);
+            let code = save(&store);
+            println!("{items} bookmark(s) and {folders} folder(s) added.");
+            code
+        }
+    }
+}
+
+/// iy-rs term [NAME] (S1): a term of the glossary, or a search (`cli.cmd_term`).
+fn term_cmd(a: TermArgs) -> ExitCode {
+    let lang = a.lang.as_str();
+    if a.search.is_some() || a.name.is_none() {
+        let found = learn::search(a.search.as_deref().unwrap_or(""));
+        for t in &found {
+            let short: String = learn::text(t, "short", lang).chars().take(70).collect();
+            println!(
+                "  {:16} {:30} {:18} {short}",
+                learn::field(t, "id"),
+                learn::name(t, lang),
+                learn::field(t, "ar")
+            );
+        }
+        println!("{} term(s)", found.len());
+        return ExitCode::SUCCESS;
+    }
+    let name = a.name.as_deref().unwrap_or("");
+    let Some(t) = learn::get(name).or_else(|| learn::search(name).into_iter().next()) else {
+        eprintln!("No term '{name}'. Try: iy term --search {name}");
+        return ExitCode::from(1);
+    };
+    let arabic = if !learn::field(t, "ar").is_empty() && lang != "ar" {
+        format!("  {}", learn::field(t, "ar"))
+    } else {
+        String::new()
+    };
+    println!(
+        "{}{arabic}   [{}]",
+        learn::name(t, lang),
+        learn::category(&learn::field(t, "cat"), lang)
+    );
+    println!("  {}", learn::text(t, "short", lang));
+    let long = learn::text(t, "long", lang);
+    if !long.is_empty() {
+        println!("  {long}");
+    }
+    let related: Vec<String> = t["related"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|r| {
+            learn::get(r.as_str().unwrap_or(""))
+                .map(|x| learn::name(x, lang))
+                .unwrap_or_default()
+        })
+        .collect();
+    if !related.is_empty() {
+        println!("  related: {}", related.join(", "));
+    }
+    if !learn::field(t, "source").is_empty() {
+        println!("  source: {}", learn::field(t, "source"));
+    }
+    ExitCode::SUCCESS
+}
+
+/// iy-rs learn [ARTICLE] (LRN-H1): the articles of History and method, with their live numbers (`cli.cmd_learn`).
+fn learn_cmd(a: LearnArgs) -> ExitCode {
+    let lang = a.lang.clone().unwrap_or_else(|| {
+        let ui = i18n::ui_language();
+        if ["en", "tr", "ar"].contains(&ui.as_str()) {
+            ui
+        } else {
+            "en".into()
+        }
+    });
+    let Some(id) = &a.article else {
+        for x in learn::articles() {
+            println!(
+                "  {:10} {}",
+                x["id"].as_str().unwrap_or(""),
+                learn::say_text(&x["title"], &lang)
+            );
+        }
+        println!("Read one: iy learn tadwin   (writing, method, numbers; --lang tr|en|ar)");
+        return ExitCode::SUCCESS;
+    };
+    let Some(art) =
+        learn::article(id).or_else(|| learn::search_articles(id, &lang).into_iter().next())
+    else {
+        eprintln!("No article '{id}'. Try: iy learn");
+        return ExitCode::from(1);
+    };
+    let para = |text: &str, indent: &str| println!("{}", py::fill(text, a.width, indent));
+    println!("{}", learn::say_text(&art["title"], &lang).to_uppercase());
+    println!();
+    para(&learn::say_text(&art["lead"], &lang), "");
+    let mut conn: Option<rusqlite_conn::Connection> = None;
+    for sec in art["sections"].as_array().into_iter().flatten() {
+        println!();
+        println!("## {}", learn::say_text(&sec["heading"], &lang));
+        for p in learn::say_list(&sec["text"], &lang) {
+            println!();
+            para(&p, "  ");
+        }
+        if let Some(kind) = sec["block"].as_str() {
+            if conn.is_none() && kind != "timeline" {
+                conn = match open() {
+                    Ok(c) => Some(c),
+                    Err(code) => return code,
+                };
+            }
+            let rows = match learn::block(conn.as_ref(), kind, &lang) {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
+            };
+            if !rows.is_empty() {
+                println!();
+                let wide = rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
+                for (label, value, note) in &rows {
+                    let mut line = if value.is_empty() {
+                        format!("  [{label}]")
+                    } else {
+                        format!("    {label:<wide$}  {value}")
+                    };
+                    if !note.is_empty() && !value.is_empty() {
+                        line += &format!("   ({note})");
+                    }
+                    println!("{line}");
+                }
+            }
+        }
+    }
+    if !art["sources"].is_null() {
+        println!();
+        para(
+            &format!(
+                "{}: {}",
+                learn::label("sources", &lang),
+                learn::say_text(&art["sources"], &lang)
+            ),
+            "",
+        );
     }
     ExitCode::SUCCESS
 }
