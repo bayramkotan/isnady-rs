@@ -4,9 +4,12 @@
 //! (`core/reset.py`). The schema, the import formats and the catalogs shipped with isnady are read from
 //! `data/sources.json`, written from the Python isnady by `tools/gen_tables.py`.
 //!
-//! Importing a book (the importers) comes next; until then `import`, `update` and `languages add` say so.
+//! Importing a book: `importers` (one per data format) and `imports` (the import and everything derived from it
+//! brought up to date, as `core/imports.py`).
 
 pub mod catalog;
+pub mod importers;
+pub mod imports;
 pub mod repos;
 pub mod store;
 
@@ -72,18 +75,122 @@ pub fn is_url(location: &str) -> bool {
     l.starts_with("http://") || l.starts_with("https://")
 }
 
-fn download(location: &str, timeout: Option<u64>) -> Result<Vec<u8>, ResourceError> {
+/// How a resource is read (`fetch.Auth`): none, basic (username + password), bearer (a token) or apikey (a key sent
+/// in a header or a query parameter). Credentials are used for the request only; the database keeps the kind alone.
+#[derive(Debug, Clone)]
+pub struct Auth {
+    pub kind: String,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub token: Option<String>,
+    pub key_name: Option<String>,
+    pub key_in: String,
+}
+
+impl Default for Auth {
+    fn default() -> Self {
+        Auth {
+            kind: "none".into(),
+            username: None,
+            password: None,
+            token: None,
+            key_name: None,
+            key_in: "header".into(),
+        }
+    }
+}
+
+impl Auth {
+    /// What the database records (`Auth.describe`).
+    pub fn describe(&self) -> String {
+        if self.kind == "apikey" {
+            format!(
+                "apikey ({}: {})",
+                self.key_in,
+                self.key_name.as_deref().unwrap_or("None")
+            )
+        } else {
+            self.kind.clone()
+        }
+    }
+}
+
+fn base64(data: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for c in data.chunks(3) {
+        let b = [c[0], *c.get(1).unwrap_or(&0), *c.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        for i in 0..4 {
+            if i <= c.len() {
+                out.push(T[((n >> (18 - 6 * i)) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+fn download(location: &str, auth: &Auth, timeout: Option<u64>) -> Result<Vec<u8>, ResourceError> {
     let secs = timeout.unwrap_or(TIMEOUT_SECONDS);
     let agent = ureq::AgentBuilder::new()
         .timeout(Duration::from_secs(secs))
         .try_proxy_from_env(true)
         .build();
-    let resp = agent
-        .get(location)
-        .set("User-Agent", &user_agent())
-        .set("Accept", "application/json, */*")
-        .call();
-    match resp {
+    let mut url = location.to_string();
+    let mut headers: Vec<(String, String)> = vec![
+        ("User-Agent".into(), user_agent()),
+        ("Accept".into(), "application/json, */*".into()),
+    ];
+    match auth.kind.as_str() {
+        "none" => {}
+        "basic" => {
+            let (Some(u), Some(p)) = (&auth.username, &auth.password) else {
+                return Err(ResourceError(
+                    "Basic authentication needs both a username and a password.".into(),
+                ));
+            };
+            headers.push((
+                "Authorization".into(),
+                format!("Basic {}", base64(format!("{u}:{p}").as_bytes())),
+            ));
+        }
+        "bearer" => {
+            let Some(t) = auth.token.as_deref().filter(|t| !t.is_empty()) else {
+                return Err(ResourceError("Bearer authentication needs a token.".into()));
+            };
+            headers.push(("Authorization".into(), format!("Bearer {t}")));
+        }
+        "apikey" => {
+            let (Some(t), Some(name)) = (
+                auth.token.as_deref().filter(|t| !t.is_empty()),
+                auth.key_name.as_deref().filter(|t| !t.is_empty()),
+            ) else {
+                return Err(ResourceError(
+                    "API key authentication needs a key and the header/parameter name to send it in.".into(),
+                ));
+            };
+            if auth.key_in == "query" {
+                if let Ok(mut u) = url::Url::parse(&url) {
+                    u.query_pairs_mut().append_pair(name, t);
+                    url = u.to_string();
+                }
+            } else {
+                headers.push((name.to_string(), t.to_string()));
+            }
+        }
+        other => {
+            return Err(ResourceError(format!(
+                "Unknown authentication type: {other}"
+            )))
+        }
+    }
+    let mut req = agent.get(&url);
+    for (k, v) in &headers {
+        req = req.set(k, v);
+    }
+    match req.call() {
         Ok(r) => {
             let mut out = vec![];
             std::io::Read::read_to_end(&mut r.into_reader(), &mut out).map_err(|e| {
@@ -116,10 +223,71 @@ fn download(location: &str, timeout: Option<u64>) -> Result<Vec<u8>, ResourceErr
     }
 }
 
+// ------------------------------------------------------------------ downloads ahead of time (fetch.prefetch)
+type Download = std::thread::JoinHandle<Result<Vec<u8>, ResourceError>>;
+
+fn ahead() -> &'static std::sync::Mutex<std::collections::HashMap<String, Download>> {
+    static AHEAD: OnceLock<std::sync::Mutex<std::collections::HashMap<String, Download>>> =
+        OnceLock::new();
+    AHEAD.get_or_init(Default::default)
+}
+
+/// What runs when a download ahead of time is in: it may start the files it names.
+pub type Then = Box<dyn FnOnce(&[u8]) + Send>;
+
+/// Start downloading a public URL now; `read_bytes_with` takes it when it is asked for (`fetch.prefetch`).
+pub fn prefetch(url: &str, then: Option<Then>) {
+    if !is_url(url) {
+        return;
+    }
+    let Ok(mut a) = ahead().lock() else {
+        return;
+    };
+    if a.contains_key(url) {
+        return;
+    }
+    let u = url.to_string();
+    let job = std::thread::spawn(move || {
+        let data = download(&u, &Auth::default(), None)?;
+        if let Some(f) = then {
+            f(&data);
+        }
+        Ok(data)
+    });
+    a.insert(url.to_string(), job);
+}
+
+/// Drop the downloads nobody asked for (`fetch.forget_prefetched`); their threads end by themselves.
+pub fn forget_prefetched() {
+    if let Ok(mut a) = ahead().lock() {
+        a.clear();
+    }
+}
+
+/// The raw bytes of a local file or a URL, read with this authentication (`fetch.read_bytes`).
+pub fn read_bytes_with(
+    location: &str,
+    auth: &Auth,
+    timeout: Option<u64>,
+) -> Result<Vec<u8>, ResourceError> {
+    if is_url(location) && auth.kind == "none" {
+        let job = ahead().lock().ok().and_then(|mut a| a.remove(location));
+        if let Some(j) = job {
+            if let Ok(Ok(data)) = j.join() {
+                return Ok(data);
+            }
+        }
+    }
+    if is_url(location) {
+        return download(location, auth, timeout);
+    }
+    read_bytes(location, timeout)
+}
+
 /// The raw bytes of a local file or a URL (`fetch.read_bytes`, without authentication).
 pub fn read_bytes(location: &str, timeout: Option<u64>) -> Result<Vec<u8>, ResourceError> {
     if is_url(location) {
-        return download(location, timeout);
+        return download(location, &Auth::default(), timeout);
     }
     let path = match location.strip_prefix("file://") {
         Some(rest) => std::path::PathBuf::from(rest),
@@ -135,6 +303,53 @@ pub fn read_bytes(location: &str, timeout: Option<u64>) -> Result<Vec<u8>, Resou
         )));
     }
     std::fs::read(&path).map_err(|e| ResourceError(format!("{}: {e}", path.display())))
+}
+
+/// The licence's tier: A may be shared further, B with conditions, C (unknown) not (`db.tier_for_license`).
+pub fn tier_for_license(license: Option<&str>) -> String {
+    const A: [&str; 11] = [
+        "unlicense",
+        "cc0",
+        "cc0-1.0",
+        "public domain",
+        "public-domain",
+        "pd",
+        "cc-by",
+        "cc-by-4.0",
+        "cc by",
+        "cc by 4.0",
+        "mit",
+    ];
+    const B: [&str; 10] = [
+        "odbl",
+        "odbl-1.0",
+        "cc-by-sa",
+        "cc-by-sa-4.0",
+        "cc by-sa",
+        "cc-by-nc",
+        "cc-by-nc-4.0",
+        "cc-by-nc-sa",
+        "cc-by-nc-sa-4.0",
+        "cc by-nc-sa",
+    ];
+    let Some(l) = license.filter(|l| !l.is_empty()) else {
+        return "C".into();
+    };
+    let name = crate::py::trim(l).to_lowercase();
+    if A.contains(&name.as_str()) {
+        "A".into()
+    } else if B.contains(&name.as_str()) || name.contains("-nc") || name.contains("-sa") {
+        "B".into()
+    } else {
+        "C".into()
+    }
+}
+
+/// The time now in UTC to the second, as `db.now_iso` writes it ("2026-11-09T14:00:00+00:00").
+pub fn now_iso() -> String {
+    chrono::Utc::now()
+        .format("%Y-%m-%dT%H:%M:%S+00:00")
+        .to_string()
 }
 
 /// A link found inside a resource, against the resource's own location (`fetch.resolve`).
@@ -200,7 +415,10 @@ pub(crate) fn write_json(path: &Path, text: &str) -> std::io::Result<()> {
     std::fs::rename(&tmp, path)
 }
 
-/// Importing comes with the importers: said where an import is asked for.
-pub const IMPORT_LATER: &str = "Importing books comes to isnady-rs with its importers (the chain reader and the \
-     narrator matcher are here already); until then import them with the Python isnady (iy catalog import, or File → \
-     Data Sources). Both read and write the same database.";
+/// A format whose importer is not here yet: said where an import of it is asked for.
+pub fn import_later(format_id: &str) -> String {
+    format!(
+        "Importing the format '{format_id}' comes to isnady-rs next; until then import it with the Python isnady \
+         (iy catalog import, or File → Data Sources). Both read and write the same database."
+    )
+}

@@ -3,7 +3,8 @@ name: Parity
 # The Rust iy-rs and the Python iy on the same data: a few books imported from isnady-data by the Python isnady of the
 # same version (its tag, or main), then tools/parity.py compares what both print, word for word. The word lists and
 # patterns isnady-rs reads (crates/isnady-core/data/*.json) are checked against that isnady too, and the chains and
-# narrators both read from the texts must be the same rows in the database (tools/parity_db.py).
+# narrators both read from the texts must be the same rows in the database (tools/parity_db.py), and so must a few books
+# imported by each into an empty folder of its own.
 on:
   workflow_call:
     inputs:
@@ -44,3 +45,8 @@ jobs:
         run: python tools/parity.py --python iy --rust target/release/iy-rs
       - name: The same chains and narrators in the database
         run: python tools/parity_db.py --python iy --rust target/release/iy-rs
+      - name: The same books imported by both
+        run: >
+          python tools/parity_db.py --python iy --rust target/release/iy-rs
+          --import al_arbain_al_nawawiyya --import al_shamail_al_muhammadiyya_al_tirmidhi
+          --import sahifat_hammam_ibn_munabbih

@@ -40,6 +40,15 @@ pub struct Entry {
     pub translations: Option<i64>,
     pub sha256: Option<String>,
     pub has_fallback: bool,
+    /// {"format", "location"}: the origin, when the repository's copy cannot be read
+    pub fallback: Option<Value>,
+    /// an API key's header or query parameter, and where it goes (header | query)
+    pub key_name: Option<String>,
+    pub key_in: String,
+    /// a table's columns (format "table"), a book in several files, a work whose entries the lives quote
+    pub mapping: Option<Value>,
+    pub parts: Option<Value>,
+    pub entries_work: Option<String>,
     pub origin_name: String,
     pub origin_url: String,
 }
@@ -118,6 +127,35 @@ pub fn entry_from_catalog(raw: &Value, repo_id: &str, base: &str) -> Option<Entr
         translations: raw.get("translations").and_then(Value::as_i64),
         sha256: st(raw, "sha256"),
         has_fallback: raw.get("fallback").is_some_and(|f| !f.is_null()),
+        fallback: raw.get("fallback").filter(|f| !f.is_null()).cloned(),
+        key_name: None,
+        key_in: "header".into(),
+        mapping: raw.get("mapping").filter(|f| !f.is_null()).cloned(),
+        parts: raw
+            .get("parts")
+            .and_then(Value::as_array)
+            .filter(|a| !a.is_empty())
+            .map(|a| {
+                Value::Array(
+                    a.iter()
+                        .map(|p| match p {
+                            Value::Object(o) => {
+                                let mut o = o.clone();
+                                let loc = o
+                                    .get("location")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("")
+                                    .to_string();
+                                o.insert("location".into(), Value::String(absolute(base, &loc)));
+                                Value::Object(o)
+                            }
+                            Value::String(l) => Value::String(absolute(base, l)),
+                            other => other.clone(),
+                        })
+                        .collect(),
+                )
+            }),
+        entries_work: st(raw, "entries"),
         origin_name: st(&origin, "name").unwrap_or_default(),
         origin_url: st(&origin, "url").unwrap_or_default(),
         source_name,
@@ -179,6 +217,12 @@ fn user_entry(r: &Value) -> Entry {
         translations: r.get("translations").and_then(Value::as_i64),
         sha256: st(r, "sha256"),
         has_fallback: r.get("fallback").is_some_and(|f| !f.is_null()),
+        fallback: r.get("fallback").filter(|f| !f.is_null()).cloned(),
+        key_name: st(r, "key_name"),
+        key_in: st(r, "key_in").unwrap_or_else(|| "header".into()),
+        mapping: r.get("mapping").filter(|f| !f.is_null()).cloned(),
+        parts: r.get("parts").filter(|f| !f.is_null()).cloned(),
+        entries_work: st(r, "entries_work"),
         origin_name: st(r, "origin_name").unwrap_or_default(),
         origin_url: st(r, "origin_url").unwrap_or_default(),
     }
@@ -764,4 +808,344 @@ pub fn sort_for_list(entries: &mut [Entry]) {
             .unwrap_or(0);
         (k, r)
     });
+}
+
+// ------------------------------------------------------------------ importing (catalog.request_for, import_entry, …)
+use super::importers::{ImportError, ImportReport};
+use super::imports::{run_import, run_many, Failed, ImportRequest, Imported, Narrators};
+use super::Auth;
+
+pub const DEFAULT_LANGUAGES: [&str; 3] = ["ara", "tur", "eng"];
+
+/// The import request of an entry (`catalog.request_for`).
+pub fn request_for(
+    entry: &Entry,
+    languages: Option<&[String]>,
+    auth: Option<&Auth>,
+    use_fallback: bool,
+) -> ImportRequest {
+    let mut options = Map::new();
+    let (mut format_id, mut location) = (entry.format_id.clone(), entry.location.clone());
+    if use_fallback {
+        if let Some(fb) = &entry.fallback {
+            format_id = fb
+                .get("format")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .unwrap_or(format_id);
+            location = fb
+                .get("location")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+        }
+    }
+    let book = entry.book.clone().unwrap_or_else(|| entry.id.clone());
+    if format_id == "openiti-work" {
+        options.insert("book".into(), json!(book));
+        options.insert("kind".into(), json!(entry.kind));
+        options.insert("title".into(), json!(entry.title));
+        options.insert("title_ar".into(), json!(entry.title_ar));
+        options.insert("entries".into(), json!(entry.entries_work));
+    } else if format_id == "table" {
+        options.insert(
+            "mapping".into(),
+            entry.mapping.clone().unwrap_or_else(|| json!({})),
+        );
+        options.insert("book".into(), json!(book));
+        options.insert("title".into(), json!(entry.title));
+        options.insert("tradition".into(), json!(entry.tradition));
+        options.insert("source_key".into(), json!(entry.source_key));
+        if let (Some(parts), false) = (&entry.parts, use_fallback) {
+            options.insert("parts".into(), parts.clone());
+        }
+    } else if entry.book.is_some() && entry.builtin && !entry.languages.is_empty() {
+        let wanted: Vec<String> = match languages {
+            Some(l) if !l.is_empty() => l.to_vec(),
+            _ => DEFAULT_LANGUAGES.iter().map(|x| x.to_string()).collect(),
+        };
+        let mut chosen: Vec<String> = wanted
+            .into_iter()
+            .filter(|c| entry.languages.contains(c))
+            .collect();
+        if chosen.is_empty() {
+            chosen = vec!["ara".into()];
+        }
+        options.insert("books".into(), json!([entry.book]));
+        options.insert("languages".into(), json!(chosen));
+    } else if entry.book.is_some() {
+        options.insert("books".into(), json!([entry.book]));
+        options.insert("languages".into(), json!(languages.unwrap_or(&[])));
+    }
+    ImportRequest {
+        format_id,
+        location,
+        name: Some(entry.source_name.clone()),
+        license: entry.license.clone(),
+        tier: None,
+        origin: if entry.builtin { "builtin" } else { "user" }.into(),
+        auth: auth.cloned().unwrap_or_default(),
+        options,
+    }
+}
+
+/// The collection's tradition as the catalog gives it: Shia books apart from Sunni ones (`_set_tradition`).
+fn set_tradition(conn: &Connection, entry: &Entry) -> rusqlite::Result<()> {
+    if entry.kind == "hadith" && entry.builtin {
+        if let Some(book) = &entry.book {
+            conn.execute(
+                "UPDATE collections SET tradition = ? WHERE key = ?",
+                params![entry.tradition, book],
+            )?;
+        }
+    }
+    Ok(())
+}
+
+/// Note these books as imported now, and the repository's list as seen (`catalog.remember`).
+pub fn remember(
+    conn: &Connection,
+    entries: &[Entry],
+    seen: Option<&[Entry]>,
+) -> Result<(), String> {
+    let mut state = load_state();
+    let mut books = state
+        .get("books")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    for e in entries {
+        if e.builtin && e.kind != "quran" {
+            let s = status(conn, e).map_err(|x| x.to_string())?;
+            books.insert(key_of(e), record(e, &s));
+        }
+    }
+    state.insert("books".into(), Value::Object(books));
+    if let Some(seen) = seen {
+        let mut all: BTreeSet<String> = state
+            .get("seen")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(|x| x.as_str().map(str::to_string))
+                    .collect()
+            })
+            .unwrap_or_default();
+        all.extend(seen.iter().filter(|e| e.builtin).map(key_of));
+        state.insert("seen".into(), json!(all.into_iter().collect::<Vec<_>>()));
+    }
+    save_state(&state);
+    Ok(())
+}
+
+/// The same entry read from the repository's catalog again, when its location changed there (`_moved`).
+fn moved(entry: &Entry) -> Option<Entry> {
+    if !entry.builtin || entry.repo.is_empty() {
+        return None;
+    }
+    let repo = repos::find(&entry.repo)?;
+    repo.url.as_ref()?;
+    let fresh = repos::entries(&repo, true)
+        .ok()?
+        .into_iter()
+        .find(|e| e.id == entry.id)?;
+    (fresh.location != entry.location).then_some(fresh)
+}
+
+fn lang() -> String {
+    crate::i18n::ui_language()
+}
+
+/// Import one entry and bring everything derived up to date (`catalog.import_entry`). The Qur'an comes with its
+/// importer, next.
+pub fn import_entry(
+    conn: &Connection,
+    entry: &Entry,
+    languages: Option<&[String]>,
+    auth: Option<&Auth>,
+    say: &dyn Fn(&str),
+) -> Result<(ImportReport, Narrators), ImportError> {
+    if entry.kind == "quran" {
+        return Err(ImportError::Resource(super::import_later(&entry.format_id)));
+    }
+    let mut entry = entry.clone();
+    let first = match run_import(conn, &request_for(&entry, languages, auth, false), say) {
+        Err(ImportError::Resource(e)) => match moved(&entry) {
+            Some(fresh) => {
+                say(&crate::i18n::t(
+                    &lang(),
+                    "The repository has moved this book; reading it from its new place",
+                    &[],
+                ));
+                entry = fresh;
+                run_import(conn, &request_for(&entry, languages, auth, false), say)
+            }
+            None => Err(ImportError::Resource(e)),
+        },
+        other => other,
+    };
+    let result = match first {
+        Err(ImportError::Resource(exc)) if entry.fallback.is_some() => {
+            say(&crate::i18n::t(
+                &lang(),
+                "The repository's copy could not be read ({exc}); reading the original",
+                &[("exc", exc)],
+            ));
+            run_import(conn, &request_for(&entry, languages, auth, true), say)?
+        }
+        other => other?,
+    };
+    set_tradition(conn, &entry)?;
+    remember(conn, std::slice::from_ref(&entry), None).map_err(ImportError::Resource)?;
+    Ok(result)
+}
+
+/// The languages chosen: one list for every book, or one per entry id (`import_all`'s `languages`).
+pub enum Languages {
+    Every(Option<Vec<String>>),
+    Each(HashMap<String, Vec<String>>),
+}
+
+impl Languages {
+    fn of(&self, id: &str) -> Option<Vec<String>> {
+        match self {
+            Languages::Every(l) => l.clone(),
+            Languages::Each(m) => m.get(id).cloned(),
+        }
+    }
+}
+
+/// Every built-in source: the hadith collections first, then the rest (`catalog.import_all`).
+pub fn import_all(
+    conn: &Connection,
+    languages: &Languages,
+    say: &dyn Fn(&str),
+) -> Result<(Imported, Failed, Narrators), String> {
+    let everything = builtin_entries(None).map_err(|e| e.0)?;
+    let mut entries: Vec<Entry> = everything
+        .iter()
+        .filter(|e| e.kind != "quran")
+        .cloned()
+        .collect();
+    entries.sort_by_key(|e| {
+        KIND_ORDER
+            .iter()
+            .position(|k| *k == e.kind)
+            .unwrap_or(KIND_ORDER.len())
+    });
+    let requests: Vec<(String, ImportRequest)> = entries
+        .iter()
+        .map(|e| {
+            (
+                e.title.clone(),
+                request_for(e, languages.of(&e.id).as_deref(), None, false),
+            )
+        })
+        .collect();
+    let (mut imported, mut failed, mut narrators) = run_many(conn, &requests, say)?;
+    // a repository's own copy not reachable: the origin, once more
+    let by_title: HashMap<&str, &Entry> = entries.iter().map(|e| (e.title.as_str(), e)).collect();
+    let retry: Vec<(String, ImportRequest)> = failed
+        .iter()
+        .filter_map(|(label, _)| {
+            let e = by_title.get(label.as_str())?;
+            e.fallback.as_ref()?;
+            Some((
+                label.clone(),
+                request_for(e, languages.of(&e.id).as_deref(), None, true),
+            ))
+        })
+        .collect();
+    if !retry.is_empty() {
+        let (again, _still, n) = run_many(conn, &retry, say)?;
+        narrators = n;
+        let done: BTreeSet<String> = again.iter().map(|(l, _)| l.clone()).collect();
+        imported.extend(again);
+        failed.retain(|f| !done.contains(&f.0));
+    }
+    for e in &entries {
+        set_tradition(conn, e).map_err(|x| x.to_string())?;
+    }
+    let done: BTreeSet<&str> = imported.iter().map(|(l, _)| l.as_str()).collect();
+    let kept: Vec<Entry> = entries
+        .iter()
+        .filter(|e| done.contains(e.title.as_str()))
+        .cloned()
+        .collect();
+    remember(conn, &kept, Some(&everything))?;
+    for e in everything.iter().filter(|e| e.kind == "quran") {
+        match import_entry(conn, e, None, None, say) {
+            Ok((report, _)) => imported.push((e.title.clone(), report)),
+            Err(x) => failed.push((e.title.clone(), x.to_string())),
+        }
+    }
+    Ok((imported, failed, narrators))
+}
+
+/// Import what `updates` found, in one go (`catalog.update`).
+pub fn update(
+    conn: &Connection,
+    items: &[Update],
+    say: &dyn Fn(&str),
+) -> Result<(Imported, Failed, Narrators), String> {
+    let requests: Vec<(String, ImportRequest)> = items
+        .iter()
+        .map(|i| {
+            let langs = (!i.languages.is_empty()).then_some(i.languages.as_slice());
+            (
+                i.entry.title.clone(),
+                request_for(&i.entry, langs, None, false),
+            )
+        })
+        .collect();
+    if requests.is_empty() {
+        return Ok((vec![], vec![], None));
+    }
+    let (imported, failed, narrators) = run_many(conn, &requests, say)?;
+    let done: BTreeSet<&str> = imported.iter().map(|(l, _)| l.as_str()).collect();
+    let entries: Vec<Entry> = items.iter().map(|i| i.entry.clone()).collect();
+    for e in &entries {
+        set_tradition(conn, e).map_err(|x| x.to_string())?;
+    }
+    let kept: Vec<Entry> = entries
+        .iter()
+        .filter(|e| done.contains(e.title.as_str()))
+        .cloned()
+        .collect();
+    remember(conn, &kept, Some(&entries))?;
+    Ok((imported, failed, narrators))
+}
+
+/// Import these languages in every imported book of the repository that offers them (`catalog.add_languages`).
+pub fn add_languages(
+    conn: &Connection,
+    codes: &[String],
+    say: &dyn Fn(&str),
+) -> Result<(Imported, Failed, Narrators), String> {
+    let entries = builtin_entries(None).map_err(|e| e.0)?;
+    let mut requests = vec![];
+    for e in &entries {
+        if e.kind != "hadith" || e.book.is_none() || e.languages.is_empty() {
+            continue;
+        }
+        if !status(conn, e).map_err(|x| x.to_string())?.imported {
+            continue;
+        }
+        let wanted: Vec<String> = codes
+            .iter()
+            .filter(|c| e.languages.contains(c))
+            .cloned()
+            .collect();
+        if !wanted.is_empty() {
+            requests.push((e.title.clone(), request_for(e, Some(&wanted), None, false)));
+        }
+    }
+    if requests.is_empty() {
+        return Ok((vec![], vec![], None));
+    }
+    let result = run_many(conn, &requests, say)?;
+    for e in &entries {
+        set_tradition(conn, e).map_err(|x| x.to_string())?;
+    }
+    Ok(result)
 }

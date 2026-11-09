@@ -1,7 +1,7 @@
 "use strict";
 // Preferences → Data sources, also File → Data Sources… (gui/sources_page.py): the repository chosen, its books by
 // kind and road with what of each is imported, one language for every book, your own sources and the data folder.
-// Removing, choosing and adding work here; importing comes with the chain reader (RS17), and says so.
+// Importing (one book, all, the updates, a language for every book) runs in the background, saying how it goes.
 
 const SRC = { kind: "hadith", road: "all", data: null, busy: false, status: "" };
 // the kinds of book, as isnady-data's folders are (0.7.3): (kind, sign, name)
@@ -76,7 +76,7 @@ function srcRepoCard(d) {
 
 function srcLanguagesCard(d) {
   const rows = d.languages.map((r) => `<b>${esc(t(r.label))}</b><span class="caption">${esc(t("in {have} of the {offered} books that have it", { have: r.imported, offered: r.offered }))}</span>
-    ${srcButton(t("Add to every book"), "import", { allowed: r.imported < r.offered })}
+    ${srcButton(t("Add to every book"), "add-language", { allowed: r.imported < r.offered, args: { code: r.code, label: r.label } })}
     ${srcButton(t("Remove from every book"), "remove-language", { allowed: r.code !== "ara" && r.imported > 0, args: { code: r.code, label: r.label }, tip: r.code === "ara" ? t("Arabic stays: the chains and the narrators are read from it.") : "" })}`).join("");
   return `<div class="ncard pf-card"><div class="ncard-title">${esc(t("Languages for every book"))}</div>
     <div class="caption">${esc(t("Add a language to every imported book that has it, or take it out of all of them, in one step. Arabic stays: the chains are read from it. Each book's card below can still differ."))}</div>
@@ -92,7 +92,7 @@ function srcLanguageRow(e) {
       const on = have.has(lang) || (!have.size && e.quran_wanted.includes(lang));
       html += `<label class="src-check" data-tip="${esc(t("Ticked: one translation in this language ({name}); untick to remove its translations. Translators… chooses others.", { name: e.quran_names[i] || "" }))}"><input type="checkbox" data-code="${esc(lang)}"${on ? " checked" : ""}> ${esc(t(lang))}</label>`;
     });
-    html += srcButton("➕ " + t("Translators…"), "import", { tip: t("Choose the translations to download, of 98 languages; untick one to remove it") });
+    html += srcButton("➕ " + t("Translators…"), "import", { args: srcArgs(e), tip: t("Choose the translations to download, of 98 languages; untick one to remove it") });
   } else if (e.book && e.languages.length && e.kind === "hadith") {
     const chosen = e.status.languages.length ? e.status.languages : ["Arabic", "Turkish", "English"];
     e.languages.forEach((code, i) => {
@@ -103,6 +103,11 @@ function srcLanguageRow(e) {
     html += `<label class="src-check" data-tip="${esc(t("This work is in Arabic only, as its author wrote it"))}"><input type="checkbox" checked disabled> ${esc(t("Arabic"))}</label>`;
   }
   return `<div class="src-langs">${html}</div>`;
+}
+
+// what an import of this entry needs to know
+function srcArgs(e) {
+  return { id: e.id, repo: e.builtin ? e.repo : "", title: e.title, kind: e.kind, auth_kind: e.auth_kind || "none" };
 }
 
 function srcCard(e) {
@@ -128,14 +133,14 @@ function srcCard(e) {
   }
   const args = { id: e.id, repo: e.builtin ? e.repo : "", title: e.title };
   const buttons = [
-    srcButton(st.imported ? t("Update") : t("Import"), "import", { primary: !st.imported }),
+    srcButton(st.imported ? t("Update") : t("Import"), "import", { primary: !st.imported, args: srcArgs(e) }),
     srcButton(t("Remove data"), "remove", { allowed: st.imported, args, tip: st.imported ? "" : t("Nothing of it is imported yet") }),
     srcButton("📚 " + t("Open in Books"), "open", { allowed: !!e.work_key, args: { key: e.work_key }, tip: e.work_key ? "" : t("Import it first; then it is read in Books") }),
     srcButton("⤴ " + t("Export…"), "export", { allowed: st.imported && e.kind === "hadith" && !!e.book,
       tip: !st.imported ? t("Import it first") : t("Export writes hadith collections (EPUB, PDF, CSV …); this kind is read in Books") }),
   ];
   if (!e.builtin) buttons.push(srcButton(t("Delete from list"), "delete", { args }));
-  return `<div class="ncard pf-card src-card"><div class="src-chead"><div class="ncard-title src-name" data-tip="${esc(e.title)}">${esc(e.name)}</div>
+  return `<div class="ncard pf-card src-card" data-entry="${esc(e.id)}"><div class="src-chead"><div class="ncard-title src-name" data-tip="${esc(e.title)}">${esc(e.name)}</div>
       ${e.title_ar ? `<div class="ar src-ar">${esc(e.title_ar)}</div>` : ""}<div class="caption src-state">${esc(srcStateText(e))}</div></div>
     ${tags}<div class="caption">${esc(e.about + (e.builtin ? "" : `  ·  ${e.location}`))}</div>
     ${srcLanguageRow(e)}<div class="src-buttons">${buttons.join("")}</div></div>`;
@@ -164,9 +169,9 @@ function srcDraw() {
   html += `<div class="caption" id="src-status">${esc(status)}</div>`;
   const n = d.updates.length;
   html += `<div class="src-head"><div class="ncard-title src-big">${esc(t("Sources of {name}", { name: d.repo.name }))}</div><span class="src-fill"></span>
-    ${srcButton("⟳ " + (n ? t("Get updates ({n})", { n }) : t("Up to date")), "import", { primary: !!n, allowed: !!n,
+    ${srcButton("⟳ " + (n ? t("Get updates ({n})", { n }) : t("Up to date")), "updates", { primary: !!n, allowed: !!n,
       tip: n ? d.updates.map(srcWhy).join("\n") : t("Nothing new in the repository: no new book, no changed book, no new language of the languages you read") })}
-    ${srcButton(t("Import all"), "import", { primary: !n, allowed: entries.length > 0, tip: t("Every source of this repository, each in the languages ticked on its card; the search index, chains and narrators are brought up to date once, at the end") })}</div>`;
+    ${srcButton(t("Import all"), "import-all", { primary: !n, allowed: entries.length > 0, tip: t("Every source of this repository, each in the languages ticked on its card; the search index, chains and narrators are brought up to date once, at the end") })}</div>`;
   const kinds = SRC_KINDS.filter((k) => entries.some((e) => e.kind === k[0]));
   if (kinds.length && !kinds.some((k) => k[0] === SRC.kind)) SRC.kind = kinds[0][0];
   if (kinds.length) {
@@ -206,7 +211,7 @@ function srcDraw() {
     const r = ev.target.closest("[data-road]");
     if (r) { SRC.road = r.dataset.road; srcDraw(); return; }
     const b = ev.target.closest("[data-src]");
-    if (b && !b.disabled) srcAct(b.dataset.src, b.dataset.args ? JSON.parse(b.dataset.args) : {});
+    if (b && !b.disabled) srcAct(b.dataset.src, b.dataset.args ? JSON.parse(b.dataset.args) : {}, b);
   };
 }
 
@@ -295,9 +300,105 @@ function srcAddDialog(formats) {
   });
 }
 
-async function srcAct(action, a) {
+// the languages ticked on a card; null when it has none to tick
+function srcTicked(card) {
+  const boxes = card ? [...card.querySelectorAll("input[data-code]")] : [];
+  if (!boxes.length) return null;
+  return boxes.filter((x) => x.checked).map((x) => x.dataset.code);
+}
+
+// what the Worker says when it is done (sources_page.Worker)
+function srcDone(r) {
+  if (r.error) return t("Failed: ") + t(r.error);
+  const fail = r.failed && r.failed.length ? ". " + t("Failed:") + " " + r.failed.map(([a, b]) => `${a} (${t(b)})`).join("; ") : "";
+  const who = r.narrators ? "; " + t("{identified:,} of {links:,} narrators in chains identified ({share:.1f}%)",
+    { identified: r.narrators.identified, links: r.narrators.links, share: 100 * r.narrators.identified / r.narrators.links }) : "";
+  let text;
+  if (r.action === "import_all") text = t("Imported {n} of {total} sources of the repository", { n: r.imported, total: r.total }) + who + fail;
+  else if (r.action === "update") text = t("{n} book(s) brought up to date", { n: r.imported }) + who + fail;
+  else if (r.action === "add_languages") text = t("{names} added to {n} book(s)", { names: r.names.map((x) => t(x)).join(", "), n: r.imported }) + fail;
+  else if (r.kind === "rijal") text = t("Imported {title}: {n:,} narrators", { title: r.title, n: r.texts }) + who;
+  else if (r.kind === "quran") text = t("Downloaded {title}: the Arabic and {n} translation(s)", { title: r.title, n: Math.max(0, r.texts - 1) }) + who;
+  else if (["sira", "tabaqat", "sahifa"].includes(r.kind)) text = t("Imported {title}: {n:,} entries and sections — read it in Books", { title: r.title, n: r.texts }) + who;
+  else text = t("Imported {title}: {n:,} texts", { title: r.title, n: r.texts }) + who;
+  return ((r.failed && r.failed.length) ? t("Failed: ") : "") + text + ".";
+}
+
+// an import in the background: the page busy, what it does said under the repository, the page drawn again at the end
+async function srcJob(first, action, args) {
+  SRC.busy = true;
+  SRC.status = first;
+  srcDraw();
+  try {
+    await invoke("src_job", { action, args: args || {} });
+  } catch (e) {
+    SRC.busy = false;
+    srcDraw();
+    srcSay(t("Failed: ") + String(e));
+    return;
+  }
+  for (;;) {
+    await new Promise((ok) => setTimeout(ok, 700));
+    const st = await invoke("src_job_status");
+    if (st.running) {
+      if (st.text) srcSay(t(st.text));
+      continue;
+    }
+    SRC.busy = false;
+    await srcLoad();
+    srcSay(srcDone(st.result || {}));
+    PF.booksChanged = true;
+    return;
+  }
+}
+
+async function srcAuth(a) {
+  if (a.auth_kind === "basic") {
+    const username = await askText(a.title, t("Username:"), "");
+    if (username === null) return null;
+    const password = await askText(a.title, t("Password:"), "", "password");
+    return password === null ? null : { username, password };
+  }
+  if (a.auth_kind === "bearer" || a.auth_kind === "apikey") {
+    const token = await askText(a.title, a.auth_kind === "bearer" ? t("Token:") : t("API key:"), "", "password");
+    return token === null ? null : { token };
+  }
+  return {};
+}
+
+async function srcAct(action, a, button) {
   const d = SRC.data;
   switch (action) {
+    case "import": {
+      const languages = srcTicked(button && button.closest(".src-card"));
+      if (languages && !languages.length && a.kind !== "quran") { srcSay(t("Choose at least one language.")); return; }
+      const auth = await srcAuth(a);
+      if (auth === null) return;
+      await srcJob(t("Importing {title}…", { title: a.title }), "import", { id: a.id, repo: a.repo, languages, auth });
+      return;
+    }
+    case "import-all": {
+      const languages = {};
+      document.querySelectorAll("#src-page .src-card[data-entry]").forEach((card) => {
+        const chosen = srcTicked(card);
+        if (chosen && chosen.length) languages[card.dataset.entry] = chosen;
+      });
+      const n = d.entries.length;
+      if (!(await askYesNo(t("Import all"), t("Import all {n} sources of {name}? Large books are downloaded; this can take a while.", { n, name: d.repo.name })))) return;
+      await srcJob(t("Importing every source of the repository…"), "import_all", { languages });
+      return;
+    }
+    case "updates": {
+      if (!d.updates.length) return;
+      if (!(await askYesNo(t("Get updates"), t("Bring these up to date?") + "\n\n" + d.updates.map((u) => "• " + srcWhy(u)).join("\n")))) return;
+      await srcJob(t("Bringing {n} book(s) up to date…", { n: d.updates.length }), "update", {});
+      return;
+    }
+    case "add-language": {
+      const label = t(a.label);
+      await srcJob(t("Adding {language} to every book that has it…", { language: label }), "add_languages", { codes: [a.code] });
+      return;
+    }
     case "use-repo":
       try { await invoke("src_use_repo", { id: a.id }); } catch (e) { infoDialog(t("Repository"), `<p>${esc(String(e))}</p>`); }
       SRC.status = "";
@@ -345,9 +446,6 @@ async function srcAct(action, a) {
         SRC.status = "";
         await srcLoad();
       }
-      return;
-    case "import":
-      try { await invoke("src_import"); } catch (e) { srcSay(t("Failed: ") + t(String(e))); }
       return;
     case "remove":
       if (await askYesNo(t("Remove data"), t("Remove everything imported from {title}?", { title: a.title }))) {

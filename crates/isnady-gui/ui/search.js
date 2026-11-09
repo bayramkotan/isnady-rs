@@ -343,7 +343,7 @@ function openLanguagePicker() {
     every.onchange = () => { for (const b of boxes) b.checked = every.checked; };
     for (const b of boxes) b.onchange = () => { every.checked = boxes.every((x) => x.checked); };
     const m = el.querySelector("[data-more]");
-    if (m) m.onclick = () => { close(); later(["&File", "Data Sources…"])(); };
+    if (m) m.onclick = () => { close(); openPreferences("sources"); };
     el.querySelector("[data-done]").onclick = () => {
       const picked = [...el.querySelectorAll("[data-lang]")].filter((c) => c.querySelector("input").checked).map((c) => c.dataset.lang);
       const next = !picked.length || picked.length === all.length ? [] : picked;
@@ -487,16 +487,16 @@ async function showStart() {
   $("s-summary").textContent = "";
   $("s-export").hidden = true;
   const kind = SEARCH.kind;
-  let body;
+  let body = SEARCH.notice ? `<div class="lead">${esc(SEARCH.notice)}</div>` : "";
   if (SEARCH.error) {
-    body = `<div class="lead">${esc(SEARCH.error)}</div>`;
+    body += `<div class="lead">${esc(SEARCH.error)}</div>`;
   } else if (SEARCH.hadith === 0 && kind === "hadith") {
-    body = `<div class="lead">${t("No books yet. Import them in <b>File → Data Sources</b> (Ctrl+Shift+I) — every book of isnady-data with one click — or from a terminal: <code>iy catalog import --all</code>")}</div>`;
+    body += `<div class="lead">${t("No books yet. Import them in <b>File → Data Sources</b> (Ctrl+Shift+I) — every book of isnady-data with one click — or from a terminal: <code>iy catalog import --all</code>")}</div>`;
   } else if (kind === "narrators" && !SEARCH.persons) {
-    body = `<div class="lead">${esc(t("No narrators yet: import Ibn Hajar's Taqrib or al-Najashi's Rijal (File → Data Sources), or from a terminal: iy catalog import taqrib"))}</div>`;
+    body += `<div class="lead">${esc(t("No narrators yet: import Ibn Hajar's Taqrib or al-Najashi's Rijal (File → Data Sources), or from a terminal: iy catalog import taqrib"))}</div>`;
   } else {
     const lead = KIND_TEXT[kind][2] ? t(KIND_TEXT[kind][2]) : t("Arabic diacritics and letter forms are ignored, so الاعمال finds الأَعْمَالُ. Turkish and other Latin-script text ignores case and accents. Try one of these:");
-    body = `<div class="lead narrow">${esc(lead)}</div>
+    body += `<div class="lead narrow">${esc(lead)}</div>
       <div class="examples">${KIND_TEXT[kind][3].map((w) => `<button class="example" data-word="${esc(w)}">${esc(w)}</button>`).join("")}</div>`;
     const rows = await invoke("recent_searches");
     if (rows.length) {

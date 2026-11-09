@@ -2,6 +2,8 @@
 //! that tools/parity.py can compare the two word for word. A command or option not ported yet says so and points to
 //! the Python `iy`; PARITY.md lists them.
 
+mod sources_cmd;
+mod stats_cmd;
 use clap::{Parser, Subcommand};
 use isnady_core::{
     bookmarks, db, genealogy, grades, huffaz, i18n, isnad, learn, lives, narrators, paths, people,
@@ -46,15 +48,38 @@ enum Command {
     Profile(ProfileArgs),
     /// What is imported: every source with its editions and texts
     Sources,
+    /// List supported data formats
+    Formats,
+    /// Built-in sources and your own: list, import, updates, update, remove, add, delete
+    Catalog(sources_cmd::CatalogArgs),
+    /// Use a ready database from a file on this computer (isnady.db or the isnady-db zip of isnady-data)
+    Database(sources_cmd::DatabaseArgs),
+    /// Data repositories: list, use, show, add, remove (isnady's own is the default)
+    Repo(sources_cmd::RepoArgs),
+    /// Import a file or URL
+    Import(sources_cmd::ImportArgs),
+    /// Remove a source and everything imported from it
+    Remove {
+        /// source key, see 'iy sources'
+        key: String,
+    },
+    /// Count what the database holds; corpus, narrators, chains, grades, books, graders for the statistics in depth
+    Stats(stats_cmd::StatsArgs),
     /// Search the hadith
     Search(SearchArgs),
     /// Show the chain of one hadith
     Chain(ChainArgs),
     /// The chains of transmission read from the Arabic texts: the report of every book
     Isnads {
-        /// (not ported yet: reading every chain again — use iy isnads --rebuild)
+        /// read every chain again
         #[arg(long)]
         rebuild: bool,
+        /// (for comparing with the Python isnady) every road of every hadith, one line each, to this file
+        #[arg(long, hide = true)]
+        dump: Option<String>,
+        /// (with --dump) only the first so many hadith
+        #[arg(long, hide = true)]
+        limit: Option<usize>,
     },
     /// Read a book in its own order: the list, a book's chapters, or a chapter
     Book(BookArgs),
@@ -476,7 +501,7 @@ fn main() -> ExitCode {
     // no book yet (FR1): one command brings them all, as one click does in the window
     if !matches!(
         cli.command,
-        Some(Command::Version) | Some(Command::Reset { .. }) | None
+        Some(Command::Version) | Some(Command::Reset { .. }) | Some(Command::Catalog(_)) | None
     ) {
         let empty = db::connect(None)
             .ok()
@@ -487,6 +512,15 @@ fn main() -> ExitCode {
             .unwrap_or(true);
         if empty {
             eprintln!("isnady has no books yet. Import every hadith book and rijal work of isnady-data with one command: iy catalog import --all");
+        }
+        // an import cut short the last time (ROB1)
+        if let Some((titles, started)) = isnady_core::sources::imports::interrupted() {
+            eprintln!(
+                "Note: an import did not finish ({}): {}. Import it again: iy catalog import ID (iy catalog list shows \
+                 what is imported).",
+                started.replace('T', " "),
+                titles.iter().take(6).cloned().collect::<Vec<_>>().join(", ")
+            );
         }
     }
     // every command in the log too (LOG1): what was asked, how it ended, how long it took — not `iy-rs log` itself
@@ -535,9 +569,20 @@ fn run(command: Option<Command>) -> ExitCode {
         }) => shortcut_cmd(!no_desktop, !no_menu),
         Some(Command::Profile(a)) => profile_cmd(a),
         Some(Command::Sources) => sources(),
+        Some(Command::Formats) => sources_cmd::formats_cmd(),
+        Some(Command::Catalog(a)) => sources_cmd::catalog_cmd(a),
+        Some(Command::Database(a)) => sources_cmd::database_cmd(a),
+        Some(Command::Repo(a)) => sources_cmd::repo_cmd(a),
+        Some(Command::Import(a)) => sources_cmd::import_cmd(a),
+        Some(Command::Remove { key }) => sources_cmd::remove_cmd(&key),
+        Some(Command::Stats(a)) => stats_cmd::stats_cmd(a),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
-        Some(Command::Isnads { rebuild }) => isnads_cmd(rebuild),
+        Some(Command::Isnads {
+            rebuild,
+            dump,
+            limit,
+        }) => isnads_cmd(rebuild, dump, limit),
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
         Some(Command::Life(a)) => life_cmd(a),
@@ -950,7 +995,7 @@ fn chrono_like(t: std::time::SystemTime) -> String {
     isnady_core::py::local_time(t, "%Y-%m-%d %H:%M")
 }
 
-/// iy-rs reset settings|books|all (`cli.cmd_reset`, RST1). The books go with the import of books.
+/// iy-rs reset settings|books|all (`cli.cmd_reset`, RST1).
 fn reset_cmd(what: &str, yes: bool) -> ExitCode {
     use std::io::IsTerminal;
     let shown = match what {
@@ -958,9 +1003,6 @@ fn reset_cmd(what: &str, yes: bool) -> ExitCode {
         "books" => "every imported book and source",
         _ => "the books, the settings, the bookmarks and the downloaded data",
     };
-    if what != "settings" {
-        return not_yet("Deleting the books", &format!("iy reset {what}"));
-    }
     if !yes {
         if !std::io::stdin().is_terminal() {
             eprintln!("Add --yes to delete without being asked.");
@@ -973,6 +1015,9 @@ fn reset_cmd(what: &str, yes: bool) -> ExitCode {
             println!("Nothing deleted.");
             return ExitCode::from(1);
         }
+    }
+    if what != "settings" {
+        return sources_cmd::reset_data(what);
     }
     match isnady_core::config::reset_settings() {
         Ok(n) => {
@@ -2471,6 +2516,19 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
     if a.mode == "meaning" {
         return not_yet("Search by meaning", "iy search --mode meaning ...");
     }
+    // every text indexed first, as iy search does (search.ensure_index)
+    match isnady_core::sources::store::connect_rw(None) {
+        Ok(rw) => {
+            if let Err(e) = search::ensure_index(&rw, &|m| eprintln!("{m}")) {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+    }
     let conn = match open() {
         Ok(c) => c,
         Err(code) => return code,
@@ -2584,23 +2642,54 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
 
 const TAHWIL_NOTE: &str = " (roads joined by tahwil, a second road after a link — \"وعن\" / \"وحدثنا\" — or two narrators at one link)";
 
-/// `iy isnads`: how far the chains of every book were read, and why the rest were kept whole; then how many of their
-/// narrators are identified. Reading them is the Python isnady's (the parser stays there for now).
-fn isnads_cmd(rebuild: bool) -> ExitCode {
-    if rebuild {
-        return not_yet("Reading every chain again", "iy isnads --rebuild");
+/// `iy isnads`: the chains read from the Arabic texts (every one again with --rebuild), how far the chains of every
+/// book were read and why the rest were kept whole; then how many of their narrators are identified.
+fn isnads_cmd(rebuild: bool, dump: Option<String>, limit: Option<usize>) -> ExitCode {
+    if let Some(path) = dump {
+        let conn = match open() {
+            Ok(c) => c,
+            Err(code) => return code,
+        };
+        let mut f = match std::fs::File::create(&path) {
+            Ok(f) => std::io::BufWriter::new(f),
+            Err(e) => {
+                eprintln!("{path}: {e}");
+                return ExitCode::from(1);
+            }
+        };
+        return match isnady_core::reader::store::dump(&conn, &mut f, limit) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
+    }
+    {
+        let conn = match isnady_core::sources::store::connect_rw(None) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        };
+        let say = |m: &str| println!("{m}");
+        match isnady_core::reader::store::ensure_isnads(&conn, &say, rebuild) {
+            Ok(stats) => {
+                if stats.parsed > 0 || stats.raw_only > 0 {
+                    println!("Read {} chains now.", stats.parsed + stats.raw_only);
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        }
     }
     let conn = match open() {
         Ok(c) => c,
         Err(code) => return code,
     };
-    if !isnad::isnads_ready(&conn) {
-        eprintln!(
-            "The chains of the books imported last are not read yet. The Python isnady reads them once, for every \
-             book: run iy isnads (or open the Isnad Chains page), then iy-rs shows them."
-        );
-        return ExitCode::from(1);
-    }
     let run = || -> rusqlite_conn::Result<()> {
         println!("Parser: {}", isnady_core::tables::get().parser_id);
         for b in isnad::book_stats(&conn)? {
@@ -2625,6 +2714,19 @@ fn isnads_cmd(rebuild: bool) -> ExitCode {
             }
         }
         if narrators::loaded(&conn) {
+            // as cmd_isnads: the narrators identified after the report of the chains
+            match isnady_core::sources::store::connect_rw(None) {
+                Ok(rw) => {
+                    if let Err(e) = isnady_core::reader::matcher::link_narrators(
+                        &rw,
+                        &|m| println!("{m}"),
+                        false,
+                    ) {
+                        eprintln!("{e}");
+                    }
+                }
+                Err(e) => eprintln!("{e}"),
+            }
             if !narrators::links_ready(&conn) {
                 eprintln!(
                     "The narrators of the chains are not identified yet. The Python isnady does it once: run iy \
@@ -2691,13 +2793,20 @@ fn chain_shown(conn: &db::Connection, a: &ChainArgs) -> rusqlite_conn::Result<Ex
         );
         return Ok(ExitCode::SUCCESS);
     }
-    if !isnad::isnads_ready(conn) || !narrators::links_ready(conn) {
-        eprintln!(
-            "The chains of the books imported last are not read yet. The Python isnady reads them once, for every \
-             book: run iy chain {} {} (or open the Isnad Chains page), then iy-rs shows them.",
-            a.book, number
-        );
-        return Ok(ExitCode::from(1));
+    if !isnad::isnads_ready(conn) {
+        // the chains read once (core_isnad.ensure_isnads), on a connection that writes
+        match isnady_core::sources::store::connect_rw(None) {
+            Ok(rw) => {
+                if let Err(e) = isnady_core::reader::store::ensure_isnads(&rw, &|_| {}, false) {
+                    eprintln!("{e}");
+                    return Ok(ExitCode::from(1));
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                return Ok(ExitCode::from(1));
+            }
+        }
     }
     let Some((hid, name)) = isnad::find_hadith(conn, &a.book, &number)? else {
         match isnad::number_range(conn, &a.book)? {
@@ -2712,6 +2821,13 @@ fn chain_shown(conn: &db::Connection, a: &ChainArgs) -> rusqlite_conn::Result<Ex
         }
         return Ok(ExitCode::from(1));
     };
+    if narrators::loaded(conn) && !narrators::links_ready(conn) {
+        if let Ok(rw) = isnady_core::sources::store::connect_rw(None) {
+            if let Err(e) = isnady_core::reader::matcher::link_narrators(&rw, &|_| {}, false) {
+                eprintln!("{e}");
+            }
+        }
+    }
     let chains = isnad::chain(conn, hid)?;
     let loaded = narrators::loaded(conn);
     let borrowed = isnady_core::tables::get().isnad.borrowed.clone();
@@ -2913,12 +3029,14 @@ fn book_cmd(mut a: BookArgs) -> ExitCode {
         Ok(c) => c,
         Err(code) => return code,
     };
+    // the tree of every hadith collection built, or built again when it changed (works.ensure_collection_works)
     if !works::ready(&conn) {
-        eprintln!(
-            "The books imported last are not laid out in chapters yet. The Python isnady does it once: run iy book \
-             (or open the Books page), then iy-rs reads them."
-        );
-        return ExitCode::from(1);
+        let built = isnady_core::sources::store::connect_rw(None)
+            .and_then(|rw| works::ensure_collection_works(&rw).map_err(|e| e.to_string()));
+        if let Err(e) = built {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
     }
     match book_shown(&conn, &mut a) {
         Ok(code) => code,

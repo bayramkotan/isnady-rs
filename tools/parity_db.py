@@ -8,11 +8,17 @@ collections are thrown away and built again: `search` builds the index (search.e
 number of candidates), the roads joined at a tahwil, the normalised texts, the word list, the trees and the stamps
 must be the same, row for row.
 
+With --import (A2), each program starts from an empty data folder of its own and imports the same sources of the
+repository (iy catalog import ID); what both print and every table of both databases (all but the times of the
+import) must be the same, and so must imported.json.
+
     python tools/parity_db.py --python iy --rust target/release/iy-rs
+    python tools/parity_db.py --import al_arbain_al_nawawiyya --import sahifat_hammam_ibn_munabbih
 """
 
 import argparse
 import hashlib
+import json
 import os
 import shlex
 import shutil
@@ -69,11 +75,73 @@ def digest(db: Path) -> dict:
     return out
 
 
+def every_table(db: Path) -> dict:
+    """Every table but the full-text index's own, each row but its import time (imported_at)."""
+    conn = sqlite3.connect(db)
+    out = {}
+    names = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE "
+                                        "'sqlite_%' AND name NOT LIKE 'texts_fts%' ORDER BY name")]
+    for name in names:
+        cols = [r[1] for r in conn.execute(f"PRAGMA table_info({name})") if r[1] != "imported_at"]
+        h, n = hashlib.md5(), 0
+        for row in conn.execute(f"SELECT {', '.join(cols)} FROM {name} ORDER BY {', '.join(cols)}"):
+            h.update(repr(row).encode())
+            n += 1
+        out[name] = (n, h.hexdigest())
+    conn.close()
+    return out
+
+
+def imports(args) -> int:
+    """Both programs import the same sources into empty folders of their own."""
+    said, tables, state = {}, {}, {}
+    with tempfile.TemporaryDirectory() as tmp:
+        for side, cmd in (("python", args.python), ("rust", args.rust)):
+            folder = Path(tmp) / side
+            folder.mkdir()
+            env = dict(os.environ, ISNADY_DATA_DIR=str(folder), PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+            out = []
+            for source in args.imports:
+                run = subprocess.run(shlex.split(cmd) + ["catalog", "import", source], env=env, capture_output=True,
+                                     text=True)
+                out.append(run.stdout + run.stderr + f"(exit {run.returncode})\n")
+            said[side] = "".join(out)
+            tables[side] = every_table(folder / "isnady.db")
+            try:
+                state[side] = json.loads((folder / "imported.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                state[side] = None
+    bad = 0
+    same = said["python"] == said["rust"]
+    bad += not same
+    print(f"{'✓' if same else '✗'} what both print")
+    if not same:
+        import difflib
+
+        sys.stdout.writelines(difflib.unified_diff(said["python"].splitlines(True), said["rust"].splitlines(True),
+                                                   "iy", "iy-rs"))
+    for name in sorted(set(tables["python"]) | set(tables["rust"])):
+        a, b = tables["python"].get(name), tables["rust"].get(name)
+        if a != b:
+            bad += 1
+            print(f"✗ {name}: {a and a[0]} rows (iy-rs: {b and b[0]})")
+    same = state["python"] == state["rust"]
+    bad += not same
+    print(f"{'✓' if same else '✗'} imported.json")
+    print(f"✓ {len(tables['python'])} tables" if not bad else f"{bad} difference(s)")
+    print("the same database" if not bad else "not the same")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--python", default="iy")
     ap.add_argument("--rust", default="target/release/iy-rs")
+    ap.add_argument("--import", dest="imports", action="append", metavar="ID",
+                    help="import this source of the repository into empty folders instead (repeatable)")
     args = ap.parse_args()
+    if args.imports:
+        return imports(args)
     data = Path(os.environ.get("ISNADY_DATA_DIR") or "")
     if not (data / "isnady.db").exists():
         print(f"No database in {data} (set ISNADY_DATA_DIR)", file=sys.stderr)

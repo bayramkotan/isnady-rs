@@ -1,5 +1,6 @@
-//! The database the Python isnady builds (isnady.db in the data folder). isnady-rs reads it; creating it, importing
-//! and upgrading its schema stay with the Python isnady until they are ported (PARITY.md).
+//! The database the Python isnady builds (isnady.db in the data folder). isnady-rs reads it here; `sources::store`
+//! opens it to write (removing, resetting, creating and upgrading it); importing stays with the Python isnady until the
+//! chain reader is ported (RS17, PARITY.md).
 
 use rusqlite::OpenFlags;
 pub use rusqlite::{params_from_iter, Connection, Error};
@@ -32,8 +33,7 @@ impl std::fmt::Display for OpenError {
         match self {
             OpenError::Missing(p) => write!(
                 f,
-                "No database yet at {}. Import the books with the Python isnady first (iy catalog import --all, or \
-                 File → Data sources); isnady-rs reads the same database.",
+                "No database at {} and none could be made there.",
                 p.display()
             ),
             OpenError::Newer(v) => write!(
@@ -43,8 +43,8 @@ impl std::fmt::Display for OpenError {
             ),
             OpenError::Older(v) => write!(
                 f,
-                "The database is of schema {v}, older than this isnady-rs reads ({SCHEMA_VERSION}). Open it once with \
-                 the Python isnady of the same version: it upgrades it in place."
+                "The database is of schema {v}, older than this isnady-rs reads ({SCHEMA_VERSION}), and it could not \
+                 be upgraded. Open it once with the Python isnady of the same version: it upgrades it in place."
             ),
             OpenError::Db(e) => write!(f, "{e}"),
         }
@@ -59,9 +59,15 @@ impl From<rusqlite::Error> for OpenError {
 
 /// Open the database of the data folder (or `path`) for reading.
 pub fn connect(path: Option<&Path>) -> Result<Connection, OpenError> {
+    if path.is_none() {
+        crate::sources::store::first_connect(); // a ready database staged for this start goes in place first
+    }
     let path = path.map(PathBuf::from).unwrap_or_else(paths::db_path);
     if !path.exists() {
-        return Err(OpenError::Missing(path));
+        // created empty, as the Python isnady's db.connect does: its books are imported next
+        if crate::sources::store::connect_rw(Some(&path)).is_err() || !path.exists() {
+            return Err(OpenError::Missing(path));
+        }
     }
     let conn = Connection::open_with_flags(
         &path,
@@ -73,7 +79,21 @@ pub fn connect(path: Option<&Path>) -> Result<Connection, OpenError> {
         return Err(OpenError::Newer(version));
     }
     if version < SCHEMA_VERSION {
-        return Err(OpenError::Older(version));
+        // upgraded in place, as the Python isnady's db.connect does
+        drop(conn);
+        if crate::sources::store::connect_rw(Some(&path)).is_err() {
+            return Err(OpenError::Older(version));
+        }
+        let conn = Connection::open_with_flags(
+            &path,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        conn.busy_timeout(Duration::from_secs(30))?;
+        let now: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        if now != SCHEMA_VERSION {
+            return Err(OpenError::Older(version));
+        }
+        return Ok(conn);
     }
     Ok(conn)
 }

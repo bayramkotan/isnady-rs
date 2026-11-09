@@ -220,15 +220,64 @@ CASES = [
     ["profile", "list"],
     ["cache"],
     ["log", "--path"],
+    # the statistics (RS12): the corpus, the graders, the hadith model, the laboratory, both roads apart
+    ["stats"],
+    ["stats", "corpus"],
+    ["stats", "narrators", "--limit", "3"],
+    ["stats", "chains", "--book", "kafi"],
+    ["stats", "grades", "--book", "@shia"],
+    ["stats", "books"],
+    ["stats", "corpus", "--book", "@all", "--limit", "2"],
+    ["stats", "graders"],
+    ["stats", "graders", "--book", "kafi"],
+    ["stats", "graders", "--book", "abudawud", "--limit", "3"],
+    ["stats", "model", "--book", "tirmidhi", "--limit", "2"],
+    ["stats", "model", "--book", "@shia"],
+    ["stats", "model", "--grader", "albani", "--limit", "1"],
+    ["stats", "lab", "--book", "abudawud", "--limit", "4"],
+    ["stats", "lab", "--book", "@shia", "--limit", "3"],
+    ["stats", "lab", "--limit", "3"],
+    ["stats", "--explain"],
+    ["stats", "--explain", "kappa"],
+    ["stats", "--explain", "nosuch"],
+    # the data sources (RS16): the formats, the repositories, the catalog with what is imported, what changed
+    ["formats"],
+    ["repo", "list"],
+    ["repo", "show", "fawazahmed0", "--refresh"],
+    ["repo", "show", "nosuch"],
+    ["repo", "remove", "isnady"],
+    ["catalog", "list"],
+    ["catalog", "list", "--repo", "thaqalayn"],
+    ["catalog", "list", "--repo", "nosuch"],
+    ["catalog", "updates"],
+    ["catalog", "languages"],
+    ["catalog", "languages", "add"],
+    ["catalog", "remove", "nosuch"],
+    ["catalog", "delete", "nosuch"],
+    ["catalog", "add", "T", "nosuchformat", "x.json"],
+    ["catalog", "import", "nosuch"],
+    ["catalog", "update"],
+    ["import", "nosuchformat", "x.json"],
+    ["import", "isnady", "/nonexistent/book.json"],
+    ["import", "isnady-sahifa", "/nonexistent/sahifa.json"],
+    ["database"],
+    ["remove", "nosuch"],
+    # the chain reader and the narrator matcher (RS17): every chain read again, every narrator identified again —
+    # the report, and (tools/parity_db.py) the same rows in the database
+    ["isnads"],
+    ["isnads", "--rebuild"],
+    ["chain", "bukhari", "1"],
 ]
 
 TIME = re.compile(r" in \d+ ms")
 EXAMPLE = re.compile(r"(Example: iy chain \S+) \S+")     # a number chosen at random
+# the statistics say whether they were computed now or read from the saved results: whichever program ran first
+SAVED = re.compile(r"  \((?:from .*|computed and saved)\)$", re.M)
 
 
 def run(cmd: list[str], args: list[str], env: dict) -> tuple[int, str]:
     p = subprocess.run(cmd + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
-    return p.returncode, EXAMPLE.sub(r"\1 N", TIME.sub(" in N ms", p.stdout))
+    return p.returncode, SAVED.sub("  (saved)", EXAMPLE.sub(r"\1 N", TIME.sub(" in N ms", p.stdout)))
 
 
 def main() -> int:

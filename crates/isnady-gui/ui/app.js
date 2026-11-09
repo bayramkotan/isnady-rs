@@ -28,9 +28,7 @@ const LOCAL = {
   tr: {
     "Number": "Numara",
     "LATER": "Bu sayfa isnady-rs'e sonraki sürümlerde, birer birer gelecek. O zamana kadar Python isnady (isnady ya da komut satırında iy) aynı verilerle gösteriyor.",
-    "NOT_READ": "Son içe aktarılan kitapların senedleri henüz okunmadı. Python isnady her kitap için bir kez okur: onun İsnad Zincirleri sayfasını açın ya da şunu çalıştırın: {cmd}. Sonra isnady-rs gösterir.",
     "LATER_TIP": "isnady-rs {v}: henüz burada değil — Python isnady aynı verilerle gösteriyor",
-    "NOT_LAID_OUT": "Son içe aktarılan kitaplar henüz bölümlere ayrılmadı. Python isnady bunu bir kez yapar: Kitaplar sayfasını açın ya da iy book çalıştırın.",
     "Sunni": "Sünnî", "Shia": "Şiî", "All": "Hepsi", "Other": "Diğer",
     "Teachers": "Hocaları", "Students": "Talebeleri", "No narrators found": "Râvi bulunamadı",
     "LATER_MENU": "isnady-rs {v}: bu henüz burada değil. Python isnady aynı verilerle yapıyor: penceresinde {menu}.",
@@ -38,9 +36,7 @@ const LOCAL = {
   ar: {
     "Number": "الرقم",
     "LATER": "تأتي هذه الصفحة إلى isnady-rs في الإصدارات القادمة، صفحةً بعد صفحة. وإلى ذلك الحين يعرضها isnady بلغة Python (isnady، أو iy في سطر الأوامر) على البيانات نفسها.",
-    "NOT_READ": "لم تُقرأ أسانيد الكتب المستوردة أخيرًا بعد. يقرؤها isnady بلغة Python مرة واحدة لكل كتاب: افتح صفحة سلاسل الإسناد فيه أو شغّل {cmd}. ثم يعرضها isnady-rs.",
     "LATER_TIP": "isnady-rs {v}: ليست هنا بعد — يعرضها isnady بلغة Python على البيانات نفسها",
-    "NOT_LAID_OUT": "لم تُقسَّم الكتب المستوردة أخيرًا إلى أبواب بعد. يفعل isnady بلغة Python ذلك مرة واحدة: افتح صفحة الكتب فيه أو شغّل iy book.",
     "Sunni": "سني", "Shia": "شيعي", "All": "الكل", "Other": "أخرى",
     "Teachers": "شيوخه", "Students": "تلاميذه", "No narrators found": "لم يوجد راوٍ",
     "LATER_MENU": "isnady-rs {v}: ليس هذا هنا بعد. يفعله isnady بلغة Python على البيانات نفسها: {menu} في نافذته.",
@@ -48,10 +44,8 @@ const LOCAL = {
 };
 const ENGLISH = {
   "LATER": "This page comes to isnady-rs in the next versions, one page at a time. Until then the Python isnady (isnady, or iy on the command line) shows it, on the same data.",
-  "NOT_READ": "The chains of the books imported last are not read yet. The Python isnady reads them once for every book: open its Isnad Chains page, or run {cmd}. Then isnady-rs shows them.",
   "LATER_TIP": "isnady-rs {v}: not here yet — the Python isnady shows it, on the same data",
   "LATER_MENU": "isnady-rs {v}: not here yet. The Python isnady does it, on the same data: {menu} in its window.",
-  "NOT_LAID_OUT": "The books imported last are not laid out in chapters yet. The Python isnady does it once: open its Books page, or run iy book.",
 };
 
 function t(text, values) {
@@ -197,6 +191,7 @@ function show(key) {
   $("page-companions").hidden = key !== "companions";
   $("page-sira").hidden = key !== "sira";
   $("page-sahifa").hidden = key !== "sahifa";
+  $("page-statistics").hidden = key !== "statistics";
   $("page-genealogy").hidden = key !== "genealogy";
   $("page-learn").hidden = key !== "learn";
   $("page-bookmarks").hidden = key !== "bookmarks";
@@ -206,6 +201,7 @@ function show(key) {
   if (key === "companions" && !HISTORY.opening) companionsRefresh();
   if (key === "sira" && !HISTORY.opening) siraRefresh();
   if (key === "sahifa" && (!HISTORY.opening || SH.stale)) sahifaRefresh();
+  if (key === "statistics" && !ST.loaded) statisticsRefresh();
   if (key === "genealogy" && !HISTORY.opening) genealogyRefresh();
   if (key === "learn" && !HISTORY.opening) learnRefresh();
   if (key === "bookmarks") bookmarksRefresh();
@@ -251,6 +247,8 @@ async function start() {
   chainsBuild();
   $("c-body").addEventListener("click", chainsClick);
   setTimeout(sahifaWarm, 4000);          // the written sources counted in the background (main_window: warm)
+  if (s.catch_up) catchUp();
+  if (s.interrupted) SEARCH.notice = s.interrupted;
   const open = s.open || "";
   if (open.startsWith("chain:")) {
     const [, book, ...num] = open.split(":");
@@ -290,6 +288,11 @@ async function start() {
   } else if (open.startsWith("verse:")) {
     const [, s, a] = open.split(":");
     await openVerse(Number(s), a ? Number(a) : null);
+  } else if (open.startsWith("stats:")) {
+    const [, sec, scope] = open.split(":");
+    if (scope) ST.scope = scope === "-" ? null : scope;
+    show("statistics");
+    statsSection(Number(sec));
   } else if (open.startsWith("sahifa:")) {
     await openSahifa(open.slice(7));
   } else if (open.startsWith("group:")) {
@@ -303,6 +306,39 @@ async function start() {
   } else {
     show("search");
   }
+}
+
+// a new version indexes the texts, reads the chains or identifies the narrators again, once, after the window has
+// opened (search_page._catch_up); the Tools menu does one of them again (job "index", "chains", "narrators"): what
+// it is doing is said at the foot of the window
+async function catchUp(job) {
+  let bar = $("catchup");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "catchup";
+    bar.className = "catchup";
+    document.body.appendChild(bar);
+  }
+  const titles = { index: "Rebuild Search Index", chains: "Read Chains Again", narrators: "Identify Narrators Again" };
+  bar.textContent = job ? t(titles[job]) + "…" : t("Bringing the chains up to date after the new version (once)…");
+  await invoke("catch_up", { job: job || null });
+  const poll = async () => {
+    const st = await invoke("catch_up_status");
+    if (st.running) {
+      if (st.text) bar.textContent = t(st.text, { todo: st.count, missing: st.count });
+      setTimeout(poll, 800);
+      return;
+    }
+    if (st.error) {
+      bar.textContent = t("The chains could not be brought up to date: {error}", { error: st.error });
+      setTimeout(() => bar.remove(), 15000);
+      return;
+    }
+    bar.remove();
+    if ($("page-chains") && !$("page-chains").hidden) showOverview();   // the other pages read it when opened
+    if (job === "index" && $("page-search") && !$("page-search").hidden && $("q") && $("q").value.trim()) runSearch(false);
+  };
+  setTimeout(poll, 800);
 }
 
 window.addEventListener("DOMContentLoaded", () => {

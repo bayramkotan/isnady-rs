@@ -638,7 +638,8 @@ function askText(title, label, value, lines) {
   return new Promise((resolve) => {
     const back = document.createElement("div");
     back.className = "dialog-back";
-    const field = lines ? `<textarea class="ask-input" rows="6"></textarea>` : `<input type="text" class="ask-input">`;
+    const field = lines === "password" ? `<input type="password" class="ask-input">`
+      : lines ? `<textarea class="ask-input" rows="6"></textarea>` : `<input type="text" class="ask-input">`;
     back.innerHTML = `<div class="dialog ask" role="dialog"><div class="pd-title">${esc(title)}</div><div>${esc(label)}</div>
       ${field}<div class="pd-buttons"><button class="primary small ok">${esc(t("OK"))}</button><button class="pd-cancel">${esc(t("Cancel"))}</button></div></div>`;
     document.body.appendChild(back);

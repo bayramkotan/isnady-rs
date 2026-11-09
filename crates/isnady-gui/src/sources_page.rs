@@ -1,6 +1,6 @@
 //! Edit → Preferences → Data sources, also File → Data Sources… (gui/sources_page.py): the repository chosen, its
 //! books by kind and road with what of each is imported, the languages for every book, the user's own sources and
-//! the data folder. Removing, choosing and adding work here; importing comes with the chain reader (RS17).
+//! the data folder. Importing, updating, adding a language to every book, removing, choosing and adding.
 
 use serde_json::{json, Value};
 
@@ -153,7 +153,7 @@ fn card(
         vec![]
     };
     Ok(json!({
-        "id": e.id, "repo": e.repo, "builtin": e.builtin, "kind": e.kind, "road": if e.kind == "quran" { Value::Null } else { json!(catalog::road(e)) },
+        "id": e.id, "repo": e.repo, "builtin": e.builtin, "kind": e.kind, "auth_kind": e.auth_kind, "road": if e.kind == "quran" { Value::Null } else { json!(catalog::road(e)) },
         "name": name, "title": e.title, "title_ar": e.title_ar, "license": e.license,
         "shareable": tier_for_license(e.license.as_deref()) != "C", "compiler": e.compiler, "size": e.size,
         "hadith": e.hadith, "origin_name": e.origin_name, "origin_url": e.origin_url, "ours": e.repo == sources::tables().default_id,
@@ -365,8 +365,149 @@ pub fn src_relocate(target: Option<String>, mode: String) -> Result<String, Stri
     paths::relocate(target.as_deref(), &mode).map(|p| paths::shown(&p))
 }
 
-/// Import, Update, Import all, Get updates, Add to every book: with the chain reader (RS17).
+// ------------------------------------------------------------------ importing (sources_page.Worker)
+
+struct Job {
+    running: bool,
+    text: String,
+    result: Value,
+}
+
+static JOB: std::sync::Mutex<Job> = std::sync::Mutex::new(Job {
+    running: false,
+    text: String::new(),
+    result: Value::Null,
+});
+
+fn job_say(m: &str) {
+    if let Ok(mut j) = JOB.lock() {
+        j.text = m.to_string();
+    }
+}
+
+fn narrators(n: &sources::imports::Narrators) -> Value {
+    match n {
+        Some((identified, links)) => json!({"identified": identified, "links": links}),
+        None => Value::Null,
+    }
+}
+
+fn failed(f: &sources::imports::Failed) -> Value {
+    json!(f.iter().map(|(a, b)| json!([a, b])).collect::<Vec<_>>())
+}
+
+fn strings(v: &Value) -> Vec<String> {
+    v.as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// One import of the page, as its Worker does it: "import" (one entry, its languages and credentials),
+/// "import_all" (the languages ticked on each card), "update" (what is new or changed), "add_languages".
+fn run_job(action: &str, args: &Value) -> Result<Value, String> {
+    let conn = store::connect_rw(None)?;
+    match action {
+        "import_all" => {
+            let mut each = std::collections::HashMap::new();
+            if let Some(o) = args.get("languages").and_then(Value::as_object) {
+                for (id, codes) in o {
+                    let codes = strings(codes);
+                    if !codes.is_empty() {
+                        each.insert(id.clone(), codes);
+                    }
+                }
+            }
+            let (imported, f, n) =
+                catalog::import_all(&conn, &catalog::Languages::Each(each), &job_say)?;
+            Ok(
+                json!({"action": action, "imported": imported.len(), "total": imported.len() + f.len(),
+                      "narrators": narrators(&n), "failed": failed(&f)}),
+            )
+        }
+        "update" => {
+            let items = catalog::updates(&conn, None)?;
+            let (imported, f, n) = catalog::update(&conn, &items, &job_say)?;
+            Ok(
+                json!({"action": action, "imported": imported.len(), "narrators": narrators(&n), "failed": failed(&f)}),
+            )
+        }
+        "add_languages" => {
+            let codes = strings(&args["codes"]);
+            let (imported, f, _n) = catalog::add_languages(&conn, &codes, &job_say)?;
+            Ok(
+                json!({"action": action, "imported": imported.len(), "failed": failed(&f),
+                      "names": codes.iter().map(|c| catalog::language_label(c)).collect::<Vec<_>>()}),
+            )
+        }
+        _ => {
+            let id = args["id"].as_str().unwrap_or("");
+            let entry = entry_of(id, args["repo"].as_str().unwrap_or(""))
+                .ok_or_else(|| format!("No source '{id}'."))?;
+            let a = &args["auth"];
+            let auth = sources::Auth {
+                kind: entry.auth_kind.clone(),
+                username: a["username"].as_str().map(str::to_string),
+                password: a["password"].as_str().map(str::to_string),
+                token: a["token"].as_str().map(str::to_string),
+                key_name: entry.key_name.clone(),
+                key_in: entry.key_in.clone(),
+            };
+            let languages = strings(&args["languages"]);
+            let languages = (!languages.is_empty()).then_some(languages);
+            let (report, n) =
+                catalog::import_entry(&conn, &entry, languages.as_deref(), Some(&auth), &job_say)
+                    .map_err(err)?;
+            Ok(
+                json!({"action": "import", "kind": entry.kind, "title": entry.title, "texts": report.texts,
+                      "narrators": narrators(&n)}),
+            )
+        }
+    }
+}
+
+/// Import, Update, Import all, Get updates, Add to every book: started in the background; the page asks how it goes.
 #[tauri::command]
-pub fn src_import() -> Result<(), String> {
-    Err(sources::IMPORT_LATER.to_string())
+pub fn src_job(action: String, args: Value) -> Result<(), String> {
+    {
+        let mut j = JOB.lock().map_err(err)?;
+        if j.running {
+            return Err("An import is running already.".into());
+        }
+        j.running = true;
+        j.text = String::new();
+        j.result = Value::Null;
+    }
+    std::thread::spawn(move || {
+        let started = std::time::Instant::now();
+        let out = run_job(&action, &args);
+        cache::clear();
+        if let Err(e) = &out {
+            isnady_core::log::error("import", &format!("{action}: {e}"));
+        } else {
+            isnady_core::log::info(
+                "import",
+                &format!("{action} done in {}", isnady_core::log::since(started)),
+            );
+        }
+        if let Ok(mut j) = JOB.lock() {
+            j.running = false;
+            j.result = match out {
+                Ok(v) => v,
+                Err(e) => json!({"error": e}),
+            };
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn src_job_status() -> Value {
+    match JOB.lock() {
+        Ok(j) => json!({"running": j.running, "text": j.text, "result": j.result}),
+        Err(_) => json!({"running": false, "text": "", "result": null}),
+    }
 }
