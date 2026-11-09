@@ -26,16 +26,6 @@ pub mod paths;
 pub mod people;
 pub mod py;
 pub mod quran;
-// the chain reader is the Python isnady's core/isnad.py and core/narrators.py line for line: their loops over
-// indexes, their tuples and their one-off patterns are kept as they are written there
-#[allow(
-    clippy::needless_range_loop,
-    clippy::type_complexity,
-    clippy::regex_creation_in_loops,
-    clippy::collapsible_str_replace,
-    clippy::wrong_self_convention
-)]
-pub mod reader;
 pub mod readmarks;
 pub mod sahaba;
 pub mod sahifa;
@@ -43,15 +33,6 @@ pub mod scholars;
 pub mod search;
 pub mod shortcut;
 pub mod sira;
-pub mod sources;
-// the statistics are written step for step as the Python isnady computes them (indexes, the Lanczos constants as
-// CPython has them): the same order of operations gives the same figures
-#[allow(
-    clippy::needless_range_loop,
-    clippy::type_complexity,
-    clippy::excessive_precision
-)]
-pub mod stats;
 pub mod tables;
 pub mod takhrij;
 pub mod works;

@@ -13,7 +13,7 @@ let THEME_MODE = "system";          // view.theme
 let CONTENT = [];                   // view.content_languages ([] = all)
 let FOOTER = "";
 
-const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "sahifa", "genealogy", "learn", "bookmarks", "statistics"]);
+const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "sahifa", "genealogy", "learn", "bookmarks"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
 const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions", sira: "sira", sahifa: "sahifa", verse: "books", genealogy: "genealogy", term: "learn" };
 
@@ -175,7 +175,7 @@ function sectionShortcut(i) {
 function menus() {
   return [
     ["&File", () => [
-      act("Data Sources…", () => openPreferences("sources"), "Ctrl+Shift+I"),
+      act("Data Sources…", later(["&File", "Data Sources…"]), "Ctrl+Shift+I"),
       act("Open Data Folder", () => invoke("open_data_folder")),
       SEP,
       act("Export…", later(["&File", "Export…"]), "Ctrl+E"),
@@ -210,9 +210,9 @@ function menus() {
     ]],
     ["&Tools", () => [
       act("Clear the Cache", clearCache),
-      act("Rebuild Search Index", () => catchUp("index")),
-      act("Read Chains Again", () => catchUp("chains")),
-      act("Identify Narrators Again", () => catchUp("narrators")),
+      act("Rebuild Search Index", later(["&Tools", "Rebuild Search Index"])),
+      act("Read Chains Again", later(["&Tools", "Read Chains Again"])),
+      act("Identify Narrators Again", later(["&Tools", "Identify Narrators Again"])),
       SEP,
       act("Create Desktop Shortcut…", createShortcut),
       SEP,
@@ -613,7 +613,7 @@ function shortcutAction(name) {
     "Ctrl+F": find, "Ctrl+Q": () => invoke("quit"), "F11": () => invoke("full_screen"),
     "Ctrl++": () => changeTextScale(+1),
     "Ctrl+-": () => changeTextScale(-1), "Ctrl+0": () => changeTextScale(0),
-    "Ctrl+Shift+I": () => openPreferences("sources"), "Ctrl+E": later(["&File", "Export…"]),
+    "Ctrl+Shift+I": later(["&File", "Data Sources…"]), "Ctrl+E": later(["&File", "Export…"]),
     "Ctrl+Shift+E": later(["&File", "Import…"]), "Ctrl+,": () => openPreferences(),
     "Ctrl+Shift+L": openLog,
   };

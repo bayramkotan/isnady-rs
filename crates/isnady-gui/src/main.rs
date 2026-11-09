@@ -10,8 +10,6 @@ use isnady_core::{
     narrators, paths, people, py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables,
     works, VERSION,
 };
-mod sources_page;
-mod stats_page;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -65,14 +63,6 @@ fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
         // a page to open at once, for screenshots and tests: "search:WORDS" or "chain:BOOK:NUMBER"
         "open": std::env::var("ISNADY_RS_OPEN").unwrap_or_default(),
     });
-    // a new version reads the chains or identifies the narrators again, once: in the background (search_page._ready)
-    if let Ok(behind) = with_db(&state, |conn| {
-        Ok(!isnady_core::search::index_ready(conn)
-            || !isnady_core::reader::store::isnads_ready(conn)
-            || (narrators::loaded(conn) && !narrators::links_ready(conn)))
-    }) {
-        out["catch_up"] = json!(behind);
-    }
     match with_db(&state, |conn| books::all_books(conn, false).map_err(err)) {
         Ok(list) => {
             let total: i64 = list.iter().map(|b| b.count).sum();
@@ -212,26 +202,13 @@ fn prefs_reset(prefix: String) -> Result<Value, String> {
     Ok(look_settings())
 }
 
-/// Preferences → Reset: back to zero (core.reset): the settings, the books, or everything.
+/// Preferences → Reset: back to zero (core.reset). The books go with the import of books (RS16).
 #[tauri::command]
-fn reset_data(state: tauri::State<Data>, kind: String) -> Result<Value, String> {
-    if kind == "settings" {
-        let n = config::reset_settings()?;
-        isnady_core::log::warning("reset", &format!("⟲ every setting reset ({n} stored)"));
-        return Ok(json!({"n": n, "look": look_settings(), "sidebar": config::sidebar_order()}));
+fn reset_data(kind: String) -> Result<Value, String> {
+    if kind != "settings" {
+        return Err("later".into());
     }
-    // the books (core.reset): the window's own connection is let go first, so VACUUM can make the file small
-    if let Ok(mut guard) = state.0.lock() {
-        *guard = None;
-    }
-    let conn = isnady_core::sources::store::connect_rw(None)?;
-    let n = if kind == "books" {
-        isnady_core::sources::store::reset_books(&conn).map_err(err)?
-    } else {
-        isnady_core::sources::store::reset_everything(&conn)
-            .map_err(err)?
-            .books
-    };
+    let n = config::reset_settings()?;
     Ok(json!({"n": n, "look": look_settings(), "sidebar": config::sidebar_order()}))
 }
 
@@ -962,110 +939,6 @@ fn is_bookmarked(kind: String, reference: String) -> bool {
     bookmarks::is_marked(&kind, &reference)
 }
 
-// ------------------------------------------------------------------ the chains brought up to date (search_page._CatchUp)
-
-struct CatchUp {
-    running: bool,
-    text: String,
-    count: i64,
-    error: String,
-}
-
-static CATCH: std::sync::Mutex<CatchUp> = std::sync::Mutex::new(CatchUp {
-    running: false,
-    text: String::new(),
-    count: 0,
-    error: String::new(),
-});
-
-fn catch_say(m: &str) {
-    if let Ok(mut c) = CATCH.lock() {
-        // "Reading isnads of 99263 hadith": the words to translate (as the catalog has them) and the number apart
-        let digits: String = m.chars().filter(|c| c.is_ascii_digit()).collect();
-        c.count = digits.parse().unwrap_or(0);
-        c.text = if digits.is_empty() {
-            m.to_string()
-        } else {
-            let name = if m.starts_with("Indexing") {
-                "{missing}"
-            } else {
-                "{todo}"
-            };
-            m.replacen(&digits, name, 1)
-        };
-    }
-}
-
-/// On a connection of its own, the window staying usable: after a new version (job "start", search_page._CatchUp)
-/// ensure_index → ensure_isnads → link_narrators; from the Tools menu the search index built again ("index",
-/// rebuild_index), every chain read again ("chains", rebuild_chains) or every narrator identified again
-/// ("narrators", identify_narrators).
-#[tauri::command]
-fn catch_up(job: Option<String>) {
-    let job = job.unwrap_or_else(|| "start".into());
-    {
-        let Ok(mut c) = CATCH.lock() else {
-            return;
-        };
-        if c.running {
-            return;
-        }
-        c.running = true;
-        c.error = String::new();
-        c.text = String::new();
-    }
-    std::thread::spawn(move || {
-        let started = std::time::Instant::now();
-        let run = || -> Result<(), String> {
-            let conn = isnady_core::sources::store::connect_rw(None)?;
-            match job.as_str() {
-                "index" => {
-                    isnady_core::search::rebuild_index(&conn, &catch_say).map_err(err)?;
-                }
-                "chains" => {
-                    isnady_core::reader::store::ensure_isnads(&conn, &catch_say, true)
-                        .map_err(err)?;
-                }
-                "narrators" => {
-                    isnady_core::reader::matcher::link_narrators(&conn, &catch_say, true)?;
-                }
-                _ => {
-                    isnady_core::search::ensure_index(&conn, &catch_say).map_err(err)?;
-                    isnady_core::reader::store::ensure_isnads(&conn, &catch_say, false)
-                        .map_err(err)?;
-                    isnady_core::reader::matcher::link_narrators(&conn, &catch_say, false)?;
-                }
-            }
-            Ok(())
-        };
-        let result = run();
-        if let Err(e) = &result {
-            isnady_core::log::error("window", &format!("bringing the chains up to date: {e}"));
-        } else {
-            isnady_core::log::info(
-                "window",
-                &format!(
-                    "chains brought up to date in {}",
-                    isnady_core::log::since(started)
-                ),
-            );
-        }
-        isnady_core::cache::clear();
-        if let Ok(mut c) = CATCH.lock() {
-            c.running = false;
-            c.error = result.err().unwrap_or_default();
-        }
-    });
-}
-
-#[tauri::command]
-fn catch_up_status() -> Value {
-    match CATCH.lock() {
-        Ok(c) => json!({"running": c.running, "text": c.text, "count": c.count, "error": c.error}),
-        Err(_) => json!({"running": false, "text": "", "count": 0, "error": ""}),
-    }
-}
-
 // ------------------------------------------------------------------ Isnad Chains (gui/isnad_page.py)
 
 /// The overview of the page: per book, the chains read, split, reaching the Prophet (or a Ma'sum), narrators per chain,
@@ -1428,12 +1301,10 @@ fn contents_chapter(state: tauri::State<Data>, chapter: i64) -> Result<Value, St
 #[tauri::command]
 fn books_shelf(state: tauri::State<Data>) -> Result<Value, String> {
     let lang = i18n::ui_language();
-    // the tree of every hadith collection built, or built again when its hadith or chapters changed
-    if !with_db(&state, |conn| Ok(works::ready(conn)))? {
-        let conn = isnady_core::sources::store::connect_rw(None)?;
-        works::ensure_collection_works(&conn).map_err(err)?;
-    }
     with_db(&state, |conn| {
+        if !works::ready(conn) {
+            return Ok(json!({"error": "not_ready", "works": []}));
+        }
         let list = works::list_works(conn, &lang).map_err(err)?;
         let labels = &works::library().kind_labels;
         let out: Vec<Value> = list
@@ -3235,31 +3106,6 @@ fn main() {
             quran_search,
             sahifa_list,
             sahifa_source,
-            catch_up,
-            catch_up_status,
-            sources_page::src_page,
-            sources_page::src_use_repo,
-            sources_page::src_refresh_repo,
-            sources_page::src_add_repo,
-            sources_page::src_remove_repo,
-            sources_page::src_remove,
-            sources_page::src_remove_language,
-            sources_page::src_delete,
-            sources_page::src_add,
-            sources_page::src_stage,
-            sources_page::src_relocate,
-            sources_page::src_import,
-            stats_page::stats_progress,
-            stats_page::stats_scope,
-            stats_page::stats_corpus,
-            stats_page::stats_graders,
-            stats_page::stats_names,
-            stats_page::stats_terms,
-            stats_page::stats_home,
-            stats_page::stats_write,
-            stats_page::stats_csv,
-            stats_page::stats_csv_folder,
-            stats_page::stats_json,
             companions_groups,
             companion_group,
             hadith_cards,

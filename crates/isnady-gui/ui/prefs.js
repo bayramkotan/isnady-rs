@@ -79,7 +79,7 @@ function pfDraw() {
   page.innerHTML = [pfThemes, pfReading, pfColours, pfInterface, pfSidebar, pfBooks, pfSources, pfResetTab][PF.tab]();
   page.onclick = null;
   page.onchange = null;
-  [pfThemesWire, pfReadingWire, pfColoursWire, pfInterfaceWire, pfSidebarWire, pfBooksWire, pfSourcesWire, pfResetWire][PF.tab]();
+  [pfThemesWire, pfReadingWire, pfColoursWire, pfInterfaceWire, pfSidebarWire, pfBooksWire, () => {}, pfResetWire][PF.tab]();
 }
 
 const pfValue = (key) => PF.state.values[key];
@@ -328,7 +328,10 @@ function pfLanguagesChanged() {
   redrawPage();
 }
 
-// ---- Data sources: sources.js (gui/sources_page.py)
+// ---- Data sources: with the import of books (RS16)
+function pfSources() {
+  return `<div class="later"><h1>${esc(t("Data sources"))}</h1><p>${esc(t("LATER_MENU", { v: APP.version, menu: [t("&File"), t("Data Sources…")].map(plain).join(" → ") }))}</p></div>`;
+}
 
 // ---- Reset: the settings, the books, or everything (core.reset; iy reset)
 function pfResetTab() {
@@ -357,6 +360,7 @@ function pfResetWire() {
     const what = { settings: "All settings will be deleted; the books and bookmarks stay.",
       books: "All books will be deleted; the settings and bookmarks stay.",
       everything: "The books, the settings and the bookmarks will all be deleted." }[b.dataset.kind];
+    if (b.dataset.kind !== "settings") { later(["&File", "Data Sources…"])(); return; }    // with the import of books
     confirmDialog(b.dataset.title, t(what) + "\n\n" + t("This cannot be undone. Go on?"), async () => {
       const r = await invoke("reset_data", { kind: b.dataset.kind });
       const done = b.dataset.kind === "settings" ? t("{n} settings deleted; isnady is as at its first start.", { n: r.n })

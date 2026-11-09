@@ -41,7 +41,7 @@ function sahifaBuild() {
     if (!a) return;
     if (a.dataset.hadith) openInBook(Number(a.dataset.hadith));
     else if (a.dataset.act === "book") openBookAt(SH.data.book);
-    else if (a.dataset.act === "sources") openPreferences("sources");
+    else if (a.dataset.act === "sources") later(["&File", "Data Sources…"])();
     else if (a.dataset.act === "more") drawMoreSahifa();
   });
 }
