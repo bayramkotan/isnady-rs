@@ -580,7 +580,7 @@ fn known_as(person: Option<&Person>, code: &str) -> String {
     name
 }
 
-fn is_companion_name(raw: &str) -> bool {
+pub(crate) fn is_companion_name(raw: &str) -> bool {
     static TRIM: OnceLock<fancy_regex::Regex> = OnceLock::new();
     let t = tables::get();
     let trim = TRIM.get_or_init(|| tables::pattern(&t.companions.trim));

@@ -1129,3 +1129,8 @@ table.st-table.first-fit td:first-child { white-space: nowrap; }
 .src-add { min-width: 560px; }
 .src-frow { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: center; }
 .src-page button[disabled] { opacity: 0.45; cursor: default; }
+
+/* the chains brought up to date once after a new version (search_page._catch_up) */
+.catchup { position: fixed; inset: auto 0 0 auto; margin: 0 14px 10px 0; padding: 6px 12px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: calc(10pt * var(--scale));
+  z-index: 50; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }

@@ -65,6 +65,13 @@ fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
         // a page to open at once, for screenshots and tests: "search:WORDS" or "chain:BOOK:NUMBER"
         "open": std::env::var("ISNADY_RS_OPEN").unwrap_or_default(),
     });
+    // a new version reads the chains or identifies the narrators again, once: in the background (search_page._ready)
+    if let Ok(behind) = with_db(&state, |conn| {
+        Ok(!isnady_core::reader::store::isnads_ready(conn)
+            || (narrators::loaded(conn) && !narrators::links_ready(conn)))
+    }) {
+        out["catch_up"] = json!(behind);
+    }
     match with_db(&state, |conn| books::all_books(conn, false).map_err(err)) {
         Ok(list) => {
             let total: i64 = list.iter().map(|b| b.count).sum();
@@ -952,6 +959,85 @@ fn toggle_bookmark(
 #[tauri::command]
 fn is_bookmarked(kind: String, reference: String) -> bool {
     bookmarks::is_marked(&kind, &reference)
+}
+
+// ------------------------------------------------------------------ the chains brought up to date (search_page._CatchUp)
+
+struct CatchUp {
+    running: bool,
+    text: String,
+    count: i64,
+    error: String,
+}
+
+static CATCH: std::sync::Mutex<CatchUp> = std::sync::Mutex::new(CatchUp {
+    running: false,
+    text: String::new(),
+    count: 0,
+    error: String::new(),
+});
+
+fn catch_say(m: &str) {
+    if let Ok(mut c) = CATCH.lock() {
+        // "Reading isnads of 99263 hadith": the words to translate and the number apart
+        let digits: String = m.chars().filter(|c| c.is_ascii_digit()).collect();
+        c.count = digits.parse().unwrap_or(0);
+        c.text = if digits.is_empty() {
+            m.to_string()
+        } else {
+            "Reading isnads of {todo} hadith".to_string()
+        };
+    }
+}
+
+/// ensure_isnads → link_narrators on a connection of its own; the window stays usable.
+#[tauri::command]
+fn catch_up() {
+    {
+        let Ok(mut c) = CATCH.lock() else {
+            return;
+        };
+        if c.running {
+            return;
+        }
+        c.running = true;
+        c.error = String::new();
+        c.text = String::new();
+    }
+    std::thread::spawn(|| {
+        let started = std::time::Instant::now();
+        let run = || -> Result<(), String> {
+            let conn = isnady_core::sources::store::connect_rw(None)?;
+            isnady_core::reader::store::ensure_isnads(&conn, &catch_say, false).map_err(err)?;
+            isnady_core::reader::matcher::link_narrators(&conn, &catch_say, false)?;
+            Ok(())
+        };
+        let result = run();
+        if let Err(e) = &result {
+            isnady_core::log::error("window", &format!("bringing the chains up to date: {e}"));
+        } else {
+            isnady_core::log::info(
+                "window",
+                &format!(
+                    "chains brought up to date in {}",
+                    isnady_core::log::since(started)
+                ),
+            );
+        }
+        isnady_core::cache::clear();
+        if let Ok(mut c) = CATCH.lock() {
+            c.running = false;
+            c.error = result.err().unwrap_or_default();
+        }
+    });
+}
+
+#[tauri::command]
+fn catch_up_status() -> Value {
+    match CATCH.lock() {
+        Ok(c) => json!({"running": c.running, "text": c.text, "count": c.count, "error": c.error}),
+        Err(_) => json!({"running": false, "text": "", "count": 0, "error": ""}),
+    }
 }
 
 // ------------------------------------------------------------------ Isnad Chains (gui/isnad_page.py)
@@ -3121,6 +3207,8 @@ fn main() {
             quran_search,
             sahifa_list,
             sahifa_source,
+            catch_up,
+            catch_up_status,
             sources_page::src_page,
             sources_page::src_use_repo,
             sources_page::src_refresh_repo,

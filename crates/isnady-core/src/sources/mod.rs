@@ -4,8 +4,7 @@
 //! (`core/reset.py`). The schema, the import formats and the catalogs shipped with isnady are read from
 //! `data/sources.json`, written from the Python isnady by `tools/gen_tables.py`.
 //!
-//! Importing a book (the importers, the chain reader, the narrator matcher) comes with RS17; until then `import`,
-//! `update` and `languages add` say so.
+//! Importing a book (the importers) comes next; until then `import`, `update` and `languages add` say so.
 
 pub mod catalog;
 pub mod repos;
@@ -201,6 +200,7 @@ pub(crate) fn write_json(path: &Path, text: &str) -> std::io::Result<()> {
     std::fs::rename(&tmp, path)
 }
 
-/// Importing comes with the chain reader (RS17): said where an import is asked for.
-pub const IMPORT_LATER: &str = "Importing books comes with the chain reader in isnady-rs; until then import them with \
-     the Python isnady (iy catalog import, or File → Data Sources). Both read and write the same database.";
+/// Importing comes with the importers: said where an import is asked for.
+pub const IMPORT_LATER: &str = "Importing books comes to isnady-rs with its importers (the chain reader and the \
+     narrator matcher are here already); until then import them with the Python isnady (iy catalog import, or File → \
+     Data Sources). Both read and write the same database.";

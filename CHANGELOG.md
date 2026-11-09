@@ -5,6 +5,21 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The chain reader and the narrator matcher (RS17; Bayram: "önce tam yakala").** isnady-rs reads the chains from
+  the Arabic texts and identifies their narrators itself, as the Python isnady does: core/isnad.py (isnady-isnad-15:
+  both roads, the tahwil, the second roads, the stories after a chain, the books that cite without chains, "بهذا
+  الإسناد" drawn beside the road) and core/narrators.py (isnady-narrators-17: the name, the book's mark, the
+  generations, the relatives, the teacher and the student, the client, the bare name, the famous one, the impossible
+  pairs) with core/tahwil_meet.py, line for line. Every chain of the full isnady-data read again by both programs is
+  the same row in the database — 114,047 chains, 525,733 links, the narrator, the confidence and the candidates of
+  each, the 345 roads joined at a tahwil — and the narrators are identified in half the time. The patterns are the
+  Python isnady's own, read as Python's `re` reads them (`reader/pyre.rs`: `\w`, `\s`, `$`, positions in
+  characters), written to `data/isnad_parser.json` by tools/gen_tables.py. `iy-rs isnads [--rebuild]` and
+  `iy-rs chain` read what is not read yet; the window does it once after a new version, in the background, saying
+  so at its foot (search_page._CatchUp). The books are read on every core.
+- `tools/parity_db.py` (and a step of the parity workflow): the chains and narrators read by both programs must be
+  the same rows; 3 more parity cases (226 in all).
+
 - **Data sources, as the Python window has them (RS16a; Bayram: "geri kalanları da hallet").** From
   gui/sources_page.py, in Preferences → Data sources and File → Data Sources…: the repository chosen (isnady-data by
   default, the datasets others publish, those you add by address or folder) with where its catalog came from; its

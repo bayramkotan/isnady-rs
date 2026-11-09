@@ -2,7 +2,8 @@ name: Parity
 
 # The Rust iy-rs and the Python iy on the same data: a few books imported from isnady-data by the Python isnady of the
 # same version (its tag, or main), then tools/parity.py compares what both print, word for word. The word lists and
-# patterns isnady-rs reads (crates/isnady-core/data/tables.json) are checked against that isnady too.
+# patterns isnady-rs reads (crates/isnady-core/data/*.json) are checked against that isnady too, and the chains and
+# narrators both read from the texts must be the same rows in the database (tools/parity_db.py).
 on:
   workflow_call:
     inputs:
@@ -41,3 +42,5 @@ jobs:
         run: cargo build --release --locked -p isnady
       - name: Compare
         run: python tools/parity.py --python iy --rust target/release/iy-rs
+      - name: The same chains and narrators in the database
+        run: python tools/parity_db.py --python iy --rust target/release/iy-rs

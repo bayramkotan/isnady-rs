@@ -257,6 +257,11 @@ CASES = [
     ["catalog", "add", "T", "nosuchformat", "x.json"],
     ["database"],
     ["remove", "nosuch"],
+    # the chain reader and the narrator matcher (RS17): every chain read again, every narrator identified again —
+    # the report, and (tools/parity_db.py) the same rows in the database
+    ["isnads"],
+    ["isnads", "--rebuild"],
+    ["chain", "bukhari", "1"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

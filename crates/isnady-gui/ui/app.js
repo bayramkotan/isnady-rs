@@ -253,6 +253,7 @@ async function start() {
   chainsBuild();
   $("c-body").addEventListener("click", chainsClick);
   setTimeout(sahifaWarm, 4000);          // the written sources counted in the background (main_window: warm)
+  if (s.catch_up) catchUp();
   const open = s.open || "";
   if (open.startsWith("chain:")) {
     const [, book, ...num] = open.split(":");
@@ -310,6 +311,36 @@ async function start() {
   } else {
     show("search");
   }
+}
+
+// a new version reads the chains or identifies the narrators again, once, after the window has opened
+// (search_page._catch_up): what it is doing is said at the foot of the window
+async function catchUp() {
+  let bar = $("catchup");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "catchup";
+    bar.className = "catchup";
+    document.body.appendChild(bar);
+  }
+  bar.textContent = t("Bringing the chains up to date after the new version (once)…");
+  await invoke("catch_up");
+  const poll = async () => {
+    const st = await invoke("catch_up_status");
+    if (st.running) {
+      if (st.text) bar.textContent = t(st.text, { todo: st.count });
+      setTimeout(poll, 800);
+      return;
+    }
+    if (st.error) {
+      bar.textContent = t("The chains could not be brought up to date: {error}", { error: st.error });
+      setTimeout(() => bar.remove(), 15000);
+      return;
+    }
+    bar.remove();
+    if ($("page-chains") && !$("page-chains").hidden) showOverview();   // the other pages read it when opened
+  };
+  setTimeout(poll, 800);
 }
 
 window.addEventListener("DOMContentLoaded", () => {

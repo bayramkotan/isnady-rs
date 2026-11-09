@@ -161,7 +161,7 @@ async function showOverview() {
   $("c-nav").querySelector(".hn-next").disabled = true;
   const d = await invoke("chains_overview");
   if (d.not_read) {
-    body.innerHTML = `<div class="notice">${esc(t("NOT_READ", { cmd: "iy isnads" }))}</div>`;
+    body.innerHTML = `<div class="notice">${esc(t("Bringing the chains up to date after the new version (once)…"))}</div>`;
     return;
   }
   let html = `<div class="c-hero">${esc(t("Chains of transmission"))}</div><div class="sp6"></div>
