@@ -278,33 +278,48 @@ fn toc_stamp(key: &str) -> String {
 
 // ------------------------------------------------------------------ the shelf
 
-/// Every hadith collection's tree is the one the Python isnady builds for it now (`ensure_collection_works`).
+/// What a hadith collection's tree is built from: its hadith, its chapters, its name and the table isnady keeps
+/// for it; a change builds it again (`ensure_collection_works`' stamp).
+fn collection_stamp(
+    conn: &Connection,
+    cid: i64,
+    key: &str,
+    name: &str,
+) -> rusqlite::Result<String> {
+    let (n, top): (i64, i64) = conn.query_row(
+        "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM hadiths WHERE collection_id = ?",
+        params![cid],
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let chapters: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM sections WHERE collection_id = ?",
+        params![cid],
+        |r| r.get(0),
+    )?;
+    let toc = toc_stamp(key);
+    Ok(format!(
+        "collection|{n}|{top}|{chapters}|{name}{}",
+        if toc.is_empty() {
+            String::new()
+        } else {
+            format!("|{toc}")
+        }
+    ))
+}
+
+fn collections(conn: &Connection) -> rusqlite::Result<Vec<(i64, String, String)>> {
+    let mut st = conn.prepare("SELECT id, key, name FROM collections")?;
+    let rows = st
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    Ok(rows)
+}
+
+/// Every hadith collection's tree is the one `ensure_collection_works` builds for it now.
 pub fn ready(conn: &Connection) -> bool {
     let run = || -> rusqlite::Result<bool> {
-        let mut st = conn.prepare("SELECT id, key, name FROM collections")?;
-        let rows: Vec<(i64, String, String)> = st
-            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
-            .collect::<Result<_, _>>()?;
-        for (cid, key, name) in rows {
-            let (n, top): (i64, i64) = conn.query_row(
-                "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM hadiths WHERE collection_id = ?",
-                params![cid],
-                |r| Ok((r.get(0)?, r.get(1)?)),
-            )?;
-            let chapters: i64 = conn.query_row(
-                "SELECT COUNT(*) FROM sections WHERE collection_id = ?",
-                params![cid],
-                |r| r.get(0),
-            )?;
-            let toc = toc_stamp(&key);
-            let stamp = format!(
-                "collection|{n}|{top}|{chapters}|{name}{}",
-                if toc.is_empty() {
-                    String::new()
-                } else {
-                    format!("|{toc}")
-                }
-            );
+        for (cid, key, name) in collections(conn)? {
+            let stamp = collection_stamp(conn, cid, &key, &name)?;
             let have: Option<Option<String>> = conn
                 .query_row("SELECT stamp FROM works WHERE key = ?", params![key], |r| {
                     r.get(0)
@@ -317,6 +332,241 @@ pub fn ready(conn: &Connection) -> bool {
         Ok(true)
     };
     run().unwrap_or(false)
+}
+
+/// The scholar who compiled a book (`works._author_of`).
+fn author_of(key: &str) -> Option<String> {
+    crate::scholars::all()
+        .iter()
+        .find(|s| s.compiler_of.iter().any(|b| b == key))
+        .map(|s| s.id.clone())
+}
+
+/// The book's hadith (id, number) laid out by the table isnady keeps for it (`chapters.plan`):
+/// [(part, [(chapter number, Arabic title, [(hadith id, number)])])]; None without a table.
+type Plan = Vec<(usize, Vec<(usize, String, Vec<(i64, String)>)>)>;
+
+fn plan(key: &str, hadith: &[(i64, String)]) -> Option<Plan> {
+    let toc = library().chapters.get(key)?;
+    if hadith.is_empty() {
+        return None;
+    }
+    let mut index: HashMap<&str, usize> = HashMap::new();
+    for (i, (_, number)) in hadith.iter().enumerate() {
+        index.insert(number.as_str(), i); // the last of equal numbers, as a dict comprehension keeps it
+    }
+    let mut starts: Vec<(usize, usize, usize, String)> = vec![];
+    for (n, row) in toc.chapters.iter().enumerate() {
+        let first = match row.first() {
+            Some(Value::String(s)) => s.clone(),
+            Some(v) => v.to_string(),
+            None => continue,
+        };
+        let part = row.get(1).and_then(Value::as_u64).unwrap_or(0) as usize;
+        let title = row.get(2).and_then(Value::as_str).unwrap_or("").to_string();
+        if let Some(&i) = index.get(first.as_str()) {
+            starts.push((i, n + 1, part, title));
+        }
+    }
+    if starts.is_empty() {
+        return None;
+    }
+    starts.sort();
+    starts[0].0 = 0; // a hadith before the first heading goes to the first chapter
+    let mut out: Plan = vec![];
+    for k in 0..starts.len() {
+        let (begin, n, part, ref title) = starts[k];
+        let end = if k + 1 < starts.len() {
+            starts[k + 1].0
+        } else {
+            hadith.len()
+        };
+        if begin >= end {
+            continue;
+        }
+        let rows: Vec<(i64, String)> = hadith[begin..end].to_vec();
+        if out.last().map(|(p, _)| *p) != Some(part) {
+            out.push((part, vec![]));
+        }
+        out.last_mut().unwrap().1.push((n, title.clone(), rows));
+    }
+    Some(out)
+}
+
+/// The tree of a book whose data carry no chapters, from the table isnady keeps: part → chapter → hadith
+/// (`works._build_from_table`). False when isnady keeps no table for it.
+fn build_from_table(conn: &Connection, wid: i64, key: &str, cid: i64) -> rusqlite::Result<bool> {
+    let mut st = conn
+        .prepare("SELECT id, number FROM hadiths WHERE collection_id = ? ORDER BY number_sort")?;
+    let hadith: Vec<(i64, String)> = st
+        .query_map(params![cid], |r| Ok((r.get(0)?, r.get(1)?)))?
+        .collect::<Result<_, _>>()?;
+    let Some(layout) = plan(key, &hadith) else {
+        return Ok(false);
+    };
+    let toc = &library().chapters[key];
+    let mut leaf = conn.prepare(
+        "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, label, hadith_id) VALUES (?, ?, ?, 'hadith', ?, ?)",
+    )?;
+    let mut rows = vec![];
+    for (p_ordinal, (part, chapters)) in layout.iter().enumerate() {
+        let en = toc
+            .parts
+            .get(*part)
+            .and_then(|p| p.get("en"))
+            .cloned()
+            .unwrap_or_default();
+        conn.execute(
+            "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, title) VALUES (?, NULL, ?, 'kitab', ?)",
+            params![wid, p_ordinal as i64, en],
+        )?;
+        let part_id = conn.last_insert_rowid();
+        for (c_ordinal, (number, title, items)) in chapters.iter().enumerate() {
+            conn.execute(
+                "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, label, title) VALUES (?, ?, ?, 'bab', ?, ?)",
+                params![wid, part_id, c_ordinal as i64, number.to_string(), title],
+            )?;
+            let chapter_id = conn.last_insert_rowid();
+            for (i, (hid, num)) in items.iter().enumerate() {
+                rows.push((chapter_id, i as i64 + 1, num.clone(), *hid));
+            }
+        }
+    }
+    for (parent, ordinal, num, hid) in rows {
+        leaf.execute(params![wid, parent, ordinal, num, hid])?;
+    }
+    Ok(true)
+}
+
+/// Build (or build again, when the hadith or chapters changed) the tree of every imported hadith collection:
+/// kitab → hadith, from `sections` and `hadiths.section_number` (`works.ensure_collection_works`). How many were
+/// built.
+pub fn ensure_collection_works(conn: &Connection) -> rusqlite::Result<usize> {
+    let mut rebuilt = 0;
+    for (cid, key, name) in collections(conn)? {
+        let stamp = collection_stamp(conn, cid, &key, &name)?;
+        let row: Option<(i64, Option<String>)> = conn
+            .query_row(
+                "SELECT id, stamp FROM works WHERE key = ?",
+                params![key],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        if let Some((_, Some(have))) = &row {
+            if *have == stamp {
+                continue;
+            }
+        }
+        let tx = conn.unchecked_transaction()?;
+        if let Some((id, _)) = row {
+            tx.execute("DELETE FROM works WHERE id = ?", params![id])?;
+        }
+        tx.execute(
+            "INSERT INTO works (key, kind, title, author, collection_id, stamp) VALUES (?, 'hadith', ?, ?, ?, ?)",
+            params![key, name, author_of(&key), cid, stamp],
+        )?;
+        let wid = tx.last_insert_rowid();
+        let mut titles: HashMap<i64, String> = HashMap::new();
+        {
+            let mut st = tx.prepare(
+                "SELECT s.number, t.title FROM sections s LEFT JOIN section_titles t ON t.section_id = s.id
+                 WHERE s.collection_id = ? ORDER BY s.number, t.edition_id",
+            )?;
+            let rows = st.query_map(params![cid], |r| {
+                Ok((r.get::<_, i64>(0)?, r.get::<_, Option<String>>(1)?))
+            })?;
+            for r in rows {
+                let (number, title) = r?;
+                if let Some(t) = title {
+                    let t = crate::py::trim(&t).to_string();
+                    if !t.is_empty() && !titles.contains_key(&number) {
+                        titles.insert(number, t);
+                    }
+                }
+            }
+        }
+        if titles.is_empty() && build_from_table(&tx, wid, &key, cid)? {
+            tx.commit()?;
+            rebuilt += 1;
+            continue;
+        }
+        // chapter 0 without a title is how the source marks "no chapter": not a first chapter, but the last
+        let mut numbers: Vec<i64> = {
+            let mut st =
+                tx.prepare("SELECT DISTINCT section_number FROM hadiths WHERE collection_id = ?")?;
+            let v: Vec<Option<i64>> = st
+                .query_map(params![cid], |r| r.get(0))?
+                .collect::<Result<_, _>>()?;
+            v.into_iter()
+                .flatten()
+                .filter(|n| !(*n == 0 && !titles.contains_key(&0)))
+                .collect()
+        };
+        numbers.sort_unstable();
+        numbers.dedup();
+        let mut node_of: HashMap<i64, i64> = HashMap::new();
+        for (ordinal, number) in numbers.iter().enumerate() {
+            let title = titles
+                .get(number)
+                .cloned()
+                .unwrap_or_else(|| format!("Chapter {number}"));
+            tx.execute(
+                "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, label, title) VALUES (?, NULL, ?, 'kitab', ?, ?)",
+                params![wid, ordinal as i64, number.to_string(), title],
+            )?;
+            node_of.insert(*number, tx.last_insert_rowid());
+        }
+        let hadith: Vec<(i64, String, Option<i64>)> = {
+            let mut st = tx.prepare(
+                "SELECT id, number, section_number FROM hadiths WHERE collection_id = ? ORDER BY number_sort",
+            )?;
+            let v = st
+                .query_map(params![cid], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+                .collect::<Result<_, _>>()?;
+            v
+        };
+        let mut other: Option<i64> = None;
+        let mut counters: HashMap<i64, i64> = HashMap::new();
+        let mut rows = vec![];
+        for (hid, num, section) in hadith {
+            let parent = match section.and_then(|s| node_of.get(&s).copied()) {
+                Some(p) => p,
+                None => match other {
+                    Some(o) => o,
+                    None => {
+                        tx.execute(
+                            "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, title) VALUES \
+                             (?, NULL, ?, 'kitab', 'Without a chapter in the source')",
+                            params![wid, numbers.len() as i64],
+                        )?;
+                        let o = tx.last_insert_rowid();
+                        other = Some(o);
+                        o
+                    }
+                },
+            };
+            let c = counters.entry(parent).or_insert(0);
+            *c += 1;
+            rows.push((parent, *c, num, hid));
+        }
+        {
+            let mut leaf = tx.prepare(
+                "INSERT INTO work_nodes (work_id, parent_id, ordinal, kind, label, hadith_id) \
+                 VALUES (?, ?, ?, 'hadith', ?, ?)",
+            )?;
+            for (parent, ordinal, num, hid) in rows {
+                leaf.execute(params![wid, parent, ordinal, num, hid])?;
+            }
+        }
+        tx.commit()?;
+        rebuilt += 1;
+    }
+    if rebuilt > 0 {
+        if let Ok(mut c) = title_cache().lock() {
+            c.clear();
+        }
+    }
+    Ok(rebuilt)
 }
 
 #[derive(Debug, Clone)]
@@ -439,9 +689,13 @@ fn work_meta(conn: &Connection, work_id: i64) -> (Option<String>, Option<String>
 
 type TitleCache = HashMap<(i64, String), HashMap<String, String>>;
 
-fn chapter_titles(conn: &Connection, work_id: i64, lang: &str) -> HashMap<String, String> {
+fn title_cache() -> &'static Mutex<TitleCache> {
     static CACHE: OnceLock<Mutex<TitleCache>> = OnceLock::new();
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn chapter_titles(conn: &Connection, work_id: i64, lang: &str) -> HashMap<String, String> {
+    let cache = title_cache();
     let key = (work_id, lang.to_string());
     if let Some(v) = cache.lock().ok().and_then(|c| c.get(&key).cloned()) {
         return v;

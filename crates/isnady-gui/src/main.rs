@@ -67,7 +67,8 @@ fn start(state: tauri::State<Data>, window: tauri::WebviewWindow) -> Value {
     });
     // a new version reads the chains or identifies the narrators again, once: in the background (search_page._ready)
     if let Ok(behind) = with_db(&state, |conn| {
-        Ok(!isnady_core::reader::store::isnads_ready(conn)
+        Ok(!isnady_core::search::index_ready(conn)
+            || !isnady_core::reader::store::isnads_ready(conn)
             || (narrators::loaded(conn) && !narrators::links_ready(conn)))
     }) {
         out["catch_up"] = json!(behind);
@@ -979,20 +980,29 @@ static CATCH: std::sync::Mutex<CatchUp> = std::sync::Mutex::new(CatchUp {
 
 fn catch_say(m: &str) {
     if let Ok(mut c) = CATCH.lock() {
-        // "Reading isnads of 99263 hadith": the words to translate and the number apart
+        // "Reading isnads of 99263 hadith": the words to translate (as the catalog has them) and the number apart
         let digits: String = m.chars().filter(|c| c.is_ascii_digit()).collect();
         c.count = digits.parse().unwrap_or(0);
         c.text = if digits.is_empty() {
             m.to_string()
         } else {
-            "Reading isnads of {todo} hadith".to_string()
+            let name = if m.starts_with("Indexing") {
+                "{missing}"
+            } else {
+                "{todo}"
+            };
+            m.replacen(&digits, name, 1)
         };
     }
 }
 
-/// ensure_isnads → link_narrators on a connection of its own; the window stays usable.
+/// On a connection of its own, the window staying usable: after a new version (job "start", search_page._CatchUp)
+/// ensure_index → ensure_isnads → link_narrators; from the Tools menu the search index built again ("index",
+/// rebuild_index), every chain read again ("chains", rebuild_chains) or every narrator identified again
+/// ("narrators", identify_narrators).
 #[tauri::command]
-fn catch_up() {
+fn catch_up(job: Option<String>) {
+    let job = job.unwrap_or_else(|| "start".into());
     {
         let Ok(mut c) = CATCH.lock() else {
             return;
@@ -1004,12 +1014,28 @@ fn catch_up() {
         c.error = String::new();
         c.text = String::new();
     }
-    std::thread::spawn(|| {
+    std::thread::spawn(move || {
         let started = std::time::Instant::now();
         let run = || -> Result<(), String> {
             let conn = isnady_core::sources::store::connect_rw(None)?;
-            isnady_core::reader::store::ensure_isnads(&conn, &catch_say, false).map_err(err)?;
-            isnady_core::reader::matcher::link_narrators(&conn, &catch_say, false)?;
+            match job.as_str() {
+                "index" => {
+                    isnady_core::search::rebuild_index(&conn, &catch_say).map_err(err)?;
+                }
+                "chains" => {
+                    isnady_core::reader::store::ensure_isnads(&conn, &catch_say, true)
+                        .map_err(err)?;
+                }
+                "narrators" => {
+                    isnady_core::reader::matcher::link_narrators(&conn, &catch_say, true)?;
+                }
+                _ => {
+                    isnady_core::search::ensure_index(&conn, &catch_say).map_err(err)?;
+                    isnady_core::reader::store::ensure_isnads(&conn, &catch_say, false)
+                        .map_err(err)?;
+                    isnady_core::reader::matcher::link_narrators(&conn, &catch_say, false)?;
+                }
+            }
             Ok(())
         };
         let result = run();
@@ -1402,10 +1428,12 @@ fn contents_chapter(state: tauri::State<Data>, chapter: i64) -> Result<Value, St
 #[tauri::command]
 fn books_shelf(state: tauri::State<Data>) -> Result<Value, String> {
     let lang = i18n::ui_language();
+    // the tree of every hadith collection built, or built again when its hadith or chapters changed
+    if !with_db(&state, |conn| Ok(works::ready(conn)))? {
+        let conn = isnady_core::sources::store::connect_rw(None)?;
+        works::ensure_collection_works(&conn).map_err(err)?;
+    }
     with_db(&state, |conn| {
-        if !works::ready(conn) {
-            return Ok(json!({"error": "not_ready", "works": []}));
-        }
         let list = works::list_works(conn, &lang).map_err(err)?;
         let labels = &works::library().kind_labels;
         let out: Vec<Value> = list

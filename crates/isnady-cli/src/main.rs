@@ -2515,6 +2515,19 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
     if a.mode == "meaning" {
         return not_yet("Search by meaning", "iy search --mode meaning ...");
     }
+    // every text indexed first, as iy search does (search.ensure_index)
+    match isnady_core::sources::store::connect_rw(None) {
+        Ok(rw) => {
+            if let Err(e) = search::ensure_index(&rw, &|m| eprintln!("{m}")) {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+    }
     let conn = match open() {
         Ok(c) => c,
         Err(code) => return code,
@@ -3015,12 +3028,14 @@ fn book_cmd(mut a: BookArgs) -> ExitCode {
         Ok(c) => c,
         Err(code) => return code,
     };
+    // the tree of every hadith collection built, or built again when it changed (works.ensure_collection_works)
     if !works::ready(&conn) {
-        eprintln!(
-            "The books imported last are not laid out in chapters yet. The Python isnady does it once: run iy book \
-             (or open the Books page), then iy-rs reads them."
-        );
-        return ExitCode::from(1);
+        let built = isnady_core::sources::store::connect_rw(None)
+            .and_then(|rw| works::ensure_collection_works(&rw).map_err(|e| e.to_string()));
+        if let Err(e) = built {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
     }
     match book_shown(&conn, &mut a) {
         Ok(code) => code,

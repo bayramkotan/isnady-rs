@@ -18,8 +18,8 @@ grades, chapters, paging, wildcards, near spellings, the recent searches; the na
 scholars by name), `iy-rs chain` (every link, its narrator and his
 grade, whom the chain reaches, the chain in Turkish and English), `iy-rs book` (the shelf, a book's chapters, a
 chapter, your places and markers in each book), `iy-rs narrator` (by any spelling, his verdicts, teachers, students
-and hadith), `iy-rs life` (the life of a Companion, a narrator or a scholar), `iy-rs isnads` (how far the chains of
-every book were read), `iy-rs scholar` (the scholars and what the data measures of their work, al-Dhahabi's huffaz),
+and hadith), `iy-rs life` (the life of a Companion, a narrator or a scholar), `iy-rs isnads` (the chains of
+every book read and their narrators identified, as the Python isnady does it), `iy-rs scholar` (the scholars and what the data measures of their work, al-Dhahabi's huffaz),
 `iy-rs group` (the Companions and the Household), `iy-rs sira` (the life of the Prophet ﷺ as a timeline),
 `iy-rs tree` (the genealogies), `iy-rs bookmark`, `iy-rs term` and `iy-rs learn` (the glossary, History and method),
 `iy-rs sahifa` (the written sources), `iy-rs quran` (the Qur'an with its translations and the hadith that name each
@@ -44,7 +44,8 @@ ported parts are listed in [PARITY.md](PARITY.md), and more are ported with ever
 | The source | `cargo build --release`, which puts `iy-rs` and the window `isnady-rs` in `target/release/`; or `cargo install --path crates/isnady-gui` for the window alone (Linux needs `webkit2gtk-4.1`) |
 
 The books are imported by the Python isnady (`pip install isnady`, then `iy catalog import --all`); `iy-rs` lists the
-repositories and their books, removes and resets them, and finds the same data folder by itself.
+repositories and their books, removes and resets them, finds the same data folder by itself, and builds the search
+index, the books' chapters, the chains and their narrators itself — the same rows the Python isnady writes.
 
 ---
 

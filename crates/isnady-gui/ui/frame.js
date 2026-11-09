@@ -210,9 +210,9 @@ function menus() {
     ]],
     ["&Tools", () => [
       act("Clear the Cache", clearCache),
-      act("Rebuild Search Index", later(["&Tools", "Rebuild Search Index"])),
-      act("Read Chains Again", later(["&Tools", "Read Chains Again"])),
-      act("Identify Narrators Again", later(["&Tools", "Identify Narrators Again"])),
+      act("Rebuild Search Index", () => catchUp("index")),
+      act("Read Chains Again", () => catchUp("chains")),
+      act("Identify Narrators Again", () => catchUp("narrators")),
       SEP,
       act("Create Desktop Shortcut…", createShortcut),
       SEP,

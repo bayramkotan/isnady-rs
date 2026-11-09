@@ -5,6 +5,18 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The search index and the books' trees (RS17c, A0 + A1; Bayram: "tamam da eşitle artık").** isnady-rs builds
+  them itself, as the Python isnady does: search.ensure_index and rebuild_index (the normalised texts, the FTS5
+  trigram index, the word list, the stamp — the texts normalised on every core) and works.ensure_collection_works
+  with the tables of contents of core/chapters.py. `iy-rs search` indexes what is not indexed yet, `iy-rs book`
+  and the Books page build the trees of the books imported last; the window indexes, reads the chains and
+  identifies the narrators after a new version, in that order. Built again from nothing by both programs on the full
+  isnady-data, the index (199,271 texts, 327,227 words) and the trees (48 works, 127,796 nodes) are the same rows.
+- **Tools → Rebuild Search Index, Read Chains Again, Identify Narrators Again** work, in the background, saying what
+  they do at the foot of the window. The links to the data sources on the Sahifa page and in the languages of Search
+  open Preferences → Data sources.
+- `tools/parity_db.py` builds the search index and the trees again in both copies and compares them too.
+
 - **The chain reader and the narrator matcher (RS17; Bayram: "önce tam yakala").** isnady-rs reads the chains from
   the Arabic texts and identifies their narrators itself, as the Python isnady does: core/isnad.py (isnady-isnad-15:
   both roads, the tahwil, the second roads, the stories after a chain, the books that cite without chains, "بهذا

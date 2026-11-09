@@ -1,7 +1,6 @@
 //! Hadith text search — the Python isnady's `isnady/core/search.py`, rule for rule, over the same search index
-//! (`text_norm`, and the FTS5 trigram index `texts_fts` the Python isnady builds).
-//!
-//! Not yet here (they stay in the Python `iy` until ported): the grades filter and the chapters filter.
+//! (`text_norm`, the FTS5 trigram index `texts_fts` and the word list), built here as it builds it
+//! (`ensure_index`, `rebuild_index`).
 
 use regex::Regex;
 use rusqlite::{params_from_iter, Connection};
@@ -102,8 +101,8 @@ impl std::fmt::Display for SearchError {
         match self {
             SearchError::NoIndex => write!(
                 f,
-                "The search index is not built yet (or was built by another version of the rules). Run the Python \
-                 isnady once (iy search WORD) — isnady-rs reads the index it builds."
+                "The search index is not built yet (or was built by another version of the rules): iy-rs search \
+                 WORD builds it once, or Tools → Rebuild Search Index."
             ),
             SearchError::BadMode(m) => write!(f, "mode must be one of all, any, phrase (not {m})"),
             SearchError::Db(e) => write!(f, "{e}"),
@@ -891,6 +890,244 @@ pub fn clear_recent() -> usize {
     let n = recent_items().len();
     crate::config::state_set(RECENT_KEY, serde_json::Value::Array(vec![]));
     n
+}
+
+// ------------------------------------------------------------------ building the index (search.ensure_index)
+
+const BATCH: usize = 2000;
+/// this many texts or more to index: their search index built without the trigger
+const BULK: usize = 5000;
+
+fn drop_index(conn: &Connection) -> rusqlite::Result<()> {
+    conn.execute_batch(
+        "DROP TRIGGER IF EXISTS text_norm_ai;
+         DROP TRIGGER IF EXISTS text_norm_ad;
+         DROP TABLE IF EXISTS texts_fts;
+         DROP TABLE IF EXISTS text_norm;
+         DROP TABLE IF EXISTS words;",
+    )
+}
+
+fn index_stamp(conn: &Connection) -> rusqlite::Result<String> {
+    conn.query_row(
+        "SELECT (SELECT COUNT(*) FROM texts), (SELECT MAX(id) FROM texts), (SELECT MAX(text_id) FROM text_norm)",
+        [],
+        |r| {
+            let n: i64 = r.get(0)?;
+            let a: Option<i64> = r.get(1)?;
+            let b: Option<i64> = r.get(2)?;
+            Ok(format!(
+                "{NORMALIZER_VERSION}|{n}|{}|{}",
+                crate::py::opt(a),
+                crate::py::opt(b)
+            ))
+        },
+    )
+}
+
+fn exists(conn: &Connection, sql: &str) -> rusqlite::Result<bool> {
+    use rusqlite::OptionalExtension;
+    Ok(conn.query_row(sql, [], |_| Ok(())).optional()?.is_some())
+}
+
+/// Index every text that is not indexed yet; how many were added (`search.ensure_index`).
+pub fn ensure_index(conn: &Connection, say: &dyn Fn(&str)) -> rusqlite::Result<usize> {
+    if index_ready(conn) {
+        return Ok(0);
+    }
+    let added = build_index(conn, say)?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS core_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+        [],
+    )?;
+    conn.execute(
+        "INSERT OR REPLACE INTO core_meta (key, value) VALUES ('index_ready', ?)",
+        [index_stamp(conn)?],
+    )?;
+    Ok(added)
+}
+
+/// Throw the search index away and build it again from the texts (`search.rebuild_index`).
+pub fn rebuild_index(conn: &Connection, say: &dyn Fn(&str)) -> rusqlite::Result<usize> {
+    drop_index(conn)?;
+    ensure_index(conn, say)
+}
+
+fn normalized(rows: Vec<(i64, String)>) -> Vec<(i64, String)> {
+    // the texts normalised on every core at once; the rows written in the same order
+    let cores = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .max(1);
+    if cores == 1 || rows.len() < 64 {
+        return rows
+            .into_iter()
+            .map(|(id, t)| (id, normalize(&t)))
+            .collect();
+    }
+    let size = rows.len().div_ceil(cores);
+    std::thread::scope(|scope| {
+        let parts: Vec<_> = rows
+            .chunks(size)
+            .map(|part| {
+                scope.spawn(move || {
+                    part.iter()
+                        .map(|(id, t)| (*id, normalize(t)))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        parts
+            .into_iter()
+            .flat_map(|h| h.join().unwrap_or_default())
+            .collect()
+    })
+}
+
+fn build_index(conn: &Connection, say: &dyn Fn(&str)) -> rusqlite::Result<usize> {
+    use crate::sources::store::create_index_tables;
+    use rusqlite::OptionalExtension;
+    create_index_tables(conn)?;
+    let have: Option<String> = conn
+        .query_row(
+            "SELECT value FROM core_meta WHERE key = 'normalizer_version'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if have.is_some_and(|v| v != NORMALIZER_VERSION.to_string()) {
+        say("Normalisation rules changed; rebuilding the search index");
+        drop_index(conn)?;
+        create_index_tables(conn)?;
+    }
+    conn.execute(
+        "INSERT OR REPLACE INTO core_meta (key, value) VALUES ('normalizer_version', ?)",
+        [NORMALIZER_VERSION.to_string()],
+    )?;
+    let missing: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM texts t LEFT JOIN text_norm n ON n.text_id = t.id WHERE n.text_id IS NULL",
+        [],
+        |r| r.get(0),
+    )?;
+    if missing == 0 {
+        if !exists(conn, "SELECT 1 FROM words LIMIT 1")?
+            && exists(conn, "SELECT 1 FROM text_norm LIMIT 1")?
+        {
+            say("Listing the words of the texts (once)");
+            add_words(conn, None)?; // a database indexed before the word list existed
+        }
+        return Ok(0);
+    }
+    say(&format!("Indexing {missing} texts for search"));
+    let ids: Vec<i64> = {
+        let mut st = conn.prepare(
+            "SELECT t.id FROM texts t LEFT JOIN text_norm n ON n.text_id = t.id WHERE n.text_id IS NULL ORDER BY t.id",
+        )?;
+        let v = st.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
+        v
+    };
+    let bulk = ids.len() >= BULK && has_fts(conn);
+    // an empty index (a first import): FTS5 builds it from the table in one pass
+    let fresh = bulk && !exists(conn, "SELECT 1 FROM text_norm LIMIT 1")?;
+    if bulk {
+        conn.execute("DROP TRIGGER IF EXISTS text_norm_ai", [])?;
+    }
+    let run = || -> rusqlite::Result<usize> {
+        let mut added = 0;
+        for chunk in ids.chunks(BATCH) {
+            let marks = vec!["?"; chunk.len()].join(",");
+            let rows: Vec<(i64, String)> = {
+                let mut st =
+                    conn.prepare(&format!("SELECT id, text FROM texts WHERE id IN ({marks})"))?;
+                let v = st
+                    .query_map(params_from_iter(chunk.iter()), |r| {
+                        Ok((r.get(0)?, r.get(1)?))
+                    })?
+                    .collect::<Result<_, _>>()?;
+                v
+            };
+            let n = rows.len();
+            let rows = normalized(rows);
+            let tx = conn.unchecked_transaction()?;
+            {
+                let mut ins = tx.prepare("INSERT INTO text_norm (text_id, norm) VALUES (?, ?)")?;
+                for (id, norm) in &rows {
+                    ins.execute(rusqlite::params![id, norm])?;
+                }
+            }
+            if bulk && !fresh {
+                tx.execute(
+                    &format!(
+                        "INSERT INTO texts_fts (rowid, norm) SELECT text_id, norm FROM text_norm WHERE text_id IN ({marks})"
+                    ),
+                    params_from_iter(chunk.iter()),
+                )?;
+            }
+            tx.commit()?;
+            added += n;
+        }
+        if fresh {
+            conn.execute("INSERT INTO texts_fts (texts_fts) VALUES ('rebuild')", [])?;
+        }
+        // every word again on a first import, or when the word list is still empty
+        let all = fresh || !exists(conn, "SELECT 1 FROM words LIMIT 1")?;
+        add_words(conn, if all { None } else { Some(&ids) })?;
+        Ok(added)
+    };
+    let result = run();
+    if bulk {
+        create_index_tables(conn)?; // the trigger again, for the texts added one by one later
+    }
+    result
+}
+
+/// `_WORD_RE` (`\w+` of Python: letters, digits and the underscore).
+fn word_re() -> &'static Regex {
+    static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"[\p{L}\p{N}_]+").unwrap())
+}
+
+/// The words of the texts with how often each is: all of them (None), or those of new texts added
+/// (`search._add_words`).
+fn add_words(conn: &Connection, text_ids: Option<&[i64]>) -> rusqlite::Result<()> {
+    let mut counts: HashMap<String, i64> = HashMap::new();
+    let mut count = |norm: &str| {
+        for m in word_re().find_iter(norm) {
+            *counts.entry(m.as_str().to_string()).or_insert(0) += 1;
+        }
+    };
+    match text_ids {
+        None => {
+            conn.execute("DELETE FROM words", [])?;
+            let mut st = conn.prepare("SELECT norm FROM text_norm")?;
+            let mut rows = st.query([])?;
+            while let Some(r) = rows.next()? {
+                count(&r.get::<_, String>(0)?);
+            }
+        }
+        Some(ids) => {
+            for chunk in ids.chunks(BATCH) {
+                let marks = vec!["?"; chunk.len()].join(",");
+                let mut st = conn.prepare(&format!(
+                    "SELECT norm FROM text_norm WHERE text_id IN ({marks})"
+                ))?;
+                let mut rows = st.query(params_from_iter(chunk.iter()))?;
+                while let Some(r) = rows.next()? {
+                    count(&r.get::<_, String>(0)?);
+                }
+            }
+        }
+    }
+    let tx = conn.unchecked_transaction()?;
+    {
+        let mut up = tx.prepare(
+            "INSERT INTO words (word, n) VALUES (?, ?) ON CONFLICT(word) DO UPDATE SET n = n + excluded.n",
+        )?;
+        for (w, n) in &counts {
+            up.execute(rusqlite::params![w, n])?;
+        }
+    }
+    tx.commit()
 }
 
 #[cfg(test)]

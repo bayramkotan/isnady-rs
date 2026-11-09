@@ -8,7 +8,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::tables;
-use crate::normalize::NORMALIZER_VERSION;
 use crate::{bookmarks, cache, config, paths};
 
 pub const LOCK_WAIT: u64 = 15;
@@ -104,7 +103,7 @@ fn fts_available(conn: &Connection) -> bool {
     .is_ok()
 }
 
-fn create_index_tables(conn: &Connection) -> rusqlite::Result<()> {
+pub(crate) fn create_index_tables(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS core_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
          CREATE TABLE IF NOT EXISTS text_norm (
@@ -129,44 +128,6 @@ fn create_index_tables(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-fn py_opt(v: Option<i64>) -> String {
-    v.map(|n| n.to_string()).unwrap_or_else(|| "None".into())
-}
-
-/// The search index thrown away and made again for a database without texts (`search.rebuild_index` after
-/// every book is removed).
-fn rebuild_empty_index(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute_batch(
-        "DROP TRIGGER IF EXISTS text_norm_ai;
-         DROP TRIGGER IF EXISTS text_norm_ad;
-         DROP TABLE IF EXISTS texts_fts;
-         DROP TABLE IF EXISTS text_norm;
-         DROP TABLE IF EXISTS words;",
-    )?;
-    create_index_tables(conn)?;
-    conn.execute(
-        "INSERT OR REPLACE INTO core_meta (key, value) VALUES ('normalizer_version', ?)",
-        [NORMALIZER_VERSION.to_string()],
-    )?;
-    let (n, a, b): (i64, Option<i64>, Option<i64>) = conn.query_row(
-        "SELECT (SELECT COUNT(*) FROM texts), (SELECT MAX(id) FROM texts), (SELECT MAX(text_id) FROM text_norm)",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
-    if n > 0 {
-        return Ok(()); // texts left: the Python isnady indexes them at its next start
-    }
-    conn.execute(
-        "INSERT OR REPLACE INTO core_meta (key, value) VALUES ('index_ready', ?)",
-        [format!(
-            "{NORMALIZER_VERSION}|{n}|{}|{}",
-            py_opt(a),
-            py_opt(b)
-        )],
-    )?;
-    Ok(())
-}
-
 // ------------------------------------------------------------------ back to zero (RST1)
 /// Remove every imported source and what came with it; how many sources there were (`reset.books`).
 pub fn reset_books(conn: &Connection) -> rusqlite::Result<i64> {
@@ -176,7 +137,7 @@ pub fn reset_books(conn: &Connection) -> rusqlite::Result<i64> {
     tx.execute("DELETE FROM persons", [])?;
     tx.commit()?;
     cleanup(conn)?;
-    rebuild_empty_index(conn)?;
+    crate::search::rebuild_index(conn, &|_| {})?; // the search index and its word list, now empty
     let _ = conn.execute_batch("VACUUM");
     cache::clear();
     crate::log::warning("reset", &format!("⟲ every book removed ({n} sources)"));

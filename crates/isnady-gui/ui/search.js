@@ -343,7 +343,7 @@ function openLanguagePicker() {
     every.onchange = () => { for (const b of boxes) b.checked = every.checked; };
     for (const b of boxes) b.onchange = () => { every.checked = boxes.every((x) => x.checked); };
     const m = el.querySelector("[data-more]");
-    if (m) m.onclick = () => { close(); later(["&File", "Data Sources…"])(); };
+    if (m) m.onclick = () => { close(); openPreferences("sources"); };
     el.querySelector("[data-done]").onclick = () => {
       const picked = [...el.querySelectorAll("[data-lang]")].filter((c) => c.querySelector("input").checked).map((c) => c.dataset.lang);
       const next = !picked.length || picked.length === all.length ? [] : picked;

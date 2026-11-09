@@ -13,6 +13,11 @@ pub fn strip<'a>(s: &'a str, chars: &str) -> &'a str {
     s.trim_matches(|c| chars.contains(c))
 }
 
+/// `s.strip()`: Python's white space, which also counts the separators \x1c-\x1f.
+pub fn trim(s: &str) -> &str {
+    s.trim_matches(|c: char| c.is_whitespace() || ('\x1c'..='\x1f').contains(&c))
+}
+
 /// `s[:1].upper() + s[1:]`.
 pub fn upper_first(s: &str) -> String {
     let mut it = s.chars();
