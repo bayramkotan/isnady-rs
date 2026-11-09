@@ -5,6 +5,23 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Data sources, as the Python window has them (RS16a; Bayram: "geri kalanları da hallet").** From
+  gui/sources_page.py, in Preferences → Data sources and File → Data Sources…: the repository chosen (isnady-data by
+  default, the datasets others publish, those you add by address or folder) with where its catalog came from; its
+  books by kind (the Qur'an, hadith, written sources, sira, tabaqat, rijal) and road, each with its tags, what it is,
+  its languages and what of it is imported; Remove data, Open in Books; what is new or changed in the repository; one
+  language taken out of every book; your own sources; the data folder and a ready database. Preferences → Reset now
+  deletes the books and everything too. Importing says it comes with the chain reader (RS17).
+- **`iy-rs repo`, `iy-rs catalog list | updates | languages | remove | add | delete`, `iy-rs formats`, `iy-rs database
+  [use FILE]`, `iy-rs remove KEY`, `iy-rs reset books | all`** word for word as `iy`, with the same files
+  (repos/*.json, user_repositories.json, user_sources.json, imported.json) and the same database afterwards. New in
+  the core: `sources/` — the repositories (`core/repositories.py`), the catalog and its status (`core/catalog.py`),
+  reading a file or a URL (`data/fetch.py`), the database written to, created and upgraded as `db.connect` does it,
+  the ready database (`data/ready.py`), back to zero (`core/reset.py`). The schema, its upgrades, the import formats
+  and the catalogs shipped with isnady are written from the Python isnady by `tools/gen_tables.py`
+  (`data/sources.json`). New dependencies: ureq (HTTPS, with the system's certificates) and url.
+- 16 more parity cases (223 in all).
+
 - **Statistics, as the Python window has it (RS12; Bayram: "tamam devam et. geri kalanları bitir").** From
   gui/statistics_page.py and gui/stats_charts.py: the books chosen above (All books, the Sunni road, the Shia road, one
   book), the nine sections on the left — Overview, Narrators, Chains, Grades and chains, The hadith model, Correlations

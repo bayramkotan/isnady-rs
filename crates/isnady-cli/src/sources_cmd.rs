@@ -1,0 +1,622 @@
+//! iy-rs formats, repo, catalog, database, remove, import (RS16): the data repositories and the sources, as the
+//! Python isnady's `cli.cmd_formats`, `cmd_repo`, `cmd_catalog`, `cmd_database`, `cmd_remove`. Importing comes with
+//! the chain reader (RS17).
+
+use clap::Args;
+use std::process::ExitCode;
+
+use isnady_core::py::thousands;
+use isnady_core::sources::{catalog, repos, store, IMPORT_LATER};
+
+fn rw() -> Result<isnady_core::db::Connection, ExitCode> {
+    store::connect_rw(None).map_err(|e| {
+        eprintln!("{e}");
+        ExitCode::from(1)
+    })
+}
+
+macro_rules! conn {
+    () => {
+        match rw() {
+            Ok(c) => c,
+            Err(code) => return code,
+        }
+    };
+}
+
+fn later() -> ExitCode {
+    eprintln!("{IMPORT_LATER}");
+    ExitCode::from(2)
+}
+
+/// iy-rs formats.
+pub fn formats_cmd() -> ExitCode {
+    for (id, title, description) in isnady_core::sources::importers() {
+        println!("{id:14} {title}\n{:14} {description}", "");
+    }
+    ExitCode::SUCCESS
+}
+
+#[derive(Args)]
+pub struct RepoArgs {
+    #[arg(default_value = "list", value_parser = ["list", "use", "show", "add", "remove"])]
+    action: String,
+    /// use/show/remove: a repository id; add: a GitHub or Hugging Face repository, a catalog URL or a folder
+    target: Option<String>,
+    /// add: the name shown for it
+    #[arg(long)]
+    name: Option<String>,
+    /// show: read the catalog again from the repository
+    #[arg(long)]
+    refresh: bool,
+}
+
+/// iy-rs repo list|use|show|add|remove.
+pub fn repo_cmd(a: RepoArgs) -> ExitCode {
+    if a.action == "list" {
+        let chosen = repos::selected().id;
+        for r in repos::all_repositories() {
+            let mark = if r.id == chosen { "*" } else { " " };
+            let kind = if r.default {
+                "default"
+            } else if !r.builtin {
+                "added by you"
+            } else {
+                "optional"
+            };
+            println!(" {mark} {:22} {:46} {kind}", r.id, r.name);
+        }
+        println!(
+            "\n* the repository in use. Choose: iy repo use ID · its sources: iy catalog list"
+        );
+        return ExitCode::SUCCESS;
+    }
+    if a.action == "add" {
+        let Some(target) = a.target.filter(|t| !t.is_empty()) else {
+            eprintln!("Give the repository: iy repo add https://github.com/owner/name");
+            return ExitCode::from(2);
+        };
+        return match repos::add_repository(&target, a.name.as_deref()) {
+            Ok(r) => {
+                println!("Added {}: {}. Use it: iy repo use {}", r.id, r.name, r.id);
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
+    }
+    let repo = match a.target.as_deref().filter(|t| !t.is_empty()) {
+        Some(t) => repos::find(t),
+        None => Some(repos::selected()),
+    };
+    let Some(repo) = repo else {
+        eprintln!(
+            "No repository '{}'. See: iy repo list",
+            a.target.unwrap_or_default()
+        );
+        return ExitCode::from(1);
+    };
+    match a.action.as_str() {
+        "use" => {
+            if let Err(e) = repos::select(&repo.id) {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+            println!("Using {}. Its sources: iy catalog list", repo.name);
+            ExitCode::SUCCESS
+        }
+        "remove" => {
+            if repo.builtin {
+                eprintln!("{} ships with isnady and stays in the list.", repo.name);
+                return ExitCode::from(1);
+            }
+            repos::remove_repository(&repo.id);
+            println!(
+                "Removed {} from the list (what you imported from it stays).",
+                repo.name
+            );
+            ExitCode::SUCCESS
+        }
+        _ => {
+            let (cat, from) = match repos::catalog(&repo, a.refresh) {
+                Ok(x) => x,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
+            };
+            println!("{} ({})\n  {}", repo.name, repo.id, repo.description);
+            if let Some(h) = &repo.homepage {
+                println!("  {h}");
+            }
+            match &repo.url {
+                Some(url) => println!(
+                    "  catalog: {url} — read from {}",
+                    match from {
+                        repos::From::Network => "the repository now",
+                        repos::From::Saved => "the copy saved in the last day",
+                        repos::From::Shipped => "the copy shipped with isnady (not reachable)",
+                    }
+                ),
+                None => println!(
+                    "  catalog: shipped with isnady (this dataset publishes none of its own)"
+                ),
+            }
+            for e in cat
+                .get("entries")
+                .and_then(|v| v.as_array())
+                .into_iter()
+                .flatten()
+            {
+                let g = |k: &str| e.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+                println!("  {:20} {:6} {}", g("id"), g("tradition"), g("title"));
+            }
+            ExitCode::SUCCESS
+        }
+    }
+}
+
+#[derive(Args)]
+pub struct CatalogArgs {
+    /// languages: one language for every book — iy catalog languages [add|remove] tr en (LANG2); updates: what is
+    /// new or changed in the repository; update: import only that (UPD5)
+    #[arg(value_parser = ["list", "import", "remove", "add", "delete", "languages", "updates", "update"])]
+    action: String,
+    /// source id (see list); for add: a title
+    id: Option<String>,
+    /// add: data format, see 'iy formats'
+    format: Option<String>,
+    /// add: file path or URL
+    location: Option<String>,
+    /// import: language code or name (repeatable; default ara, tur, eng)
+    #[arg(long)]
+    language: Vec<String>,
+    /// import: every source of the repository (hadith books first, then the rijal works)
+    #[arg(long)]
+    all: bool,
+    /// add: licence of the data
+    #[arg(long)]
+    license: Option<String>,
+    /// add: book key for index files (e.g. bukhari)
+    #[arg(long)]
+    book: Option<String>,
+    /// add: kind of authentication; credentials are asked at import and never stored
+    #[arg(long, default_value = "none", value_parser = ["none", "basic", "bearer", "apikey"])]
+    auth: String,
+    /// add: header name for an API key
+    #[arg(long)]
+    api_key_header: Option<String>,
+    /// add: query parameter name for an API key
+    #[arg(long)]
+    api_key_param: Option<String>,
+    /// list / import: the sources of this repository instead of the chosen one
+    #[arg(long)]
+    repo: Option<String>,
+}
+
+fn kind_name(kind: &str) -> &str {
+    match kind {
+        "quran" => "The Qur'an",
+        "hadith" => "Hadith collections",
+        "sahifa" => "Written sources",
+        "sira" => "Sira",
+        "tabaqat" => "Tabaqat",
+        "rijal" => "Rijal",
+        k => k,
+    }
+}
+
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        Some(f) => f
+            .to_uppercase()
+            .chain(c.flat_map(|x| x.to_lowercase()))
+            .collect(),
+        None => String::new(),
+    }
+}
+
+fn list(conn: &isnady_core::db::Connection, repo_arg: Option<&str>) -> ExitCode {
+    let repo = match repo_arg.filter(|r| !r.is_empty()) {
+        Some(r) => repos::find(r),
+        None => Some(repos::selected()),
+    };
+    let Some(repo) = repo else {
+        eprintln!(
+            "No repository '{}'. See: iy repo list",
+            repo_arg.unwrap_or_default()
+        );
+        return ExitCode::from(1);
+    };
+    for builtin in [true, false] {
+        let (mut entries, title) = if builtin {
+            match repos::entries(&repo, false) {
+                Ok(e) => (e, format!("Sources of {}", repo.name)),
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
+            }
+        } else {
+            (
+                catalog::user_entries(),
+                "Your sources (User Resources)".to_string(),
+            )
+        };
+        let mut heads: Vec<(String, String)> = vec![];
+        if builtin {
+            catalog::sort_for_list(&mut entries);
+            let mut folders: Vec<(String, String, String)> = vec![];
+            for e in &entries {
+                let road = catalog::road(e);
+                let folder = if road.is_empty() {
+                    format!("{}/", e.kind)
+                } else {
+                    format!("{}/{road}/", e.kind)
+                };
+                if folders.iter().any(|(f, _, _)| *f == folder) {
+                    continue;
+                }
+                let label = format!(
+                    "{}{}",
+                    kind_name(&e.kind),
+                    if road.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" · {}", capitalize(road))
+                    }
+                );
+                folders.push((
+                    folder.clone(),
+                    e.id.clone(),
+                    format!("{label}  (isnady-data/{folder})"),
+                ));
+            }
+            heads = folders.into_iter().map(|(_, id, h)| (id, h)).collect();
+        }
+        println!("\n{title}");
+        if entries.is_empty() {
+            println!("  none yet — add one: iy catalog add TITLE FORMAT FILE-OR-URL");
+        }
+        for e in &entries {
+            if let Some((_, h)) = heads.iter().find(|(id, _)| *id == e.id) {
+                println!("\n  — {h} —");
+            }
+            let st = match catalog::status(conn, e) {
+                Ok(s) => s,
+                Err(err) => {
+                    eprintln!("{err}");
+                    return ExitCode::from(1);
+                }
+            };
+            let state = if st.imported {
+                let langs = if st.languages.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        " ({})",
+                        st.languages
+                            .iter()
+                            .map(|l| catalog::shown_language(l))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("imported{langs}, {}", thousands(st.count))
+            } else {
+                "not imported".to_string()
+            };
+            let kind = if e.builtin || e.kind != "hadith" {
+                e.kind.as_str()
+            } else {
+                ""
+            };
+            println!("  {:38} {kind:7} {:46} {state}", e.id, e.title);
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+/// iy-rs catalog list|import|remove|add|delete|languages|updates|update.
+pub fn catalog_cmd(a: CatalogArgs) -> ExitCode {
+    let action = a.action.as_str();
+    if action == "updates" || action == "update" {
+        let conn = conn!();
+        let items = match catalog::updates(&conn, a.repo.as_deref()) {
+            Ok(i) => i,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        };
+        if items.is_empty() {
+            println!("Up to date: no new book, no changed book, no new language of the languages you read.");
+            return ExitCode::SUCCESS;
+        }
+        for i in &items {
+            let why = match i.why.as_str() {
+                "new" => "new in the repository".to_string(),
+                "changed" => "changed in the repository".to_string(),
+                _ => format!(
+                    "new language(s): {}",
+                    i.new
+                        .iter()
+                        .map(|c| catalog::language_label(c))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            };
+            println!("  {:46} {why}", i.entry.id);
+        }
+        if action == "updates" {
+            println!("{} to bring up to date: iy catalog update", items.len());
+            return ExitCode::SUCCESS;
+        }
+        return later();
+    }
+    if action == "languages" {
+        let conn = conn!();
+        let what = a.id.clone().unwrap_or_default().to_lowercase();
+        let mut named: Vec<String> = vec![];
+        if let Some(f) = &a.format {
+            named.push(f.clone());
+            named.extend(a.location.clone());
+        }
+        named.extend(a.language.clone());
+        let codes: Vec<String> = named
+            .iter()
+            .filter(|x| !x.is_empty())
+            .map(|x| catalog::code_for(x))
+            .collect();
+        if what.is_empty() || what == "list" {
+            match catalog::language_overview(&conn) {
+                Ok(rows) => {
+                    for r in rows {
+                        println!(
+                            "  {}  {:12} imported in {:>2} of the {} books that offer it",
+                            r.code, r.label, r.imported, r.offered
+                        );
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
+            }
+            println!("Add one to every book: iy catalog languages add tr en   ·   remove: iy catalog languages remove ur");
+            return ExitCode::SUCCESS;
+        }
+        if codes.is_empty() {
+            eprintln!("Name the languages: iy catalog languages add tr en");
+            return ExitCode::from(2);
+        }
+        if what == "add" {
+            return later();
+        }
+        if what == "remove" {
+            if codes.iter().any(|c| c == "ara") {
+                eprintln!("Arabic stays: the chains and the narrators are read from it.");
+            }
+            return match catalog::remove_languages(&conn, &codes) {
+                Ok(n) => {
+                    println!("Removed {n} edition(s).");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    ExitCode::from(1)
+                }
+            };
+        }
+        eprintln!("iy catalog languages [list | add CODES | remove CODES]");
+        return ExitCode::from(2);
+    }
+    if action == "list" {
+        let conn = conn!();
+        return list(&conn, a.repo.as_deref());
+    }
+    if action == "add" {
+        let (Some(title), Some(format), Some(location)) = (&a.id, &a.format, &a.location) else {
+            eprintln!("Give a title, a format and a file or URL: iy catalog add \"My Bukhari\" fawazahmed0 ./bukhari.json");
+            return ExitCode::from(2);
+        };
+        return match catalog::add_user_entry(
+            title,
+            format,
+            location,
+            a.license.as_deref(),
+            &a.auth,
+            a.api_key_header.as_deref().or(a.api_key_param.as_deref()),
+            if a.api_key_param.is_some() {
+                "query"
+            } else {
+                "header"
+            },
+            a.book.as_deref(),
+        ) {
+            Ok(e) => {
+                println!(
+                    "Added {}: {}. Import it with: iy catalog import {}",
+                    e.id, e.title, e.id
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    if action == "delete" {
+        let id = a.id.clone().unwrap_or_default();
+        let ok = catalog::delete_user_entry(&id);
+        if ok {
+            println!("Deleted.");
+        } else {
+            println!("No user source '{id}'. See: iy catalog list");
+        }
+        return if ok {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(1)
+        };
+    }
+    if action == "import" && a.all {
+        return later();
+    }
+    let wanted = match (&a.repo, &a.id) {
+        (Some(r), Some(i)) if !r.is_empty() && !i.is_empty() => format!("{r}/{i}"),
+        _ => a.id.clone().unwrap_or_default(),
+    };
+    let Some(entry) = catalog::find(&wanted) else {
+        eprintln!(
+            "No source '{}'. See: iy catalog list",
+            a.id.clone().unwrap_or_else(|| "None".into())
+        );
+        return ExitCode::from(1);
+    };
+    let conn = conn!();
+    if action == "remove" {
+        return match catalog::remove_entry(&conn, &entry) {
+            Ok(true) => {
+                println!("Removed what {} imported.", entry.id);
+                ExitCode::SUCCESS
+            }
+            Ok(false) => {
+                println!("{} was not imported.", entry.id);
+                ExitCode::from(1)
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
+    }
+    later()
+}
+
+#[derive(Args)]
+pub struct DatabaseArgs {
+    #[arg(default_value = "show", value_parser = ["show", "use"])]
+    action: String,
+    /// use: isnady.db or isnady-db-<date>.zip
+    file: Option<String>,
+}
+
+/// iy-rs database [use FILE].
+pub fn database_cmd(a: DatabaseArgs) -> ExitCode {
+    if a.action == "use" {
+        let Some(file) = a.file.filter(|f| !f.is_empty()) else {
+            eprintln!("Give the file: iy database use ~/Downloads/isnady-db-2026-10-10.zip");
+            return ExitCode::from(2);
+        };
+        let info = match store::stage(&file) {
+            Ok(i) => i,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        };
+        match store::apply_pending() {
+            Err(_) => {
+                println!(
+                    "Ready: {} books, {} hadith. isnady is open and holds the database; it is used from the next start.",
+                    info.books,
+                    thousands(info.hadith)
+                );
+            }
+            Ok(backup) => {
+                println!(
+                    "Using the ready database: {} books, {} hadith (schema {}){}.",
+                    info.books,
+                    thousands(info.hadith),
+                    info.schema,
+                    backup
+                        .map(|b| format!("; your previous database is kept as {}", b.display()))
+                        .unwrap_or_default()
+                );
+                println!("If the isnady window is open, close and start it again.");
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
+    println!(
+        "database: {}{}",
+        isnady_core::paths::db_path().display(),
+        if store::pending() {
+            "  (a ready database is waiting for the next start)"
+        } else {
+            ""
+        }
+    );
+    ExitCode::SUCCESS
+}
+
+/// iy-rs remove KEY: a source and everything imported from it.
+pub fn remove_cmd(key: &str) -> ExitCode {
+    let conn = conn!();
+    match store::remove_source(&conn, key) {
+        Ok(true) => {
+            println!("Removed source '{key}' and everything imported from it.");
+            ExitCode::SUCCESS
+        }
+        Ok(false) => {
+            eprintln!("No source with key '{key}'. See: iy sources");
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// iy-rs reset books|all (`cli.cmd_reset`): the books out of the database, or the whole profile.
+pub fn reset_data(what: &str) -> ExitCode {
+    let conn = conn!();
+    if what == "books" {
+        return match store::reset_books(&conn) {
+            Ok(n) => {
+                println!("{n} sources deleted. Import them again with: iy catalog import --all");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
+    }
+    match store::reset_everything(&conn) {
+        Ok(out) => {
+            println!(
+                "Everything deleted: {} sources, the settings{}.",
+                out.books,
+                if out.bookmarks { ", the bookmarks" } else { "" }
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::from(1)
+        }
+    }
+}
+
+/// iy-rs import FORMAT LOCATION: with the chain reader (RS17).
+pub fn import_cmd(format: &str) -> ExitCode {
+    if !isnady_core::sources::has_importer(format) {
+        let known: Vec<&str> = isnady_core::sources::importers()
+            .iter()
+            .map(|i| i.0.as_str())
+            .collect();
+        eprintln!(
+            "Unknown format '{format}'. Known formats: {}",
+            known.join(", ")
+        );
+        return ExitCode::from(2);
+    }
+    later()
+}

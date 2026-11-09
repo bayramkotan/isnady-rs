@@ -506,10 +506,43 @@ def settings() -> str:
     return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
 
 
+SOURCES = os.path.join(HERE, "..", "crates", "isnady-core", "data", "sources.json")
+
+
+def sources() -> str:
+    """Where the books come from (RS16): the database's schema and its upgrades, the import formats, the catalogs of
+    the repositories that ship with isnady, and the language names of the catalog."""
+    _import()
+    import json as _json
+
+    from isnady.core import catalog, repositories, titles
+    from isnady.data import db
+    from isnady.data.importers import list_importers
+
+    out = {
+        "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
+        "schema_version": db.SCHEMA_VERSION,
+        "oldest_upgradable": db.OLDEST_UPGRADABLE,
+        "schema": db.SCHEMA,
+        "cleanup": db.CLEANUP_SQL,
+        "migrations": [[v, list(s)] for v, s in sorted(db.MIGRATIONS.items())],
+        "importers": [[i.format_id, i.title, i.description] for i in list_importers()],
+        "repositories": [repositories.bundled()[k] for k in sorted(repositories.bundled())],
+        "order": repositories.ORDER,
+        "default_id": repositories.DEFAULT_ID,
+        "languages": [[k, v] for k, v in catalog.LANGUAGE_NAMES.items()],
+        "default_languages": catalog.DEFAULT_LANGUAGES,
+        "two_letters": [[k, v] for k, v in catalog._TWO_LETTERS.items()],
+        "about": {code: titles._table(code)["about"] for code in ("ar", "tr")},
+    }
+    return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"
+
+
 def outputs() -> dict:
     files = {OUT: text(), BOOKS: books(), WINDOW: window(), LIVES: lives(), HUFFAZ: huffaz_index(),
              SAHABA: sahaba(), SIRA: sira(),
-             GENEALOGY: genealogy(), LEARN: learn_data(), SAHIFA: sahifa(), SETTINGS: settings()}
+             GENEALOGY: genealogy(), LEARN: learn_data(), SAHIFA: sahifa(), SETTINGS: settings(),
+             SOURCES: sources()}
     for code, body in catalogs().items():
         files[os.path.join(I18N, f"{code}.json")] = body
     return files

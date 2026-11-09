@@ -240,6 +240,23 @@ CASES = [
     ["stats", "--explain"],
     ["stats", "--explain", "kappa"],
     ["stats", "--explain", "nosuch"],
+    # the data sources (RS16): the formats, the repositories, the catalog with what is imported, what changed
+    ["formats"],
+    ["repo", "list"],
+    ["repo", "show", "fawazahmed0", "--refresh"],
+    ["repo", "show", "nosuch"],
+    ["repo", "remove", "isnady"],
+    ["catalog", "list"],
+    ["catalog", "list", "--repo", "thaqalayn"],
+    ["catalog", "list", "--repo", "nosuch"],
+    ["catalog", "updates"],
+    ["catalog", "languages"],
+    ["catalog", "languages", "add"],
+    ["catalog", "remove", "nosuch"],
+    ["catalog", "delete", "nosuch"],
+    ["catalog", "add", "T", "nosuchformat", "x.json"],
+    ["database"],
+    ["remove", "nosuch"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

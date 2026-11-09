@@ -1107,3 +1107,25 @@ table.st-table.first-fit td:first-child { white-space: nowrap; }
   background-position: right 12px center; background-size: 12px 12px; background-repeat: no-repeat;
 }
 .st-gbar select { min-width: 270px; }
+
+/* Preferences → Data sources (sources.js, gui/sources_page.py) */
+.src-page { display: flex; flex-direction: column; gap: 10px; }
+.src-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.src-head select { min-width: 360px; flex: 1; }
+.src-fill { flex: 1; }
+.src-bar, .src-buttons, .src-tags, .src-langs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.src-buttons { justify-content: flex-end; }
+.src-big { font-size: calc(15pt * var(--scale)); }
+.src-band { font-size: calc(16pt * var(--scale)); }
+.src-chead { display: flex; gap: 10px; align-items: center; }
+.src-name { flex: 3; }
+.src-ar { flex: 2; font-family: var(--arabic); font-size: calc(17pt * var(--scale)); color: var(--arabic-ink, var(--ink)); direction: rtl; }
+.src-state { flex: 2; text-align: end; }
+.src-check { display: inline-flex; align-items: center; gap: 4px; }
+.src-grid { display: grid; grid-template-columns: auto auto auto auto 1fr; gap: 4px 12px; align-items: center; }
+.src-progress { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+.src-progress i { position: absolute; inset: 0 auto 0 0; width: 30%; background: var(--lapis); animation: src-run 1.2s linear infinite; }
+@keyframes src-run { from { left: -30%; } to { left: 100%; } }
+.src-add { min-width: 560px; }
+.src-frow { display: grid; grid-template-columns: 140px 1fr; gap: 8px; align-items: center; }
+.src-page button[disabled] { opacity: 0.45; cursor: default; }

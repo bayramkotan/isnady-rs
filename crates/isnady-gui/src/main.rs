@@ -10,6 +10,7 @@ use isnady_core::{
     narrators, paths, people, py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables,
     works, VERSION,
 };
+mod sources_page;
 mod stats_page;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -203,13 +204,26 @@ fn prefs_reset(prefix: String) -> Result<Value, String> {
     Ok(look_settings())
 }
 
-/// Preferences → Reset: back to zero (core.reset). The books go with the import of books (RS16).
+/// Preferences → Reset: back to zero (core.reset): the settings, the books, or everything.
 #[tauri::command]
-fn reset_data(kind: String) -> Result<Value, String> {
-    if kind != "settings" {
-        return Err("later".into());
+fn reset_data(state: tauri::State<Data>, kind: String) -> Result<Value, String> {
+    if kind == "settings" {
+        let n = config::reset_settings()?;
+        isnady_core::log::warning("reset", &format!("⟲ every setting reset ({n} stored)"));
+        return Ok(json!({"n": n, "look": look_settings(), "sidebar": config::sidebar_order()}));
     }
-    let n = config::reset_settings()?;
+    // the books (core.reset): the window's own connection is let go first, so VACUUM can make the file small
+    if let Ok(mut guard) = state.0.lock() {
+        *guard = None;
+    }
+    let conn = isnady_core::sources::store::connect_rw(None)?;
+    let n = if kind == "books" {
+        isnady_core::sources::store::reset_books(&conn).map_err(err)?
+    } else {
+        isnady_core::sources::store::reset_everything(&conn)
+            .map_err(err)?
+            .books
+    };
     Ok(json!({"n": n, "look": look_settings(), "sidebar": config::sidebar_order()}))
 }
 
@@ -3107,6 +3121,18 @@ fn main() {
             quran_search,
             sahifa_list,
             sahifa_source,
+            sources_page::src_page,
+            sources_page::src_use_repo,
+            sources_page::src_refresh_repo,
+            sources_page::src_add_repo,
+            sources_page::src_remove_repo,
+            sources_page::src_remove,
+            sources_page::src_remove_language,
+            sources_page::src_delete,
+            sources_page::src_add,
+            sources_page::src_stage,
+            sources_page::src_relocate,
+            sources_page::src_import,
             stats_page::stats_progress,
             stats_page::stats_scope,
             stats_page::stats_corpus,

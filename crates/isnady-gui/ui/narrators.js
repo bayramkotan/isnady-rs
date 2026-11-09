@@ -350,7 +350,7 @@ function showEmpty() {
   if (NARR.road !== "sunni") html += `<div class="lead">${esc(t("Shia narrators come from al-Najashi's Rijal — 1,266 authors and narrators with his judgment on each, read in the Imami terms (reliability and creed); the chains of the Shia books are matched to them."))}</div>`;
   html += `<div><button class="primary" id="n-sources">${esc(t("Open Data Sources"))}</button></div></div>`;
   $("n-view").innerHTML = html;
-  $("n-sources").onclick = later(["&File", "Data Sources…"]);
+  $("n-sources").onclick = () => openPreferences("sources");
 }
 
 // Qt draws a box square when its radius is more than half its height
@@ -445,7 +445,7 @@ async function fillEntries(life, root) {
       if (found.available) { box.innerHTML = `<div class="caption">${esc(t("This entry is not in the downloaded copy."))}</div>`; continue; }
       box.innerHTML = `<div class="caption">${esc(t("Read his entry in the author's own words (Arabic): the work is downloaded once from isnady-data (about {mb} MB) and kept on this computer — or import it in Data sources, and read the whole work in Books.", { mb: found.size_mb }))}</div>
         <button class="nlink">${esc(t("Download {work}", { work: e.title }))}</button>`;
-      box.querySelector("button").onclick = later(["&File", "Data Sources…"]);
+      box.querySelector("button").onclick = () => openPreferences("sources");
       continue;
     }
     const whole = found.text;

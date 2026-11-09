@@ -2,6 +2,7 @@
 //! that tools/parity.py can compare the two word for word. A command or option not ported yet says so and points to
 //! the Python `iy`; PARITY.md lists them.
 
+mod sources_cmd;
 mod stats_cmd;
 use clap::{Parser, Subcommand};
 use isnady_core::{
@@ -47,6 +48,29 @@ enum Command {
     Profile(ProfileArgs),
     /// What is imported: every source with its editions and texts
     Sources,
+    /// List supported data formats
+    Formats,
+    /// Built-in sources and your own: list, import, updates, update, remove, add, delete
+    Catalog(sources_cmd::CatalogArgs),
+    /// Use a ready database from a file on this computer (isnady.db or the isnady-db zip of isnady-data)
+    Database(sources_cmd::DatabaseArgs),
+    /// Data repositories: list, use, show, add, remove (isnady's own is the default)
+    Repo(sources_cmd::RepoArgs),
+    /// Import a file or URL (comes with the chain reader)
+    Import {
+        /// data format, see 'iy formats'
+        format: String,
+        /// local file path or http(s) URL
+        location: String,
+        /// the other options of iy import
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+        rest: Vec<String>,
+    },
+    /// Remove a source and everything imported from it
+    Remove {
+        /// source key, see 'iy sources'
+        key: String,
+    },
     /// Count what the database holds; corpus, narrators, chains, grades, books, graders for the statistics in depth
     Stats(stats_cmd::StatsArgs),
     /// Search the hadith
@@ -479,7 +503,7 @@ fn main() -> ExitCode {
     // no book yet (FR1): one command brings them all, as one click does in the window
     if !matches!(
         cli.command,
-        Some(Command::Version) | Some(Command::Reset { .. }) | None
+        Some(Command::Version) | Some(Command::Reset { .. }) | Some(Command::Catalog(_)) | None
     ) {
         let empty = db::connect(None)
             .ok()
@@ -538,6 +562,12 @@ fn run(command: Option<Command>) -> ExitCode {
         }) => shortcut_cmd(!no_desktop, !no_menu),
         Some(Command::Profile(a)) => profile_cmd(a),
         Some(Command::Sources) => sources(),
+        Some(Command::Formats) => sources_cmd::formats_cmd(),
+        Some(Command::Catalog(a)) => sources_cmd::catalog_cmd(a),
+        Some(Command::Database(a)) => sources_cmd::database_cmd(a),
+        Some(Command::Repo(a)) => sources_cmd::repo_cmd(a),
+        Some(Command::Import { format, .. }) => sources_cmd::import_cmd(&format),
+        Some(Command::Remove { key }) => sources_cmd::remove_cmd(&key),
         Some(Command::Stats(a)) => stats_cmd::stats_cmd(a),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
@@ -954,7 +984,7 @@ fn chrono_like(t: std::time::SystemTime) -> String {
     isnady_core::py::local_time(t, "%Y-%m-%d %H:%M")
 }
 
-/// iy-rs reset settings|books|all (`cli.cmd_reset`, RST1). The books go with the import of books.
+/// iy-rs reset settings|books|all (`cli.cmd_reset`, RST1).
 fn reset_cmd(what: &str, yes: bool) -> ExitCode {
     use std::io::IsTerminal;
     let shown = match what {
@@ -962,9 +992,6 @@ fn reset_cmd(what: &str, yes: bool) -> ExitCode {
         "books" => "every imported book and source",
         _ => "the books, the settings, the bookmarks and the downloaded data",
     };
-    if what != "settings" {
-        return not_yet("Deleting the books", &format!("iy reset {what}"));
-    }
     if !yes {
         if !std::io::stdin().is_terminal() {
             eprintln!("Add --yes to delete without being asked.");
@@ -977,6 +1004,9 @@ fn reset_cmd(what: &str, yes: bool) -> ExitCode {
             println!("Nothing deleted.");
             return ExitCode::from(1);
         }
+    }
+    if what != "settings" {
+        return sources_cmd::reset_data(what);
     }
     match isnady_core::config::reset_settings() {
         Ok(n) => {

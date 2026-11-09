@@ -33,6 +33,7 @@ pub mod scholars;
 pub mod search;
 pub mod shortcut;
 pub mod sira;
+pub mod sources;
 // the statistics are written step for step as the Python isnady computes them (indexes, the Lanczos constants as
 // CPython has them): the same order of operations gives the same figures
 #[allow(

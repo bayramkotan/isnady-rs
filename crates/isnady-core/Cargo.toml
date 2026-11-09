@@ -24,3 +24,5 @@ caseless.workspace = true
 zip.workspace = true
 chrono.workspace = true
 md5.workspace = true
+ureq.workspace = true
+url.workspace = true

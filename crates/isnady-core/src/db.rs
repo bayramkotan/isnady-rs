@@ -1,5 +1,6 @@
-//! The database the Python isnady builds (isnady.db in the data folder). isnady-rs reads it; creating it, importing
-//! and upgrading its schema stay with the Python isnady until they are ported (PARITY.md).
+//! The database the Python isnady builds (isnady.db in the data folder). isnady-rs reads it here; `sources::store`
+//! opens it to write (removing, resetting, creating and upgrading it); importing stays with the Python isnady until the
+//! chain reader is ported (RS17, PARITY.md).
 
 use rusqlite::OpenFlags;
 pub use rusqlite::{params_from_iter, Connection, Error};
@@ -59,6 +60,9 @@ impl From<rusqlite::Error> for OpenError {
 
 /// Open the database of the data folder (or `path`) for reading.
 pub fn connect(path: Option<&Path>) -> Result<Connection, OpenError> {
+    if path.is_none() {
+        crate::sources::store::first_connect(); // a ready database staged for this start goes in place first
+    }
     let path = path.map(PathBuf::from).unwrap_or_else(paths::db_path);
     if !path.exists() {
         return Err(OpenError::Missing(path));

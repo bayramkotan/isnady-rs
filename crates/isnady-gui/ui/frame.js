@@ -175,7 +175,7 @@ function sectionShortcut(i) {
 function menus() {
   return [
     ["&File", () => [
-      act("Data Sources…", later(["&File", "Data Sources…"]), "Ctrl+Shift+I"),
+      act("Data Sources…", () => openPreferences("sources"), "Ctrl+Shift+I"),
       act("Open Data Folder", () => invoke("open_data_folder")),
       SEP,
       act("Export…", later(["&File", "Export…"]), "Ctrl+E"),
@@ -613,7 +613,7 @@ function shortcutAction(name) {
     "Ctrl+F": find, "Ctrl+Q": () => invoke("quit"), "F11": () => invoke("full_screen"),
     "Ctrl++": () => changeTextScale(+1),
     "Ctrl+-": () => changeTextScale(-1), "Ctrl+0": () => changeTextScale(0),
-    "Ctrl+Shift+I": later(["&File", "Data Sources…"]), "Ctrl+E": later(["&File", "Export…"]),
+    "Ctrl+Shift+I": () => openPreferences("sources"), "Ctrl+E": later(["&File", "Export…"]),
     "Ctrl+Shift+E": later(["&File", "Import…"]), "Ctrl+,": () => openPreferences(),
     "Ctrl+Shift+L": openLog,
   };
