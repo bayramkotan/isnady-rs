@@ -16,13 +16,14 @@ rust-version = "1.75"
 [workspace.dependencies]
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = { version = "1", features = ["preserve_order"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 regex = "1"
 fancy-regex = "0.14"
 unicode-normalization = "0.1"
 caseless = "0.2"
 clap = { version = "4", features = ["derive"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+md5 = "0.7"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 # the core, with the same version as the workspace (tools/bump_version.py writes both): crates.io needs the version
 isnady-core = { path = "crates/isnady-core", version = "=0.7.4" }

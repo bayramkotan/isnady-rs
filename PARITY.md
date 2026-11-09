@@ -36,7 +36,7 @@ Python `iy` does on the same data.
 | `iy sira [EVENT]` | ✅ | `--lang`, `--width`: the timeline by period; an event with its date, place, age, verses, Ibn Hisham's chapter and the hadith that say its phrase |
 | `iy sahifa [ID]` | ✅ | `--tradition`, `--limit`, `--lang`, `--width`: the sources of each road with how many hadith, a source with its hadith (Hammam's with their parallels) |
 | `iy quran …` | ✅ | the suras, a sura or verses with the translations shown (`--edition`) and the hadith that name each (`--hadith`), `search`, `editions` (downloaded), `remove`. ⏳ `download` and the editions to download: with the data sources |
-| `iy stats …` | ⏳ | |
+| `iy stats …` | ✅ | plain (what the database holds), `corpus`, `narrators`, `chains`, `grades`, `books`, `model`, `lab`, `graders`, `--book` (a book, `@shia`, `@all`), `--grader`, `--csv`, `--recompute`, `--limit`, `--explain`; the same figures to the last digit, the same saved results (derived/*.json) |
 | `iy catalog …`, `iy repo …`, `iy import …`, `iy database …`, `iy remove` | ⏳ | the database is imported by the Python isnady |
 | `iy bookmark list, folders, add, remove, export, import` | ✅ | `--folder`, `--title`, `--note`; the same bookmarks.json |
 | `iy term [NAME]`, `iy learn [ARTICLE]` | ✅ | `--search`, `--lang`, `--width`; the articles' numbers counted live |
@@ -64,7 +64,8 @@ Python `iy` does on the same data.
 | Bookmarks | ✅ as the Python page draws it: the folders, the bookmarks with their kind, detail, folders and notes, dragging onto a folder, every menu, Open where it belongs. ⏳ (each says so): Export / import (File → Export, Import) |
 | Learn | ✅ as the Python page draws it: the glossary in colour in three languages, the chips, the list, a term's card; History and method with its live numbers |
 | Narrators | ✅ as the Python page draws it: All / Sunni / Shia, the overview of each road, the search as you type (the famous ones by any spelling first), ★ the famous ones group by group, the filters (generation, Ibn Hajar's rank or the Imami assessment, the six books by Ibn Hajar's marks) with Clear filters, the list 200 at a time and the next ones at its end, its right-click menu; a narrator: the name card (the name he is known by, the parts of his name, ☆), his life (written, or read from the data; the classical entry when downloaded), what the critics say (the entry as written, every verdict with the glossary on the hover, tabaqa, death, Open his entry in the book, Ibn Hajar's marks opening their books), teachers and students, the compilers, the hadith (each opens its chain). ⏳ (it says so): downloading a classical work |
-| Statistics; Data sources | ⏳ one page at a time; until then the Python window shows them, on the same data |
+| Statistics | ✅ as the Python page draws it: the books, the nine sections with every finding, its plain words, chart, figures on hover, How to read it and Save as CSV; Recompute; Export as a web page, CSV files, JSON. ⏳ (each says so): PDF, PNG, SVG, Excel |
+| Data sources | ⏳ until then the Python window shows them, on the same data |
 
 ## The core
 
@@ -100,6 +101,7 @@ Python `iy` does on the same data.
 | `isnady.core.scholars` (the register, roles, search, named, as_narrator, short_name, name_view, present, compiler_stats, grader_stats, critic_stats) | ✅ `scholars.rs` | the register is read from the Python isnady (`data/tables.json`); kept while the database is unchanged (`cache.rs`, as core/cache.py in memory) |
 | `isnady.core.huffaz` | ✅ `huffaz.rs` | the index from the Python isnady (`data/huffaz.json`) |
 | `isnady.core.sahaba` | ✅ `sahaba.rs` | the groups from the Python isnady (`data/sahaba.json`) |
+| `isnady.core.stats_corpus`, `stats_graders`, `stats_models`, `stats_lab`, `stats_words`, `stats_jobs` | ✅ `stats/` | Python's random, sum and lgamma as CPython has them; the results in derived/*.json, read by either program |
 | everything else | ⏳ | |
 
 ## How parity is kept

@@ -2,6 +2,7 @@
 //! that tools/parity.py can compare the two word for word. A command or option not ported yet says so and points to
 //! the Python `iy`; PARITY.md lists them.
 
+mod stats_cmd;
 use clap::{Parser, Subcommand};
 use isnady_core::{
     bookmarks, db, genealogy, grades, huffaz, i18n, isnad, learn, lives, narrators, paths, people,
@@ -46,6 +47,8 @@ enum Command {
     Profile(ProfileArgs),
     /// What is imported: every source with its editions and texts
     Sources,
+    /// Count what the database holds; corpus, narrators, chains, grades, books, graders for the statistics in depth
+    Stats(stats_cmd::StatsArgs),
     /// Search the hadith
     Search(SearchArgs),
     /// Show the chain of one hadith
@@ -535,6 +538,7 @@ fn run(command: Option<Command>) -> ExitCode {
         }) => shortcut_cmd(!no_desktop, !no_menu),
         Some(Command::Profile(a)) => profile_cmd(a),
         Some(Command::Sources) => sources(),
+        Some(Command::Stats(a)) => stats_cmd::stats_cmd(a),
         Some(Command::Search(a)) => search_cmd(a),
         Some(Command::Chain(a)) => chain_cmd(a),
         Some(Command::Isnads { rebuild }) => isnads_cmd(rebuild),

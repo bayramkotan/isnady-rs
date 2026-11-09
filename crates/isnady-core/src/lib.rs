@@ -33,6 +33,14 @@ pub mod scholars;
 pub mod search;
 pub mod shortcut;
 pub mod sira;
+// the statistics are written step for step as the Python isnady computes them (indexes, the Lanczos constants as
+// CPython has them): the same order of operations gives the same figures
+#[allow(
+    clippy::needless_range_loop,
+    clippy::type_complexity,
+    clippy::excessive_precision
+)]
+pub mod stats;
 pub mod tables;
 pub mod takhrij;
 pub mod works;

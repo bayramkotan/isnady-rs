@@ -10,6 +10,7 @@ use isnady_core::{
     narrators, paths, people, py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables,
     works, VERSION,
 };
+mod stats_page;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -3106,6 +3107,17 @@ fn main() {
             quran_search,
             sahifa_list,
             sahifa_source,
+            stats_page::stats_progress,
+            stats_page::stats_scope,
+            stats_page::stats_corpus,
+            stats_page::stats_graders,
+            stats_page::stats_names,
+            stats_page::stats_terms,
+            stats_page::stats_home,
+            stats_page::stats_write,
+            stats_page::stats_csv,
+            stats_page::stats_csv_folder,
+            stats_page::stats_json,
             companions_groups,
             companion_group,
             hadith_cards,

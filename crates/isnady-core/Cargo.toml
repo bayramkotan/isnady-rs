@@ -23,3 +23,4 @@ unicode-normalization.workspace = true
 caseless.workspace = true
 zip.workspace = true
 chrono.workspace = true
+md5.workspace = true

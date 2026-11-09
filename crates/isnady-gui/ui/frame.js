@@ -13,7 +13,7 @@ let THEME_MODE = "system";          // view.theme
 let CONTENT = [];                   // view.content_languages ([] = all)
 let FOOTER = "";
 
-const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "sahifa", "genealogy", "learn", "bookmarks"]);
+const READY = new Set(["search", "books", "narrators", "chains", "scholars", "companions", "sira", "sahifa", "genealogy", "learn", "bookmarks", "statistics"]);
 const HISTORY = { list: [], at: -1, replaying: false, opening: false };
 const PLACE_SECTION = { chain: "chains", narrator: "narrators", book: "books", chapter: "books", in_book: "books", person_in_book: "books", find: "search", tree: "genealogy", scholar: "scholars", group: "companions", sira: "sira", sahifa: "sahifa", verse: "books", genealogy: "genealogy", term: "learn" };
 

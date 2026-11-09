@@ -5,6 +5,25 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Statistics, as the Python window has it (RS12; Bayram: "tamam devam et. geri kalanları bitir").** From
+  gui/statistics_page.py and gui/stats_charts.py: the books chosen above (All books, the Sunni road, the Shia road, one
+  book), the nine sections on the left — Overview, Narrators, Chains, Grades and chains, The hadith model, Correlations
+  and tests, Books, Graders, Terms explained — each a few findings with the sentence that says what the numbers show,
+  its plain words, its chart (tiles, stacked bars, columns, the Lorenz curve, people ranked, interval plots, heat maps,
+  calibration), the figures on hover, How to read it and Save as CSV; Recompute; Export (a section or every section as
+  a web page, every table as CSV files, the results as JSON; PDF, PNG and Excel say they come later); a narrator or a
+  hadith opens where it belongs. The computation runs in a thread of its own, its steps under the head.
+- **`iy-rs stats [corpus | narrators | chains | grades | books | model | lab | graders] [--book KEY | @shia | @all]
+  [--grader] [--csv DIR] [--recompute] [--limit] [--explain [TERM]]`** word for word as `iy stats`, and plain `iy-rs
+  stats` (what the database holds). New in the core: `stats/` — the corpus (`stats_corpus.py`), the graders with their
+  Dawid–Skene model (`stats_graders.py`), the ordinal hadith model (`stats_models.py`), the laboratory (`stats_lab.py`),
+  the plain words (`stats_words.py`), Python's Mersenne Twister (the same bootstrap samples), its compensated `sum`
+  and its own `lgamma`: the same data gives the same figures, to the last digit. The results are kept where the
+  Python isnady keeps them (derived/*.json, the same fingerprint, the same file byte for byte): either program reads
+  what the other computed. serde_json now reads floats exactly (`float_roundtrip`). New dependency: md5 (the name of
+  the results kept for a set of active books, as Python names it).
+- 19 more parity cases (207 in all).
+
 - **Written sources, the Qur'an, Preferences and profiles, and the small commands (Bayram: "ok. geri kalanları da
   bitir").** RS9, RS10, RS14 and RS18 at once, each compared with the Python window and with `iy`, word for word.
 - **Written sources as the Python window has it (RS9).** From gui/sahifa_page.py: the Sunni road and the Shia road

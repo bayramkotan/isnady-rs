@@ -197,6 +197,7 @@ function show(key) {
   $("page-companions").hidden = key !== "companions";
   $("page-sira").hidden = key !== "sira";
   $("page-sahifa").hidden = key !== "sahifa";
+  $("page-statistics").hidden = key !== "statistics";
   $("page-genealogy").hidden = key !== "genealogy";
   $("page-learn").hidden = key !== "learn";
   $("page-bookmarks").hidden = key !== "bookmarks";
@@ -206,6 +207,7 @@ function show(key) {
   if (key === "companions" && !HISTORY.opening) companionsRefresh();
   if (key === "sira" && !HISTORY.opening) siraRefresh();
   if (key === "sahifa" && (!HISTORY.opening || SH.stale)) sahifaRefresh();
+  if (key === "statistics" && !ST.loaded) statisticsRefresh();
   if (key === "genealogy" && !HISTORY.opening) genealogyRefresh();
   if (key === "learn" && !HISTORY.opening) learnRefresh();
   if (key === "bookmarks") bookmarksRefresh();
@@ -290,6 +292,11 @@ async function start() {
   } else if (open.startsWith("verse:")) {
     const [, s, a] = open.split(":");
     await openVerse(Number(s), a ? Number(a) : null);
+  } else if (open.startsWith("stats:")) {
+    const [, sec, scope] = open.split(":");
+    if (scope) ST.scope = scope === "-" ? null : scope;
+    show("statistics");
+    statsSection(Number(sec));
   } else if (open.startsWith("sahifa:")) {
     await openSahifa(open.slice(7));
   } else if (open.startsWith("group:")) {

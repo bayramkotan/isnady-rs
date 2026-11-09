@@ -89,6 +89,64 @@ pub fn book_title(key: &str, fallback: &str, lang: &str) -> String {
     }
 }
 
+/// The name a book is written as in files and folders: its full title with its compiler (`books.full_name`).
+pub fn full_name(key: &str) -> String {
+    library()
+        .catalog
+        .get(key)
+        .map(|e| e.id.clone())
+        .unwrap_or_else(|| key.to_string())
+}
+
+fn fold_title(name: &str) -> String {
+    name.to_lowercase()
+        .replace("al-", "al")
+        .replace(" at ", " al")
+        .replace(" an ", " al")
+        .chars()
+        .filter(|c| c.is_ascii_lowercase())
+        .collect()
+}
+
+/// A title given by its English name (as the statistics keep them) in the language (`titles.book_named`).
+pub fn book_named(conn: Option<&Connection>, name: &str, lang: &str) -> String {
+    let lib = library();
+    let mut key: Option<String> = None;
+    for (k, e) in &lib.catalog {
+        let short = e.title.split(" — ").next().unwrap_or("");
+        for n in [e.title.as_str(), short] {
+            if !n.is_empty() && n == name {
+                key = Some(k.clone());
+            }
+        }
+    }
+    if key.is_none() {
+        let folded = fold_title(name);
+        for (k, e) in &lib.catalog {
+            let short = e.title.split(" — ").next().unwrap_or("");
+            if [e.title.as_str(), short]
+                .iter()
+                .any(|n| !n.is_empty() && fold_title(n) == folded)
+            {
+                key = Some(k.clone());
+            }
+        }
+    }
+    if key.is_none() {
+        if let Some(c) = conn {
+            key = c
+                .query_row("SELECT key FROM collections WHERE name = ?", [name], |r| {
+                    r.get(0)
+                })
+                .ok();
+        }
+    }
+    match key {
+        Some(k) => book_title(&k, name, lang),
+        None => name.to_string(),
+    }
+}
+
 /// The database key of a book given by its full name, its key, or the id of an earlier version (`books.resolve`).
 pub fn resolve(name: &str) -> String {
     let name = name.trim();
