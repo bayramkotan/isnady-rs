@@ -133,6 +133,7 @@ mod tests {
     fn as_python_math() {
         assert_eq!(fsum([0.1; 10]), 1.0);
         assert_eq!(lgamma(2.5), 0.2846828704729196);
-        assert_eq!(erfc(0.7), 0.32219880616258156);
+        // erfc is the C library's, as in CPython: the last bit may differ from one platform's to another's (macOS)
+        assert!((erfc(0.7) - 0.32219880616258156).abs() <= 2.0 * f64::EPSILON * 0.33);
     }
 }
