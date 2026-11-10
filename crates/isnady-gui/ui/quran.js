@@ -27,7 +27,7 @@ function quranBuild() {
     <div class="qr-body" id="qr-body"></div>`;
   $("qr-prev").onclick = () => quranGo(QR.sura - 1);
   $("qr-next").onclick = () => quranGo(QR.sura + 1);
-  $("qr-add").onclick = later(["Translations of the Qur'an"]);
+  $("qr-add").onclick = quranAdd;
   $("qr-find").addEventListener("keydown", (e) => { if (e.key === "Enter") quranSearch(); });
   $("qr-find").addEventListener("search", () => { if (!$("qr-find").value.trim()) showSura(QR.sura); });
   $("qr-langs").addEventListener("change", async (e) => {
@@ -42,8 +42,11 @@ function quranBuild() {
     if (b.dataset.act === "skip") {
       await invoke("quran_skip", { languages: QR.data.missing });
       $("qr-offer").hidden = true;
+    } else if (b.dataset.act === "get") {
+      b.disabled = true;
+      await quranJob({ editions: [b.dataset.key] }, $("qr-facts"));
     } else {
-      later(["Translations of the Qur'an"])();
+      quranAdd();
     }
   });
   $("qr-body").addEventListener("click", (e) => {
@@ -55,7 +58,10 @@ function quranBuild() {
       $("qr-find").value = "";
       showSura(s, v);
     } else if (a.dataset.act === "more") quranMore();
-    else if (a.dataset.act === "download") later(["Download the Qur'an"])();
+    else if (a.dataset.act === "download") {
+      a.disabled = true;
+      quranJob({ editions: QR.data.defaults || [] }, $("qr-dl-status"));
+    }
   });
 }
 
@@ -105,7 +111,7 @@ async function showSura(n, ayah, keep) {
   const d = await invoke("quran_sura", { n });
   if (seq !== QR.seq) return;
   const body = $("qr-body");
-  if (d.download) { quranDownload(d); return; }
+  if (d.download) { QR.data = d; quranDownload(d); return; }
   if (d.error) return;
   for (const id of ["qr-nav", "qr-langs"]) $(id).hidden = false;
   const top = keep ? body.scrollTop : 0;
@@ -125,7 +131,7 @@ async function showSura(n, ayah, keep) {
   if (d.missing.length) {
     const names = d.missing.map((l) => t(l)).join(", ");
     offer.innerHTML = `<div class="lead">📥 ${esc(t("No translation in {languages} is downloaded yet.", { languages: names }))}</div>`
-      + d.missing.map((l) => `<button class="primary" data-act="get" data-tip="${esc(t("The translation readers of {language} know best, from isnady-data; others with ➕ Translations…", { language: t(l) }))}">${esc(t("Download {language}", { language: t(l) }))}</button>`).join("")
+      + d.missing.map((l, i) => `<button class="primary" data-act="get" data-key="${esc((d.missing_keys || [])[i] || "")}" data-tip="${esc(t("The translation readers of {language} know best, from isnady-data; others with ➕ Translations…", { language: t(l) }))}">${esc(t("Download {language}", { language: t(l) }))}</button>`).join("")
       + `<button class="quiet" data-act="other">${esc(t("Another translation…"))}</button><button class="quiet" data-act="skip" data-tip="${esc(t("Do not offer it again"))}">✕</button>`;
   }
   for (const x of $("b-tree").querySelectorAll(".pd-item")) {
@@ -188,7 +194,7 @@ function quranDownload(d) {
   $("qr-facts").textContent = "";
   for (const id of ["qr-nav", "qr-langs", "qr-offer"]) $(id).hidden = true;
   $("qr-body").innerHTML = `<div class="ncard qr-download"><div class="lead">${esc(t("The text of the Qur'an and its translations are downloaded once, on request, from isnady-data: the Arabic (Tanzil's text) with a translation in each language you read — {languages} — about 1 MB each; more translations can be added afterwards, of 98 languages (those isnady-data does not keep are read from fawazahmed0/quran-api).", { languages: d.languages.map((l) => t(l)).join(", ") }))}</div>
-    <div><button class="primary" data-act="download">${esc(t("Download the Qur'an"))}</button></div></div>`;
+    <div><button class="primary" data-act="download">${esc(t("Download the Qur'an"))}</button></div><div class="caption" id="qr-dl-status"></div></div>`;
 }
 
 async function quranSearch() {
@@ -204,4 +210,88 @@ async function quranSearch() {
   body.innerHTML = found.length ? found.map((r) => `<div class="ncard qr-found"><div><button class="linkbtn" data-verse="${r.sura}:${r.ayah}">${esc(r.label)}</button></div>${quranText(esc(r.text), r.rtl, r.rtl ? 1 : 0.9)}</div>`).join("")
     : `<div class="lead">${esc(t("No verse holds these words in the texts downloaded."))}</div>`;
   body.scrollTop = 0;
+}
+
+// ------------------------------------------------------------------ the translations window (AddTranslations)
+// The translations there are, by language — isnady-data's first, then the source's; those ticked are downloaded,
+// a downloaded one unticked is removed. Resolves {chosen, removed} on Apply, null on Cancel.
+function quranTranslations() {
+  return new Promise((resolve) => {
+    const back = document.createElement("div");
+    back.className = "dialog-back";
+    back.innerHTML = `<div class="dialog qr-tr" role="dialog"><div class="pd-title">${esc(t("Translations of the Qur'an"))}</div>
+      <div class="caption">${esc(t("The translations isnady-data keeps come first (★); the others, of 98 languages, are read from fawazahmed0/quran-api (each from Tanzil, the King Fahd Complex, QuranEnc or another source it names). Tick a translation to download it (about 1 MB); untick one downloaded to remove it."))}</div>
+      <select class="qr-tr-lang" disabled></select><div class="qr-tr-list"></div>
+      <div class="caption qr-tr-status">${esc(t("Reading the list of translations …"))}</div>
+      <div class="pd-buttons"><button class="primary small ok" disabled>${esc(t("Apply"))}</button><button class="pd-cancel">${esc(t("Cancel"))}</button></div></div>`;
+    document.body.appendChild(back);
+    const sel = back.querySelector(".qr-tr-lang");
+    const list = back.querySelector(".qr-tr-list");
+    const ok = back.querySelector(".ok");
+    const ticks = {};
+    let info = [], own = "isnady-data", arabic = "ara-quransimple";
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector(".pd-cancel").onclick = () => done(null);
+    ok.onclick = () => done({
+      chosen: Object.keys(ticks).filter((k) => ticks[k] && !info.find((x) => x.key === k).have),
+      removed: Object.keys(ticks).filter((k) => !ticks[k] && info.find((x) => x.key === k).have),
+    });
+    const fill = () => {
+      const lang = sel.value;
+      const rows = info.filter((v) => v.language === lang && !v.key.endsWith("-la") && v.key !== arabic);
+      rows.sort((a, b) => (a.origin !== own) - (b.origin !== own) || a.author.toLowerCase().localeCompare(b.author.toLowerCase()));
+      list.innerHTML = rows.length ? rows.map((v) => {
+        const on = v.key in ticks ? ticks[v.key] : v.have;
+        const label = `${v.origin === own ? "★ " : ""}${v.author}   (${v.source || v.origin})${v.comments ? ` — ${v.comments}` : ""}${v.have ? "   ✓ " + t("downloaded") : ""}`;
+        return `<label class="src-check qr-tr-row" data-tip="${esc(t("Read from {origin}", { origin: v.origin }) + (v.url ? "\n" + v.url : ""))}"><input type="checkbox" data-key="${esc(v.key)}"${on ? " checked" : ""}> ${esc(label)}</label>`;
+      }).join("") : `<div class="caption">${esc(t("No translation in this language"))}</div>`;
+    };
+    list.addEventListener("change", (e) => { if (e.target.dataset.key) ticks[e.target.dataset.key] = e.target.checked; });
+    sel.onchange = fill;
+    invoke("quran_offered").then((r) => {
+      if (!back.isConnected) return;
+      const status = back.querySelector(".qr-tr-status");
+      if (r.error) { status.textContent = t("The list could not be read: {error}", { error: r.error }); return; }
+      info = r.list; own = r.own; arabic = r.arabic;
+      const ownIn = (lang) => info.some((v) => v.language === lang && v.origin === own && v.key !== arabic);
+      const langs = [...new Set(info.filter((v) => !v.key.endsWith("_la") && !v.key.endsWith("-la") && v.key !== arabic).map((v) => v.language))]
+        .sort((a, b) => (!ownIn(a)) - (!ownIn(b)) || t(a).localeCompare(t(b)));
+      const mine = { tr: "Turkish", en: "English", ar: "English" }[document.documentElement.lang] || "English";
+      sel.innerHTML = langs.map((lang) => {
+        const n = info.filter((v) => v.language === lang && v.origin === own && v.key !== arabic).length;
+        return `<option value="${esc(lang)}"${lang === mine ? " selected" : ""}>${esc(t(lang) + (n ? `  ★${n}` : ""))}</option>`;
+      }).join("");
+      sel.disabled = false;
+      const ownN = info.filter((v) => v.origin === own && v.key !== arabic).length;
+      status.textContent = t("{n} translations in {languages} languages", { n: info.length, languages: langs.length })
+        + (ownN ? " · " + t("{n} of them in isnady-data", { n: ownN }) : " · " + t("isnady-data has none yet: all are read from the source"));
+      ok.disabled = false;
+      fill();
+    });
+  });
+}
+
+// a download of the Qur'an's texts in the background (QuranView._fetch): what it does said in `status`
+async function quranJob(args, status) {
+  try { await invoke("src_job", { action: "quran", args }); } catch (e) { if (status) status.textContent = String(e); return; }
+  for (;;) {
+    await new Promise((ok) => setTimeout(ok, 700));
+    const st = await invoke("src_job_status");
+    if (st.running) { if (st.text && status) status.textContent = t(st.text); continue; }
+    const r = st.result || {};
+    if (r.error) {
+      if (status) status.textContent = t("Not downloaded: {error}", { error: r.error });
+      return;
+    }
+    PF.booksChanged = true;
+    openQuran(QR.sura);
+    return;
+  }
+}
+
+async function quranAdd() {
+  const r = await quranTranslations();
+  if (!r || (!r.chosen.length && !r.removed.length)) return;
+  $("qr-facts").textContent = t("Downloading …");
+  await quranJob({ editions: r.chosen, removed: r.removed, viewer: true }, $("qr-facts"));
 }

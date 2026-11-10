@@ -739,3 +739,407 @@ mod tests {
         assert_eq!(marks_in("(2:300)"), vec![]);
     }
 }
+
+// ------------------------------------------------------------------ downloading (quran.fetch, quran.catalog; Q1b)
+/// The fawazahmed0/quran-api, where a text isnady-data does not keep is read (`quran.BASE`).
+pub const BASE: &str = "https://raw.githubusercontent.com/fawazahmed0/quran-api/1";
+
+/// An edition there is to download (`catalog`'s values).
+#[derive(Debug, Clone, Default)]
+pub struct Offered {
+    pub language: String,
+    pub author: String,
+    pub direction: String,
+    pub source: String,
+    pub comments: String,
+    pub origin: String,
+    pub url: String,
+    pub sha256: Option<String>,
+}
+
+fn connect_rw() -> rusqlite::Result<Connection> {
+    let p = path();
+    if let Some(d) = p.parent() {
+        let _ = std::fs::create_dir_all(d);
+    }
+    let conn = Connection::open(p)?;
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS suras (n INTEGER PRIMARY KEY, name TEXT, english TEXT, arabic TEXT, place TEXT, verses INTEGER);
+         CREATE TABLE IF NOT EXISTS editions (key TEXT PRIMARY KEY, language TEXT, author TEXT, direction TEXT, source TEXT, comments TEXT, imported_at TEXT);
+         CREATE TABLE IF NOT EXISTS verses (edition TEXT, sura INTEGER, ayah INTEGER, text TEXT, PRIMARY KEY (edition, sura, ayah));",
+    )?;
+    if conn.prepare("SELECT origin FROM editions LIMIT 0").is_err() {
+        conn.execute("ALTER TABLE editions ADD COLUMN origin TEXT", [])?;
+    }
+    Ok(conn)
+}
+
+fn s(v: &serde_json::Value, k: &str) -> String {
+    v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string()
+}
+
+/// (the "quran" section of isnady-data's catalog, what its locations are relative to) (`quran.own`).
+fn own() -> Option<(serde_json::Value, String)> {
+    use crate::sources::repos;
+    let mut seen = std::collections::HashSet::new();
+    let mut order = vec![Some(repos::selected())];
+    order.push(repos::find(&crate::sources::tables().default_id));
+    for repo in order.into_iter().flatten() {
+        if !seen.insert(repo.id.clone()) {
+            continue;
+        }
+        let Ok((cat, _)) = repos::catalog(&repo, false) else {
+            continue;
+        };
+        if let Some(q) = cat.get("quran").filter(|q| {
+            q.get("editions")
+                .and_then(|e| e.as_array())
+                .is_some_and(|a| !a.is_empty())
+        }) {
+            return Some((q.clone(), repo.url.clone().unwrap_or_default()));
+        }
+    }
+    None
+}
+
+fn own_editions() -> (Vec<(String, Offered)>, Option<serde_json::Value>, String) {
+    let Some((q, base)) = own() else {
+        return (vec![], None, String::new());
+    };
+    let mut out = vec![];
+    for e in q["editions"].as_array().into_iter().flatten() {
+        let key = s(e, "key");
+        out.push((
+            key.clone(),
+            Offered {
+                language: s(e, "language"),
+                author: e
+                    .get("author")
+                    .and_then(|x| x.as_str())
+                    .map(str::to_string)
+                    .unwrap_or(key.clone()),
+                direction: e
+                    .get("direction")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("ltr")
+                    .to_string(),
+                source: s(e, "source"),
+                comments: s(e, "comments"),
+                origin: OWN.into(),
+                url: crate::sources::absolute(&base, &s(e, "location")),
+                sha256: e.get("sha256").and_then(|x| x.as_str()).map(str::to_string),
+            },
+        ));
+    }
+    (out, Some(q), base)
+}
+
+fn source_editions() -> Result<Vec<(String, Offered)>, String> {
+    let raw =
+        crate::sources::read_bytes(&format!("{BASE}/editions.json"), Some(120)).map_err(|e| e.0)?;
+    let v: serde_json::Value = serde_json::from_slice(&raw).map_err(|e| e.to_string())?;
+    Ok(v.as_object()
+        .into_iter()
+        .flatten()
+        .map(|(_, e)| {
+            let name = s(e, "name");
+            (
+                name.clone(),
+                Offered {
+                    language: s(e, "language"),
+                    author: s(e, "author"),
+                    direction: s(e, "direction"),
+                    source: s(e, "source"),
+                    comments: s(e, "comments"),
+                    origin: SOURCE.into(),
+                    url: format!("{BASE}/editions/{name}.min.json"),
+                    sha256: None,
+                },
+            )
+        })
+        .collect())
+}
+
+/// The translations downloaded before keep their text but take the names isnady-data gives them (`_rename`).
+fn rename(mine: &[(String, Offered)]) {
+    if !path().exists() {
+        return;
+    }
+    if let Ok(c) = connect_rw() {
+        for (k, v) in mine {
+            let _ = c.execute(
+                "UPDATE editions SET author = ? WHERE key = ? AND author != ?",
+                rusqlite::params![v.author, k, v.author],
+            );
+        }
+    }
+}
+
+/// Every edition there is to download: isnady-data's first, then (source) the rest of fawazahmed0/quran-api's
+/// (`quran.catalog`).
+pub fn catalog(say: &dyn Fn(&str), source: bool) -> Result<Vec<(String, Offered)>, String> {
+    say("Reading the list of translations");
+    let (mine, _q, _b) = own_editions();
+    let mut out = mine.clone();
+    if source {
+        match source_editions() {
+            Ok(list) => {
+                for (k, v) in list {
+                    if !out.iter().any(|(x, _)| *x == k) {
+                        out.push((k, v));
+                    }
+                }
+            }
+            Err(e) => {
+                crate::log::warning(
+                    "quran",
+                    &format!("The list of {SOURCE} could not be read: {e}"),
+                );
+                if mine.is_empty() {
+                    return Err(e);
+                }
+            }
+        }
+    }
+    if !mine.is_empty() {
+        rename(&mine);
+    }
+    Ok(out)
+}
+
+type Rows = Vec<(i64, i64, String)>;
+/// (n, name, english, arabic, place, verses)
+type SuraRow = (i64, String, String, String, String, i64);
+
+fn verses_of(data: &serde_json::Value) -> Option<Rows> {
+    if let Some(v) = data.get("verses").and_then(|v| v.as_array()) {
+        return v
+            .iter()
+            .map(|r| {
+                let n = |i: usize| match &r[i] {
+                    serde_json::Value::String(t) => t.trim().parse().ok(),
+                    x => x.as_i64(),
+                };
+                Some((n(0)?, n(1)?, r[2].as_str()?.to_string()))
+            })
+            .collect();
+    }
+    data.get("quran")?
+        .as_array()?
+        .iter()
+        .map(|r| {
+            Some((
+                r["chapter"].as_i64()?,
+                r["verse"].as_i64()?,
+                r["text"].as_str()?.to_string(),
+            ))
+        })
+        .collect()
+}
+
+fn read_edition(about: &Offered, key: &str) -> Result<(Rows, String), String> {
+    let mut tries = vec![(
+        if about.url.is_empty() {
+            format!("{BASE}/editions/{key}.min.json")
+        } else {
+            about.url.clone()
+        },
+        if about.origin.is_empty() {
+            SOURCE.to_string()
+        } else {
+            about.origin.clone()
+        },
+        about.sha256.clone(),
+    )];
+    if about.origin == OWN {
+        tries.push((
+            format!("{BASE}/editions/{key}.min.json"),
+            SOURCE.to_string(),
+            None,
+        ));
+    }
+    let mut last = String::new();
+    for (url, origin, sha) in tries {
+        let attempt = || -> Result<Rows, String> {
+            let raw = crate::sources::read_bytes(&url, Some(600)).map_err(|e| e.0)?;
+            if let Some(sha) = &sha {
+                if crate::sources::store::sha256::hex(&raw) != *sha {
+                    return Err(format!(
+                        "{url}: the file is not the one the catalog lists (sha256)"
+                    ));
+                }
+            }
+            let text = String::from_utf8_lossy(&raw);
+            let data: serde_json::Value = serde_json::from_str(text.trim_start_matches('\u{feff}'))
+                .map_err(|e| e.to_string())?;
+            let rows = verses_of(&data).ok_or_else(|| format!("{url}: no verses"))?;
+            if rows.len() < 6000 {
+                return Err(format!("{url}: {} verses", rows.len()));
+            }
+            Ok(rows)
+        };
+        match attempt() {
+            Ok(rows) => return Ok((rows, origin)),
+            Err(e) => {
+                crate::log::warning(
+                    "quran",
+                    &format!("Qur'an text {key} not read from {url}: {e}"),
+                );
+                last = e;
+            }
+        }
+    }
+    Err(last)
+}
+
+fn suras_rows(q: Option<&serde_json::Value>, base: &str) -> Result<Vec<SuraRow>, String> {
+    if let Some(loc) = q
+        .and_then(|q| q.get("suras"))
+        .and_then(|x| x.as_str())
+        .filter(|x| !x.is_empty())
+    {
+        let got = crate::sources::read_bytes(&crate::sources::absolute(base, loc), Some(120))
+            .map_err(|e| e.0)
+            .and_then(|raw| {
+                serde_json::from_slice::<serde_json::Value>(&raw).map_err(|e| e.to_string())
+            });
+        match got {
+            Ok(data) => {
+                return Ok(data["suras"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .map(|x| {
+                        (
+                            x["n"].as_i64().unwrap_or(0),
+                            s(x, "name"),
+                            s(x, "english"),
+                            s(x, "arabic"),
+                            s(x, "place"),
+                            x["verses"].as_i64().unwrap_or(0),
+                        )
+                    })
+                    .collect())
+            }
+            Err(e) => crate::log::warning("quran", &format!("The suras not read from {OWN}: {e}")),
+        }
+    }
+    let raw =
+        crate::sources::read_bytes(&format!("{BASE}/info.json"), Some(120)).map_err(|e| e.0)?;
+    let meta: serde_json::Value = serde_json::from_slice(&raw).map_err(|e| e.to_string())?;
+    Ok(meta["chapters"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|c| {
+            (
+                c["chapter"].as_i64().unwrap_or(0),
+                s(c, "name"),
+                s(c, "englishname"),
+                s(c, "arabicname"),
+                s(c, "revelation"),
+                c["verses"].as_array().map(|v| v.len() as i64).unwrap_or(0),
+            )
+        })
+        .collect())
+}
+
+/// Download the Arabic (once) and these editions; the keys kept. A text that cannot be read is said and the others
+/// are still downloaded; an error only when none was (`quran.fetch`).
+pub fn fetch(editions_: &[String], say: &dyn Fn(&str)) -> Result<Vec<String>, String> {
+    let conn = connect_rw().map_err(|e| e.to_string())?;
+    let (mine, q, base) = own_editions();
+    let have: i64 = conn
+        .query_row("SELECT COUNT(*) FROM suras", [], |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+    if have == 0 {
+        say("Reading the suras");
+        let rows = suras_rows(q.as_ref(), &base)?;
+        for r in rows {
+            conn.execute(
+                "INSERT OR REPLACE INTO suras VALUES (?, ?, ?, ?, ?, ?)",
+                rusqlite::params![r.0, r.1, r.2, r.3, r.4, r.5],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+    }
+    let mut wanted: Vec<String> = if available() {
+        vec![]
+    } else {
+        vec![ARABIC.to_string()]
+    };
+    for e in editions_ {
+        if e != ARABIC && !wanted.contains(e) {
+            wanted.push(e.clone());
+        }
+    }
+    let mut info: HashMap<String, Offered> = mine.into_iter().collect();
+    if wanted.iter().any(|e| !info.contains_key(e)) {
+        match source_editions() {
+            Ok(list) => {
+                for (k, v) in list {
+                    info.entry(k).or_insert(v);
+                }
+            }
+            Err(e) => crate::log::warning(
+                "quran",
+                &format!("The list of {SOURCE} could not be read: {e}"),
+            ),
+        }
+    }
+    let (mut kept, mut failed) = (vec![], vec![]);
+    for key in &wanted {
+        let Some(about) = info.get(key) else {
+            say(&format!("No translation '{key}'"));
+            failed.push(format!("{key}: not listed"));
+            continue;
+        };
+        say(&format!(
+            "Downloading {} — {}",
+            about.language, about.author
+        ));
+        let (rows, origin) = match read_edition(about, key) {
+            Ok(x) => x,
+            Err(e) => {
+                failed.push(format!("{}: {e}", about.author));
+                say(&format!("Not downloaded: {} ({e})", about.author));
+                continue;
+            }
+        };
+        let write = || -> rusqlite::Result<()> {
+            let tx = conn.unchecked_transaction()?;
+            tx.execute("DELETE FROM verses WHERE edition = ?", [key])?;
+            {
+                let mut st = tx.prepare("INSERT OR REPLACE INTO verses VALUES (?, ?, ?, ?)")?;
+                for (s_, a, t) in &rows {
+                    st.execute(rusqlite::params![key, s_, a, t])?;
+                }
+            }
+            tx.execute(
+                "INSERT OR REPLACE INTO editions (key, language, author, direction, source, comments, imported_at, origin) \
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rusqlite::params![
+                    key,
+                    about.language,
+                    about.author,
+                    if about.direction.is_empty() { "ltr" } else { &about.direction },
+                    about.source,
+                    about.comments,
+                    crate::sources::now_iso(),
+                    origin
+                ],
+            )?;
+            tx.commit()
+        };
+        write().map_err(|e| e.to_string())?;
+        kept.push(key.clone());
+        crate::log::info(
+            "quran",
+            &format!("Qur'an text {key} downloaded from {origin}"),
+        );
+    }
+    if !failed.is_empty() && kept.is_empty() {
+        return Err(failed.join("; "));
+    }
+    Ok(kept)
+}

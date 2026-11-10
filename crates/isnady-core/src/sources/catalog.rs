@@ -956,8 +956,7 @@ fn lang() -> String {
     crate::i18n::ui_language()
 }
 
-/// Import one entry and bring everything derived up to date (`catalog.import_entry`). The Qur'an comes with its
-/// importer, next.
+/// Import one entry and bring everything derived up to date; the Qur'an is downloaded (`catalog.import_entry`).
 pub fn import_entry(
     conn: &Connection,
     entry: &Entry,
@@ -966,7 +965,24 @@ pub fn import_entry(
     say: &dyn Fn(&str),
 ) -> Result<(ImportReport, Narrators), ImportError> {
     if entry.kind == "quran" {
-        return Err(ImportError::Resource(super::import_later(&entry.format_id)));
+        // the Arabic and these translations (keys), else one in each language the reader reads (_import_quran)
+        let mut wanted: Vec<String> = languages
+            .unwrap_or(&[])
+            .iter()
+            .filter(|k| k.contains('-'))
+            .cloned()
+            .collect();
+        if wanted.is_empty() {
+            wanted = crate::quran::default_editions();
+        }
+        let kept = crate::quran::fetch(&wanted, say).map_err(ImportError::Resource)?;
+        let report = ImportReport {
+            source_key: "quran".into(),
+            editions: kept,
+            texts: crate::quran::editions().len() as i64,
+            ..Default::default()
+        };
+        return Ok((report, None));
     }
     let mut entry = entry.clone();
     let first = match run_import(conn, &request_for(&entry, languages, auth, false), say) {

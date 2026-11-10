@@ -2939,7 +2939,10 @@ fn quran_state() -> Value {
 fn quran_sura(state: tauri::State<Data>, n: u32) -> Result<Value, String> {
     let lang = i18n::ui_language();
     if !quran::available() {
-        return Ok(json!({"download": true, "languages": quran::wanted_languages()}));
+        return Ok(
+            json!({"download": true, "languages": quran::wanted_languages(),
+                         "defaults": quran::default_editions()}),
+        );
     }
     let Some(s) = quran::suras().into_iter().find(|x| x.n == n) else {
         return Ok(json!({"error": "no_sura"}));
@@ -3021,6 +3024,7 @@ fn quran_sura(state: tauri::State<Data>, n: u32) -> Result<Value, String> {
         "editions": eds.iter().map(|e| json!({"key": e.key, "language": e.language, "author": e.author,
             "source": if e.source.is_empty() { e.origin.clone() } else { e.source.clone() }, "origin": e.origin,
             "on": chosen.contains(&e.key)})).collect::<Vec<_>>(),
+        "missing_keys": missing.iter().map(|l| quran::default_of(l).unwrap_or("")).collect::<Vec<_>>(),
         "missing": missing,
         "verses": verses,
     }))
@@ -3268,6 +3272,7 @@ fn main() {
             sources_page::src_relocate,
             sources_page::src_job,
             sources_page::src_job_status,
+            sources_page::quran_offered,
             stats_page::stats_progress,
             stats_page::stats_scope,
             stats_page::stats_corpus,

@@ -37,6 +37,7 @@ pub mod quran;
 )]
 pub mod reader;
 pub mod readmarks;
+pub mod rijal;
 pub mod sahaba;
 pub mod sahifa;
 pub mod scholars;

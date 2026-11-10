@@ -1240,8 +1240,31 @@ fn quran_cmd(a: QuranArgs) -> ExitCode {
     let lang = a.lang.clone().unwrap_or_else(i18n::ui_language);
     let words = &a.what;
     let first = words.first().map(String::as_str);
+    let say = |m: &str| eprintln!("  … {m}");
     if first == Some("download") {
-        return not_yet("Downloading the Qur'an", "iy quran download");
+        let wanted: Vec<String> = if words.len() > 1 {
+            words[1..].to_vec()
+        } else {
+            quran::default_editions()
+        };
+        return match quran::fetch(&wanted, &say) {
+            Ok(kept) => {
+                println!(
+                    "Downloaded: {} — {}",
+                    if kept.is_empty() {
+                        "nothing new".to_string()
+                    } else {
+                        kept.join(", ")
+                    },
+                    quran::path().display()
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::from(1)
+            }
+        };
     }
     if first == Some("editions") {
         if a.installed || (words.len() == 1 && a.language.is_none()) {
@@ -1256,10 +1279,63 @@ fn quran_cmd(a: QuranArgs) -> ExitCode {
             }
             return ExitCode::SUCCESS;
         }
-        return not_yet(
-            "The list of translations to download",
-            "iy quran editions --language L",
-        );
+        let everything = match quran::catalog(&say, !a.own) {
+            Ok(x) => x,
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::from(1);
+            }
+        };
+        let mut rows: Vec<&(String, quran::Offered)> = everything.iter().collect();
+        rows.sort_by(|x, y| {
+            (
+                &x.1.language,
+                x.1.origin != quran::OWN,
+                x.1.author.to_lowercase(),
+            )
+                .cmp(&(
+                    &y.1.language,
+                    y.1.origin != quran::OWN,
+                    y.1.author.to_lowercase(),
+                ))
+        });
+        let mut shown = 0;
+        for (key, v) in rows {
+            if let Some(l) = &a.language {
+                let l = l.to_lowercase();
+                if l != v.language.to_lowercase() && l != key.chars().take(3).collect::<String>() {
+                    continue;
+                }
+            }
+            if key.ends_with("-la") {
+                continue;
+            }
+            let star = if v.origin == quran::OWN { "★" } else { " " };
+            println!(
+                "  {star} {key:30} {:12} {}   {}",
+                v.language,
+                v.author,
+                if v.source.is_empty() {
+                    &v.origin
+                } else {
+                    &v.source
+                }
+            );
+            shown += 1;
+        }
+        let own = everything
+            .iter()
+            .filter(|(_, v)| v.origin == quran::OWN)
+            .count();
+        if own > 0 {
+            println!("{shown} shown · ★ {own} kept in isnady-data");
+        } else {
+            println!(
+                "{shown} shown · isnady-data has none yet: every text is read from {}",
+                quran::SOURCE
+            );
+        }
+        return ExitCode::SUCCESS;
     }
     if first == Some("remove") {
         for key in &words[1..] {

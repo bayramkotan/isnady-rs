@@ -50,3 +50,6 @@ jobs:
           python tools/parity_db.py --python iy --rust target/release/iy-rs
           --import al_arbain_al_nawawiyya --import al_shamail_al_muhammadiyya_al_tirmidhi
           --import sahifat_hammam_ibn_munabbih
+          --import taqrib_al_tahdhib_ibn_hajar_al_asqalani --import rijal_al_najashi_ahmad_ibn_ali_al_najashi
+          --import tadhkirat_al_huffaz_al_dhahabi --import al_quran_al_karim
+          --import hadith-json/nawawi-hj --import thaqalayn/zuhd

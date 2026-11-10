@@ -2,8 +2,12 @@
 //! row tied to the source it came from. Here: `isnady` (a book of isnady-data, `isnady_book.py`) and `isnady-sahifa`
 //! (a written source as a book, `sahifa_book.py`); the other formats say they come next (`import_later`).
 
+pub mod fawazahmed0;
 pub mod isnady_book;
+pub mod openiti_work;
+pub mod rijal_works;
 pub mod sahifa_book;
+pub mod table;
 
 use rusqlite::Connection;
 use serde_json::{Map, Value};
@@ -76,6 +80,11 @@ pub fn run(
     match format_id {
         "isnady" => isnady_book::run(conn, source, options, say),
         "isnady-sahifa" => sahifa_book::run(conn, source, say),
+        "taqrib" => rijal_works::taqrib(conn, source, say),
+        "najashi" => rijal_works::by_profile("najashi", conn, source, say),
+        "openiti-work" => openiti_work::run(conn, source, options, say),
+        "fawazahmed0" => fawazahmed0::run(conn, source, options, say),
+        "table" => table::run(conn, source, options, say),
         f if super::has_importer(f) => Err(ImportError::Resource(import_later(f))),
         f => {
             let mut known: Vec<&str> = super::importers()

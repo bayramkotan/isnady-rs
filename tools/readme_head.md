@@ -43,10 +43,10 @@ ported parts are listed in [PARITY.md](PARITY.md), and more are ported with ever
 | [Releases](https://github.com/bayramkotan/isnady-rs/releases/latest) | `iy-rs` for Windows, Linux and macOS (Apple silicon and Intel), ready to run: unpack it and run `iy-rs` |
 | The source | `cargo build --release`, which puts `iy-rs` and the window `isnady-rs` in `target/release/`; or `cargo install --path crates/isnady-gui` for the window alone (Linux needs `webkit2gtk-4.1`) |
 
-`iy-rs catalog import --all` (or Import all in the window's Data sources) imports every hadith book and written
-source of isnady-data itself, then builds the search index, the books' chapters, the chains and their narrators — the
-same rows the Python isnady writes. The rijal works, the sira, the tabaqat and the Qur'an are imported by the Python
-isnady for now (`pip install isnady`, then `iy catalog import --all`); both use the same data folder.
+`iy-rs catalog import --all` (or Import all in the window's Data sources) imports all of isnady-data itself — every
+hadith book, the written sources, the rijal works, the sira, the tabaqat and the Qur'an — then builds the search index,
+the books' chapters, the chains and their narrators: the same rows the Python isnady writes. The other repositories'
+formats (fawazahmed0, tables in CSV or JSON) are read too.
 
 ---
 

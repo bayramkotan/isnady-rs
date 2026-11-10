@@ -1055,24 +1055,13 @@ pub fn link_narrators(
             ..Default::default()
         });
     }
+    // a database read before a better rule for the years of death (rijal.fix_death_years)
+    crate::rijal::fix_death_years(conn).map_err(e)?;
     conn.execute(
         "CREATE TABLE IF NOT EXISTS core_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
         [],
     )
     .map_err(e)?;
-    let rule: Option<String> = conn
-        .query_row(
-            "SELECT value FROM core_meta WHERE key = 'death_rule'",
-            [],
-            |r| r.get(0),
-        )
-        .optional()
-        .map_err(e)?;
-    if rule.as_deref() != Some(m().death_rule.as_str()) {
-        return Err("The narrators' years of death were read with an older rule: open the database once with the Python \
-                    isnady (it reads them again), then iy-rs identifies the narrators."
-            .into());
-    }
     let stamp = format!(
         "{}|{}|{}",
         m().id,

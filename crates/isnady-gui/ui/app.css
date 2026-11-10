@@ -1134,3 +1134,7 @@ table.st-table.first-fit td:first-child { white-space: nowrap; }
 .catchup { position: fixed; inset: auto 0 0 auto; margin: 0 14px 10px 0; padding: 6px 12px; border-radius: 8px;
   background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: calc(10pt * var(--scale));
   z-index: 50; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+/* the translations of the Qur'an (AddTranslations) */
+.dialog.qr-tr { width: min(660px, calc(100vw - 32px)); height: min(580px, calc(100vh - 40px)); gap: 10px; padding: 18px 20px 14px; display: flex; flex-direction: column; }
+.qr-tr-list { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.qr-tr-row { display: block; }

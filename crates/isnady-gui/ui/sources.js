@@ -92,7 +92,7 @@ function srcLanguageRow(e) {
       const on = have.has(lang) || (!have.size && e.quran_wanted.includes(lang));
       html += `<label class="src-check" data-tip="${esc(t("Ticked: one translation in this language ({name}); untick to remove its translations. Translators… chooses others.", { name: e.quran_names[i] || "" }))}"><input type="checkbox" data-code="${esc(lang)}"${on ? " checked" : ""}> ${esc(t(lang))}</label>`;
     });
-    html += srcButton("➕ " + t("Translators…"), "import", { args: srcArgs(e), tip: t("Choose the translations to download, of 98 languages; untick one to remove it") });
+    html += srcButton("➕ " + t("Translators…"), "translators", { args: srcArgs(e), tip: t("Choose the translations to download, of 98 languages; untick one to remove it") });
   } else if (e.book && e.languages.length && e.kind === "hadith") {
     const chosen = e.status.languages.length ? e.status.languages : ["Arabic", "Turkish", "English"];
     e.languages.forEach((code, i) => {
@@ -310,6 +310,7 @@ function srcTicked(card) {
 // what the Worker says when it is done (sources_page.Worker)
 function srcDone(r) {
   if (r.error) return t("Failed: ") + t(r.error);
+  if (r.action === "refresh") return "";
   const fail = r.failed && r.failed.length ? ". " + t("Failed:") + " " + r.failed.map(([a, b]) => `${a} (${t(b)})`).join("; ") : "";
   const who = r.narrators ? "; " + t("{identified:,} of {links:,} narrators in chains identified ({share:.1f}%)",
     { identified: r.narrators.identified, links: r.narrators.links, share: 100 * r.narrators.identified / r.narrators.links }) : "";
@@ -369,7 +370,17 @@ async function srcAuth(a) {
 async function srcAct(action, a, button) {
   const d = SRC.data;
   switch (action) {
+    case "translators": {
+      const r = await quranTranslations();
+      if (!r || (!r.chosen.length && !r.removed.length)) return;
+      await srcJob(t("Downloading the translations…"), "quran", { editions: r.chosen, removed: r.removed });
+      return;
+    }
     case "import": {
+      if (a.kind === "quran") {        // its languages ticked on the card (0.7.3)
+        await srcJob(t("Downloading the translations…"), "quran_card", { ticked: srcTicked(button && button.closest(".src-card")) || [] });
+        return;
+      }
       const languages = srcTicked(button && button.closest(".src-card"));
       if (languages && !languages.length && a.kind !== "quran") { srcSay(t("Choose at least one language.")); return; }
       const auth = await srcAuth(a);

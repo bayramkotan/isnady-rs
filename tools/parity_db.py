@@ -102,11 +102,17 @@ def imports(args) -> int:
             env = dict(os.environ, ISNADY_DATA_DIR=str(folder), PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
             out = []
             for source in args.imports:
-                run = subprocess.run(shlex.split(cmd) + ["catalog", "import", source], env=env, capture_output=True,
-                                     text=True)
+                # "REPO/ID": a source of another repository (iy catalog import ID --repo REPO)
+                repo, _, entry = source.rpartition("/")
+                run = subprocess.run(shlex.split(cmd) + ["catalog", "import", entry] + (["--repo", repo] if repo else []),
+                                     env=env, capture_output=True, text=True)
                 out.append(run.stdout + run.stderr + f"(exit {run.returncode})\n")
             said[side] = "".join(out)
             tables[side] = every_table(folder / "isnady.db")
+            # the databases beside it: the Qur'an, the entries the written lives quote
+            for extra in sorted((folder / "sources").glob("*.db")) if (folder / "sources").is_dir() else []:
+                for name, value in every_table(extra).items():
+                    tables[side][f"sources/{extra.name}:{name}"] = value
             try:
                 state[side] = json.loads((folder / "imported.json").read_text(encoding="utf-8"))
             except (OSError, ValueError):
@@ -138,7 +144,8 @@ def main() -> int:
     ap.add_argument("--python", default="iy")
     ap.add_argument("--rust", default="target/release/iy-rs")
     ap.add_argument("--import", dest="imports", action="append", metavar="ID",
-                    help="import this source of the repository into empty folders instead (repeatable)")
+                    help="import this source of the repository (REPO/ID: of another repository) into empty folders "
+                         "instead (repeatable)")
     args = ap.parse_args()
     if args.imports:
         return imports(args)

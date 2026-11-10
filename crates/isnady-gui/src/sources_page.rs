@@ -435,6 +435,88 @@ fn run_job(action: &str, args: &Value) -> Result<Value, String> {
                 json!({"action": action, "imported": imported.len(), "narrators": narrators(&n), "failed": failed(&f)}),
             )
         }
+        // the Qur'an: these translations downloaded, those removed (AddTranslations); from the reader, they are also
+        // the ones shown (QuranView._add_translations)
+        "quran" => {
+            let editions = strings(&args["editions"]);
+            let removed = strings(&args["removed"]);
+            if args["viewer"].as_bool().unwrap_or(false) {
+                let mut chosen =
+                    isnady_core::quran::shown(isnady_core::quran::saved_choice().as_deref());
+                if !removed.is_empty() {
+                    chosen.retain(|k| !removed.contains(k));
+                }
+                for k in &editions {
+                    if !chosen.contains(k) {
+                        chosen.push(k.clone());
+                    }
+                }
+                let joined = chosen.join(",");
+                isnady_core::config::state_set(
+                    "quran.editions",
+                    json!(if joined.is_empty() {
+                        ",".into()
+                    } else {
+                        joined
+                    }),
+                );
+            }
+            for k in &removed {
+                isnady_core::quran::remove(k);
+            }
+            let kept = if editions.is_empty() {
+                vec![]
+            } else {
+                isnady_core::quran::fetch(&editions, &job_say)?
+            };
+            Ok(
+                json!({"action": "import", "kind": "quran", "title": "The Holy Qur'an",
+                      "texts": isnady_core::quran::editions().len(), "kept": kept}),
+            )
+        }
+        // the Qur'an's card: a language ticked gets its translation, one unticked loses its translations (_import_quran)
+        "quran_card" => {
+            use isnady_core::quran;
+            let ticked = strings(&args["ticked"]);
+            let have: Vec<quran::Edition> = if quran::available() {
+                quran::editions()
+                    .into_iter()
+                    .filter(|e| e.key != quran::ARABIC)
+                    .collect()
+            } else {
+                vec![]
+            };
+            for e in &have {
+                if !ticked.contains(&e.language) {
+                    quran::remove(&e.key);
+                }
+            }
+            let mut wanted: Vec<String> = have
+                .iter()
+                .filter(|e| ticked.contains(&e.language))
+                .map(|e| e.key.clone())
+                .collect();
+            let langs: Vec<&str> = have.iter().map(|e| e.language.as_str()).collect();
+            let mut sorted = ticked.clone();
+            sorted.sort();
+            for l in sorted {
+                if !langs.contains(&l.as_str()) {
+                    if let Some(k) = quran::default_of(&l) {
+                        wanted.push(k.to_string());
+                    }
+                }
+            }
+            if wanted.is_empty() && !quran::available() {
+                wanted = quran::default_editions();
+            }
+            if wanted.is_empty() {
+                return Ok(json!({"action": "refresh"}));
+            }
+            quran::fetch(&wanted, &job_say)?;
+            Ok(
+                json!({"action": "import", "kind": "quran", "title": "The Holy Qur'an", "texts": quran::editions().len()}),
+            )
+        }
         "add_languages" => {
             let codes = strings(&args["codes"]);
             let (imported, f, _n) = catalog::add_languages(&conn, &codes, &job_say)?;
@@ -509,5 +591,21 @@ pub fn src_job_status() -> Value {
     match JOB.lock() {
         Ok(j) => json!({"running": j.running, "text": j.text, "result": j.result}),
         Err(_) => json!({"running": false, "text": "", "result": null}),
+    }
+}
+
+/// The translations of the Qur'an there are, isnady-data's first, then the source's (AddTranslations' list).
+#[tauri::command]
+pub async fn quran_offered() -> Value {
+    let have: Vec<String> = isnady_core::quran::editions()
+        .into_iter()
+        .map(|e| e.key)
+        .collect();
+    match isnady_core::quran::catalog(&|_| {}, true) {
+        Ok(list) => json!({"own": isnady_core::quran::OWN, "arabic": isnady_core::quran::ARABIC,
+            "list": list.into_iter().map(|(k, v)| json!({"key": k, "language": v.language, "author": v.author,
+                "source": v.source, "comments": v.comments, "origin": v.origin, "url": v.url,
+                "have": have.contains(&k)})).collect::<Vec<_>>()}),
+        Err(e) => json!({"error": e}),
     }
 }

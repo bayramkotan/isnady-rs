@@ -5,6 +5,20 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Importing, the rest (A2b, A2c; Bayram: "ya lütfen hepsini çöz").** Every format the Python isnady reads is read
+  here too: the rijal works (`taqrib`: Ibn Hajar's ranks, tabaqat, years of death with his rule, book marks and
+  cross-references; `najashi`: the Shia scale, core/shia_rijal.py), the sira and the tabaqat (`openiti-work`, with
+  the entries the written lives quote kept in sources/siyar.db and tadhkira.db), the Qur'an (`iy-rs quran download`,
+  `iy-rs quran editions`, the Arabic and the translations in sources/quran.db, isnady-data's first, then
+  fawazahmed0/quran-api's), and the other repositories' formats (`fawazahmed0`; `table`: CSV with Python's csv rules,
+  or JSON records, in parts or volumes). core/rijal.py is in Rust (rijal.rs): the matcher reads the years of death
+  again when the rule changed instead of asking for the Python isnady. In the window: the Qur'an's card and
+  Translators… in Data sources, ➕ Translations…, Download {language} and Download the Qur'an in the reader.
+  Imported by both programs into empty folders, the whole of isnady-data in Arabic gives the same database row for
+  row (49 sources; 371,319 of 524,826 links identified) and the same Qur'an, Siyar and Tadhkira databases; the
+  parity workflow imports the rijal, the Tadhkira, the Qur'an and two books of other repositories with both.
+- 6 more parity cases (237 in all).
+
 - **Importing (A2a; Bayram: "ok devam et").** isnady-rs imports the books of isnady-data itself, as the Python
   isnady does: the importers of the formats `isnady` (every hadith book, one file per language) and `isnady-sahifa`
   (the written sources) and core/imports.py — then the search index, the chains and the narrators, once.

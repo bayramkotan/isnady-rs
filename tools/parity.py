@@ -260,6 +260,12 @@ CASES = [
     ["import", "nosuchformat", "x.json"],
     ["import", "isnady", "/nonexistent/book.json"],
     ["import", "isnady-sahifa", "/nonexistent/sahifa.json"],
+    ["import", "taqrib", "/nonexistent/taqrib.md"],
+    ["import", "najashi", "/nonexistent/najashi.md"],
+    ["import", "openiti-work", "/nonexistent/work.md"],
+    ["import", "fawazahmed0", "/nonexistent/editions.json"],
+    ["import", "table", "/nonexistent/x.csv"],
+    ["quran", "remove", "nosuch-edition"],
     ["database"],
     ["remove", "nosuch"],
     # the chain reader and the narrator matcher (RS17): every chain read again, every narrator identified again —

@@ -329,7 +329,7 @@ pub fn has_source(conn: &Connection, key: &str) -> rusqlite::Result<bool> {
         .is_some())
 }
 
-mod sha256 {
+pub(crate) mod sha256 {
     //! SHA-256 (FIPS 180-4), for the database.json check of a ready database.
     const K: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
