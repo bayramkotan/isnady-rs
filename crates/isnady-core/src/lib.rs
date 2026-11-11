@@ -43,6 +43,7 @@ pub mod sahaba;
 pub mod sahifa;
 pub mod scholars;
 pub mod search;
+pub mod semantic;
 pub mod shortcut;
 pub mod sira;
 pub mod sources;

@@ -788,6 +788,29 @@ fn find(
         q.chapters = chapters;
         q.offset = offset;
         q.limit = limit;
+        if q.mode == "meaning" {
+            // by meaning (YZ1a): the cards with their closeness; why not, when it cannot run yet
+            let page = match isnady_core::semantic::search(conn, &q, 0.10) {
+                Ok(p) => p,
+                Err(e) => {
+                    return Ok(
+                        json!({"meaning_error": e, "not_built": e == isnady_core::semantic::NOT_BUILT}),
+                    )
+                }
+            };
+            let cx = CardCtx::new(conn, &cites, &lang)?;
+            let mut results = vec![];
+            for (r, score) in page.results.iter().zip(&page.scores) {
+                let mut card = card_json(conn, r, &cx, false)?;
+                card["score"] = json!(format!("{score:.2}"));
+                results.push(card);
+            }
+            let stale = isnady_core::semantic::status(conn)["stale"] == json!(true);
+            return Ok(json!({
+                "total": page.total, "elapsed_ms": page.elapsed_ms as u64, "used_index": true, "spellings": "",
+                "before_grades": 0, "terms": 0, "results": results, "meaning": true, "stale": stale,
+            }));
+        }
         let page = search::search(conn, &q).map_err(err)?;
         let cx = CardCtx::new(conn, &cites, &lang)?;
         let mut results = vec![];
@@ -988,6 +1011,10 @@ struct CatchUp {
     text: String,
     count: i64,
     error: String,
+    /// the words said as they are (the AI indexes say them translated already)
+    raw: bool,
+    /// what the job says when it is done ("ai")
+    done: String,
 }
 
 static CATCH: std::sync::Mutex<CatchUp> = std::sync::Mutex::new(CatchUp {
@@ -995,7 +1022,18 @@ static CATCH: std::sync::Mutex<CatchUp> = std::sync::Mutex::new(CatchUp {
     text: String::new(),
     count: 0,
     error: String::new(),
+    raw: false,
+    done: String::new(),
 });
+
+/// What building the AI indexes says, translated already (search_page.build_meaning_index).
+fn ai_say(m: &str) {
+    if let Ok(mut c) = CATCH.lock() {
+        c.text = m.to_string();
+        c.count = 0;
+        c.raw = true;
+    }
+}
 
 fn catch_say(m: &str) {
     if let Ok(mut c) = CATCH.lock() {
@@ -1032,6 +1070,8 @@ fn catch_up(job: Option<String>) {
         c.running = true;
         c.error = String::new();
         c.text = String::new();
+        c.raw = false;
+        c.done = String::new();
     }
     std::thread::spawn(move || {
         let started = std::time::Instant::now();
@@ -1047,6 +1087,35 @@ fn catch_up(job: Option<String>) {
                 }
                 "narrators" => {
                     isnady_core::reader::matcher::link_narrators(&conn, &catch_say, true)?;
+                }
+                // Tools → Build AI Indexes (Meaning, Takhrij)
+                "ai" => {
+                    let lang = i18n::ui_language();
+                    let meta = isnady_core::semantic::build(
+                        &conn,
+                        isnady_core::semantic::DEFAULT_DIMS,
+                        &ai_say,
+                    )
+                    .map_err(|e| {
+                        i18n::t(&lang, "Meaning index failed: {error}", &[("error", e)])
+                    })?;
+                    let found = isnady_core::takhrij::build(&conn, &ai_say).map_err(|e| {
+                        i18n::t(&lang, "Meaning index failed: {error}", &[("error", e)])
+                    })?;
+                    let n = |v: &Value| isnady_core::py::thousands(v.as_i64().unwrap_or(0));
+                    let done = i18n::t(
+                        &lang,
+                        "AI indexes ready: meaning ({documents:,} hadith, {concepts} concepts); takhrij ({same:,} + {report:,} pairs)",
+                        &[
+                            ("documents:,", n(&meta["documents"])),
+                            ("concepts", meta["dims"].to_string()),
+                            ("same:,", n(&found["same"])),
+                            ("report:,", n(&found["same_report"])),
+                        ],
+                    );
+                    if let Ok(mut c) = CATCH.lock() {
+                        c.done = done;
+                    }
                 }
                 _ => {
                     isnady_core::search::ensure_index(&conn, &catch_say).map_err(err)?;
@@ -1080,7 +1149,10 @@ fn catch_up(job: Option<String>) {
 #[tauri::command]
 fn catch_up_status() -> Value {
     match CATCH.lock() {
-        Ok(c) => json!({"running": c.running, "text": c.text, "count": c.count, "error": c.error}),
+        Ok(c) => {
+            json!({"running": c.running, "text": c.text, "count": c.count, "error": c.error, "raw": c.raw,
+            "done": c.done})
+        }
         Err(_) => json!({"running": false, "text": "", "count": 0, "error": ""}),
     }
 }

@@ -216,7 +216,7 @@ function menus() {
       SEP,
       act("Create Desktop Shortcut…", createShortcut),
       SEP,
-      act("Build AI Indexes (Meaning, Takhrij)", later(["&Tools", "Build AI Indexes (Meaning, Takhrij)"])),
+      act("Build AI Indexes (Meaning, Takhrij)", () => catchUp("ai")),
     ]],
     ["&Help", () => [
       act("Search Tips", searchTips),

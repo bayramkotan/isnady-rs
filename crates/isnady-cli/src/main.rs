@@ -2,6 +2,7 @@
 //! that tools/parity.py can compare the two word for word. A command or option not ported yet says so and points to
 //! the Python `iy`; PARITY.md lists them.
 
+mod ai_cmd;
 mod export_cmd;
 mod sources_cmd;
 mod stats_cmd;
@@ -139,6 +140,10 @@ enum Command {
     /// Bring back a book, bookmarks, settings, a profile or a backup from a file made by iy export or File → Export…
     #[command(name = "import-data")]
     ImportData(export_cmd::ImportDataArgs),
+    /// Artificial-intelligence features: build or check the meaning index and takhrij
+    Ai(ai_cmd::AiArgs),
+    /// Other narrations of a hadith in the imported books (takhrij)
+    Tahric(ai_cmd::TahricArgs),
 }
 
 #[derive(clap::Args)]
@@ -602,6 +607,8 @@ fn run(command: Option<Command>) -> ExitCode {
         Some(Command::Bookmark(a)) => bookmark_cmd(a),
         Some(Command::Export(a)) => export_cmd::export_cmd(a),
         Some(Command::ImportData(a)) => export_cmd::import_data_cmd(a),
+        Some(Command::Ai(a)) => ai_cmd::ai_cmd(a),
+        Some(Command::Tahric(a)) => ai_cmd::tahric_cmd(a),
         Some(Command::Term(a)) => term_cmd(a),
         Some(Command::Learn(a)) => learn_cmd(a),
     }
@@ -2558,6 +2565,63 @@ fn search_people(
     Ok(ExitCode::SUCCESS)
 }
 
+/// iy search --mode meaning (YZ1a): the hadith closest in meaning, across languages (`cli._search_meaning`).
+fn search_meaning(a: &SearchArgs, text: &str) -> ExitCode {
+    let conn = match open() {
+        Ok(c) => c,
+        Err(code) => return code,
+    };
+    let mut q = search::SearchQuery::new(text);
+    q.collections = a.book.clone();
+    q.languages = a.language.clone();
+    q.limit = a.limit;
+    q.offset = a.offset;
+    q.grades = a.grade.clone();
+    q.every_grader = a.every_grader;
+    q.sahihayn = !a.no_sahihayn;
+    let Some(chapters) = chapters_given(&conn, &a.chapter) else {
+        return ExitCode::from(1);
+    };
+    q.chapters = chapters.iter().map(|(_, n)| n.id).collect();
+    let st = isnady_core::semantic::status(&conn);
+    let page = match isnady_core::semantic::search(&conn, &q, 0.10) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(2);
+        }
+    };
+    let stale = if st["stale"] == serde_json::json!(true) {
+        "  (the meaning index is older than the data: iy ai build)"
+    } else {
+        ""
+    };
+    println!(
+        "{} hadith by meaning in {} ms{stale}",
+        page.total, page.elapsed_ms
+    );
+    if !page.unknown_words.is_empty() {
+        println!("  no imported text uses: {}", page.unknown_words.join(", "));
+    }
+    for (r, score) in page.results.iter().zip(&page.scores) {
+        println!(
+            "\n{} #{}   meaning {:.2}",
+            r.collection_name, r.number, score
+        );
+        for t in &r.texts {
+            let body = t.text.split_whitespace().collect::<Vec<_>>().join(" ");
+            let n = body.chars().count();
+            let head: String = body.chars().take(a.width).collect();
+            println!(
+                "  [{}] {head}{}",
+                t.language,
+                if n > a.width { " ..." } else { "" }
+            );
+        }
+    }
+    ExitCode::SUCCESS
+}
+
 fn search_cmd(a: SearchArgs) -> ExitCode {
     if a.clear_recent {
         println!("Forgot {} recent searches.", search::clear_recent());
@@ -2599,7 +2663,7 @@ fn search_cmd(a: SearchArgs) -> ExitCode {
         };
     }
     if a.mode == "meaning" {
-        return not_yet("Search by meaning", "iy search --mode meaning ...");
+        return search_meaning(&a, &text);
     }
     // every text indexed first, as iy search does (search.ensure_index)
     match isnady_core::sources::store::connect_rw(None) {

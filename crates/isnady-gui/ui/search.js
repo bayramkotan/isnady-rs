@@ -432,16 +432,21 @@ async function runSearch() {
     return;
   }
   SEARCH.found = null;
-  if (SEARCH.mode === "meaning") {
-    notice(t("Search by meaning"), t("LATER_MENU", { v: APP.version, menu: `${t("Match")} → ${t("By meaning (AI)")}` }) + "\n\n" +
-      t("Search by meaning finds hadith that say the same thing in other words or in another language. It learns from the texts imported here; building it takes a few seconds to a minute."));
-    $("s-summary").textContent = "";
-    $("s-export").hidden = true;
-    return;
-  }
   document.body.classList.add("busy");
   try {
     const page = await fetchPage(0, true);
+    if (page.meaning_error) {              // meaning search cannot run yet: why, and the button when it is not built
+      notice(t("Search by meaning"), page.meaning_error + "\n\n" +
+        t("Search by meaning finds hadith that say the same thing in other words or in another language. It learns from the texts imported here; building it takes a few seconds to a minute."));
+      if (page.not_built) {
+        $("s-body").querySelector(".hero").insertAdjacentHTML("beforeend", `<div class="row"><button class="primary" id="s-build-ai">${esc(t("Build the meaning index now"))}</button></div>`);
+        $("s-build-ai").onclick = () => catchUp("ai");
+      }
+      SEARCH.page = null;
+      $("s-summary").textContent = "";
+      $("s-export").hidden = true;
+      return;
+    }
     SEARCH.page = page;
     SEARCH.results = page.results.slice();
     render();
@@ -573,6 +578,7 @@ function updateSummary() {
   $("s-export").hidden = !(page.total && SEARCH.kind === "hadith");
   if (!page.total) { $("s-summary").textContent = ""; return; }
   let note = page.used_index ? "" : ", " + t("index unavailable");
+  if (page.meaning) note = " " + t("by meaning") + (page.stale ? " · " + t("index older than the data (Tools → Build Meaning Index)") : "");
   if (page.spellings) note += " · " + t("near spellings: {spellings}", { spellings: page.spellings });
   if (SEARCH.chapters.length && !SEARCH.grades.length) {
     note += " · " + t("in the chapter: {total:,} / {all:,}", { total: page.total, all: page.before_grades || page.total });
@@ -841,7 +847,7 @@ function card(r) {
   el.className = "hcard";
   const reference = `${r.key}:${r.number}`;
   let html = `<div class="hcard-head">
-      <span class="hcard-title">${esc(r.name)}</span><span class="hcard-number">${esc(t("hadith {number}", { number: r.number }))}</span>
+      <span class="hcard-title">${esc(r.name)}</span><span class="hcard-number">${esc(t("hadith {number}", { number: r.number }))}</span>${r.score ? `<span class="hcard-number hcard-meaning" data-tip="${esc(t("How close this hadith is in meaning to the search, from 0 to 1: shared words and shared concepts learnt from the Arabic texts and their translations.\nA measure of closeness, not of authenticity."))}">meaning ${esc(r.score)}</span>` : ""}
       <span class="grow"></span>
       ${starHtml(r.bookmarked, "hadith", `${r.name} ${r.number}`)}
       <button class="qlink" data-act="export" data-tip="${esc(t("Write this hadith to a file: PDF, Word, Markdown, JSON, Excel …"))}">${esc(t("Export"))}</button>

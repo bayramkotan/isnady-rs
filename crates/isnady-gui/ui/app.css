@@ -1156,3 +1156,4 @@ table.st-table.first-fit td:first-child { white-space: nowrap; }
 .xf-buttons .grow, .dialog.xf .grow { flex: 1; }
 .xf-said { white-space: pre-wrap; }
 .catchup.xf-bar { z-index: 70; max-width: 70vw; }
+.hcard-meaning { margin-inline-start: 10px; }

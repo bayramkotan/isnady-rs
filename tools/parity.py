@@ -268,6 +268,11 @@ CASES = [
     ["quran", "remove", "nosuch-edition"],
     ["database"],
     # export and import-data (EX1, A3): what there is; the files themselves are compared by tools/parity_export.py
+    # the meaning index and takhrij before they are built (YZ1, A4); built, by tools/parity_ai.py
+    ["ai", "status"],
+    ["search", "--mode", "meaning", "niyet"],
+    ["tahric", "riyad", "1"],
+    ["tahric", "riyad", "999999"],
     ["export", "--list"],
     ["export"],
     ["export", "book", "nosuchbook"],

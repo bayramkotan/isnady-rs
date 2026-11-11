@@ -322,18 +322,25 @@ async function catchUp(job) {
     document.body.appendChild(bar);
   }
   const titles = { index: "Rebuild Search Index", chains: "Read Chains Again", narrators: "Identify Narrators Again" };
-  bar.textContent = job ? t(titles[job]) + "…" : t("Bringing the chains up to date after the new version (once)…");
+  bar.textContent = job === "ai" ? t("Building the AI indexes (meaning, takhrij)…")
+    : job ? t(titles[job]) + "…" : t("Bringing the chains up to date after the new version (once)…");
   await invoke("catch_up", { job: job || null });
   const poll = async () => {
     const st = await invoke("catch_up_status");
     if (st.running) {
-      if (st.text) bar.textContent = t(st.text, { todo: st.count, missing: st.count });
+      if (st.text) bar.textContent = st.raw ? st.text : t(st.text, { todo: st.count, missing: st.count });
       setTimeout(poll, 800);
       return;
     }
     if (st.error) {
-      bar.textContent = t("The chains could not be brought up to date: {error}", { error: st.error });
+      bar.textContent = job === "ai" ? st.error : t("The chains could not be brought up to date: {error}", { error: st.error });
       setTimeout(() => bar.remove(), 15000);
+      return;
+    }
+    if (job === "ai") {                        // said for a while; a search by meaning shown again with the index
+      bar.textContent = st.done;
+      setTimeout(() => bar.remove(), 15000);
+      if ($("page-search") && !$("page-search").hidden && $("q") && $("q").value.trim()) runSearch(false);
       return;
     }
     bar.remove();

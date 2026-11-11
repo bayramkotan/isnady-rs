@@ -5,6 +5,18 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Search by meaning, `ai` and `tahric` (A4).** `iy-rs search --mode meaning`, `iy-rs ai build|status` and
+  `iy-rs tahric BOOK NUMBER`, as the Python isnady's; core/semantic.py and core/takhrij.py are in Rust (semantic.rs,
+  takhrij.rs). The index is the Python isnady's own files (ai/lsa.npz, lsa.vocab, lsa.json), numpy's format read and
+  written here: built by either program, read by both. On the Python isnady's index iy-rs finds the same hadith with
+  the same scores in the same order; built by iy-rs, the takhrij pairs are the same rows (258,216 on the whole of
+  isnady-data), the vocabulary, idf and TF-IDF rows the same, and the concepts the same subspace up to a small angle
+  (scipy's ARPACK is not in Rust; a randomized subspace iteration finds it), so the same hadith come first. In the
+  window: Match → By meaning (AI) with the closeness on each card, Build the meaning index now, Tools → Build AI
+  Indexes (Meaning, Takhrij) in the background, the other narrations of each hadith on its card.
+  `tools/parity_ai.py` checks all of it and runs in the Parity workflow (which now installs `isnady[ai]`).
+- 4 more parity cases (245 in all).
+
 - **Export and import (A3; Bayram: "Diğer tüm problemleri (eşitlemeleri) hallet").** `iy-rs export` and `iy-rs
   import-data`, with every argument of the Python isnady's: hadith by number, a book or a chapter (several books,
   all, sunni, shia; each in its own file with `--separate`), search results with the grades, books and chapter
