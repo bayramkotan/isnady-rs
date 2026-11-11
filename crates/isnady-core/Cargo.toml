@@ -26,3 +26,6 @@ chrono.workspace = true
 md5.workspace = true
 ureq.workspace = true
 url.workspace = true
+rustybuzz.workspace = true
+unicode-bidi.workspace = true
+flate2.workspace = true

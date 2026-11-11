@@ -55,6 +55,10 @@ CASES = [
     ("nothing_found", ["search", "zzzqqq"], ["json"]),
     ("wrong_format", ["settings"], ["epub"]),
     ("no_profile", ["profile", "nosuchprofile"], ["json"]),
+    # PDF: written by both (each draws its own; compared: that one was written, and what was said)
+    ("pdf_hadith", ["hadith", "nawawi:1", "sifat-shia:1"], ["pdf"]),
+    ("pdf_tables", ["narrators", "الزهري"], ["pdf"]),
+    ("pdf_bookmarks", ["bookmarks"], ["pdf"]),
 ]
 
 # kind, export name, format, more arguments
@@ -109,6 +113,9 @@ def content(path: str):
     if data[:4] == b"PK\x03\x04":
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             return [(i.filename, i.compress_type, plain(z.read(i))) for i in z.infolist()]
+    if data[:5] == b"%PDF-":
+        # each program draws its own PDF (Qt there, isnady's writer here): both must write one
+        return b"a PDF"
     if data[:15] == b"SQLite format 3":
         return tables(path)
     return plain(data)

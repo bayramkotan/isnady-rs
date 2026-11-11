@@ -2243,6 +2243,21 @@ fn source_entry(work: String, volume: i64, number: i64) -> Value {
     }
 }
 
+/// The classical work downloaded once and split into its entries (life_card: Download), in the background.
+#[tauri::command]
+async fn source_fetch(work: String) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let n = lives::fetch(&work, &|_| {});
+        match &n {
+            Ok(n) => isnady_core::log::info("sources", &format!("{work}: {n} entries downloaded")),
+            Err(e) => isnady_core::log::error("sources", &format!("{work}: {e}")),
+        }
+        n
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 // ------------------------------------------------------------------ Hadith Scholars (gui/scholars_page.py)
 
 /// Hadith Scholars: the scholars with something in this database, each with his roles, as the list shows him.
@@ -3391,6 +3406,7 @@ fn main() {
             profile_export,
             profile_import,
             home_folder,
+            source_fetch,
             help_page::help_check,
             help_page::help_update,
             help_page::help_update_status,
@@ -3417,6 +3433,10 @@ fn main() {
             stats_page::stats_home,
             stats_page::stats_write,
             stats_page::stats_csv,
+            stats_page::stats_xlsx,
+            stats_page::stats_workbook,
+            stats_page::stats_picture,
+            stats_page::stats_pdf,
             stats_page::stats_csv_folder,
             stats_page::stats_json,
             companions_groups,

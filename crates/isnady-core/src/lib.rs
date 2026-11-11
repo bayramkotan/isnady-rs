@@ -25,6 +25,7 @@ pub mod names;
 pub mod narrators;
 pub mod normalize;
 pub mod paths;
+pub mod pdf;
 pub mod people;
 pub mod py;
 pub mod quran;

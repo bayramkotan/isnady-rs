@@ -132,6 +132,32 @@ fn base64(data: &[u8]) -> String {
     out
 }
 
+/// Base64 back to bytes (a data URL's body); None when it is not base64.
+pub fn base64_decode(text: &str) -> Option<Vec<u8>> {
+    let body = text.split_once("base64,").map(|x| x.1).unwrap_or(text);
+    let mut out = Vec::with_capacity(body.len() * 3 / 4);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in body.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' | b'-' => 62,
+            b'/' | b'_' => 63,
+            b'=' | b'\n' | b'\r' | b' ' => continue,
+            _ => return None,
+        } as u32;
+        acc = (acc << 6) | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1 << bits) - 1;
+        }
+    }
+    Some(out)
+}
+
 fn download(location: &str, auth: &Auth, timeout: Option<u64>) -> Result<Vec<u8>, ResourceError> {
     let secs = timeout.unwrap_or(TIMEOUT_SECONDS);
     let agent = ureq::AgentBuilder::new()

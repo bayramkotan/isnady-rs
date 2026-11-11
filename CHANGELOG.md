@@ -5,6 +5,17 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **PDF, pictures, Excel and the classical works (A5, the rest).** isnady's own PDF writer (`pdf.rs`): Amiri
+  embedded (SIL OFL, in `data/fonts`), the Arabic shaped by rustybuzz and set in the bidirectional order, lines
+  broken by width, tables with their columns fitted, the text searchable and copyable, pictures placed as JPEG. With
+  it `iy-rs export … --format pdf` writes every kind the Python isnady writes as PDF (hadith, a book or chapter,
+  search results, bookmarks, narrators), and in the window File → Export… and Books' ⤓ PDF. Statistics: every
+  finding's ⤓ as PDF, a picture (PNG) and a vector picture (SVG), its figures as Excel; the section or every section
+  as PDF, the section as one picture, every table as Excel (a sheet each) — each finding drawn as the page draws it.
+  `iy-rs life … --source` and `iy-rs scholar --huffaz … --source` download the classical work once (from isnady-data,
+  else the OpenITI corpus) into the same `sources/<work>.db` as the Python isnady's (the same rows), and the
+  window's lives download it on a click. `tools/parity_export.py`: 114 cases (the PDFs written by both).
+
 - **Doctor, update and the profiles in the window (A5, the first part).** `iy-rs doctor [--fix --yes --offline]` and
   `iy-rs update [--check --yes]`: every copy cargo installed (from crates.io, a clone or git, as `.crates2.json`
   records them) and every iy-rs and isnady-rs on PATH with the one that starts, the newest on crates.io and what is

@@ -445,7 +445,18 @@ async function fillEntries(life, root) {
       if (found.available) { box.innerHTML = `<div class="caption">${esc(t("This entry is not in the downloaded copy."))}</div>`; continue; }
       box.innerHTML = `<div class="caption">${esc(t("Read his entry in the author's own words (Arabic): the work is downloaded once from isnady-data (about {mb} MB) and kept on this computer — or import it in Data sources, and read the whole work in Books.", { mb: found.size_mb }))}</div>
         <button class="nlink">${esc(t("Download {work}", { work: e.title }))}</button>`;
-      box.querySelector("button").onclick = () => openPreferences("sources");
+      box.querySelector("button").onclick = async (ev) => {      // downloaded once, then every entry of it is here
+        ev.target.disabled = true;
+        ev.target.textContent = t("Downloading… (it is kept on this computer; the other lives will use it too)");
+        try {
+          await invoke("source_fetch", { work: e.work });
+          fillEntries(life, root);
+        } catch (err) {
+          ev.target.disabled = false;
+          ev.target.textContent = t("Download {work}", { work: e.title });
+          box.insertAdjacentHTML("beforeend", `<div class="caption">${esc(t("Could not download: {error}", { error: String(err) }))}</div>`);
+        }
+      };
       continue;
     }
     const whole = found.text;

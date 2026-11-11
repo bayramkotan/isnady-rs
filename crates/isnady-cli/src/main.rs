@@ -505,11 +505,6 @@ struct SearchArgs {
     chapter: Vec<String>,
 }
 
-fn not_yet(what: &str, python: &str) -> ExitCode {
-    eprintln!("{what} is not in isnady-rs {VERSION} yet; the Python isnady does it on the same data: {python}");
-    ExitCode::from(2)
-}
-
 fn main() -> ExitCode {
     let cli = Cli::parse();
     if cli.version {
@@ -706,10 +701,19 @@ fn huffaz_cmd(a: &ScholarArgs, conn: &rusqlite_conn::Connection) -> ExitCode {
             );
         }
         if a.source {
-            return not_yet(
-                "Al-Dhahabi's entry in his own words",
-                "iy scholar --huffaz NAME --source",
-            );
+            let work = huffaz::work();
+            if !lives::available(work) {
+                eprintln!("  … Downloading (≈{} MB, once)", lives::work_size(work));
+                if let Err(e) = lives::fetch(work, &|m| eprintln!("  … {m}")) {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
+            }
+            if let Some((heading, body)) = lives::entry(work, 0, r.entry.n) {
+                println!("\n  {heading}\n");
+                println!("{body}");
+            }
+            return ExitCode::SUCCESS;
         }
         println!("  (--source prints al-Dhahabi's entry in his own words)");
         return ExitCode::SUCCESS;
@@ -2321,11 +2325,15 @@ fn life_cmd(a: LifeArgs) -> ExitCode {
             );
             if a.source {
                 if !lives::available(&e.work) {
-                    not_yet(
-                        &format!("Downloading {}", e.title),
-                        &format!("iy life {text} --source (once; then iy-rs reads it too)"),
+                    eprintln!(
+                        "  … {} (≈{} MB, once)",
+                        i18n::t(&lang, "Downloading", &[]),
+                        lives::work_size(&e.work)
                     );
-                    continue;
+                    if let Err(err) = lives::fetch(&e.work, &|m| eprintln!("  … {m}")) {
+                        eprintln!("{err}");
+                        return ExitCode::from(1);
+                    }
                 }
                 if let Some((heading, body)) = lives::entry(&e.work, e.volume, e.number) {
                     println!("  {heading}\n");

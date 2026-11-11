@@ -259,6 +259,18 @@ pub fn write_table(t: &Table, fmt: &str, path: &Path) -> Result<PathBuf, String>
         "xlsx" => write_workbook(std::slice::from_ref(t), path)?,
         "md" => io(std::fs::write(path, table_markdown(t)))?,
         "html" => io(std::fs::write(path, table_html(t)))?,
+        "pdf" => {
+            let mut pdf = crate::pdf::Pdf::new(&t.title);
+            pdf.paragraph(&t.title, 16.0, true, false, 0.0);
+            pdf.space(6.0);
+            let rows: Vec<Vec<String>> = t
+                .rows
+                .iter()
+                .map(|r| cols.iter().map(|c| cell(r.get(c))).collect())
+                .collect();
+            pdf.table(cols, &rows, 8.0);
+            pdf.save(path)?;
+        }
         "txt" => {
             let mut lines = vec![t.title.clone(), String::new()];
             for r in &t.rows {
@@ -656,6 +668,35 @@ pub struct DocumentWriter {
     zip: Option<Zip>,
     file: Option<std::io::BufWriter<std::fs::File>>,
     body_path: Option<PathBuf>,
+    pdf: Option<crate::pdf::Pdf>,
+}
+
+/// A section of a document on the PDF's pages (as section_html shows it).
+fn section_pdf(pdf: &mut crate::pdf::Pdf, s: &Section) {
+    if !s.heading.is_empty() {
+        pdf.space(10.0);
+        pdf.paragraph(&s.heading, 14.0, true, false, 0.0);
+        pdf.rule();
+    }
+    for e in &s.entries {
+        pdf.space(6.0);
+        if !e.heading.is_empty() {
+            pdf.paragraph(&e.heading, 11.5, true, false, 0.0);
+        }
+        for (label, text) in &e.paragraphs {
+            if text.is_empty() {
+                continue;
+            }
+            if !label.is_empty() {
+                pdf.paragraph(label, 8.5, true, true, 0.0);
+            }
+            let arabic = rtl(text);
+            pdf.paragraph(text, if arabic { 13.0 } else { 10.5 }, false, false, 0.0);
+        }
+        if !e.note.is_empty() {
+            pdf.paragraph(&e.note, 8.5, false, true, 0.0);
+        }
+    }
 }
 
 impl DocumentWriter {
@@ -665,7 +706,7 @@ impl DocumentWriter {
         title: &str,
         subtitle: &str,
     ) -> Result<DocumentWriter, String> {
-        if !["html", "md", "txt", "epub", "docx"].contains(&fmt) {
+        if !["html", "md", "txt", "epub", "docx", "pdf"].contains(&fmt) {
             return Err(format!("A document is not written as {fmt}."));
         }
         parent(path);
@@ -677,9 +718,19 @@ impl DocumentWriter {
             zip: None,
             file: None,
             body_path: None,
+            pdf: None,
         };
         let open = |p: &Path| io(std::fs::File::create(p)).map(std::io::BufWriter::new);
         match fmt {
+            "pdf" => {
+                let mut pdf = crate::pdf::Pdf::new(title);
+                pdf.paragraph(title, 18.0, true, false, 0.0);
+                if !subtitle.is_empty() {
+                    pdf.paragraph(subtitle, 9.0, false, true, 0.0);
+                }
+                pdf.space(6.0);
+                w.pdf = Some(pdf);
+            }
             "epub" => {
                 let mut z = zip::ZipWriter::new(io(std::fs::File::create(path))?);
                 put(&mut z, "mimetype", b"application/epub+zip", false)?;
@@ -738,6 +789,12 @@ impl DocumentWriter {
             "md" => section_markdown(s) + "\n",
             "txt" => section_text(s) + "\n",
             "docx" => section_docx(s),
+            "pdf" => {
+                if let Some(pdf) = self.pdf.as_mut() {
+                    section_pdf(pdf, s);
+                }
+                return Ok(());
+            }
             _ => {
                 let name = format!("c{:05}.xhtml", self.chapters.len() + 1);
                 let heading = if s.heading.is_empty() {
@@ -761,6 +818,11 @@ impl DocumentWriter {
 
     pub fn close(mut self) -> Result<PathBuf, String> {
         match self.fmt.as_str() {
+            "pdf" => {
+                if let Some(pdf) = self.pdf.take() {
+                    pdf.save(&self.path)?;
+                }
+            }
             "epub" => self.close_epub()?,
             "docx" => {
                 if let Some(mut f) = self.file.take() {

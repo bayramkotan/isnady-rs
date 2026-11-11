@@ -678,6 +678,73 @@ pub fn entry(work: &str, volume: i64, number: i64) -> Option<(String, String)> {
     .flatten()
 }
 
+/// Where each work is in the OpenITI corpus, when isnady-data cannot give it (`source_entries.WORKS[…]["url"]`).
+fn corpus_url(work: &str) -> Option<&'static str> {
+    match work {
+        "siyar" => Some(
+            "https://raw.githubusercontent.com/OpenITI/0750AH/master/data/0748Dhahabi/0748Dhahabi.SiyarAclamNubala/\
+             0748Dhahabi.SiyarAclamNubala.Shamela0010906-ara1.mARkdown",
+        ),
+        "tadhkira" => Some(
+            "https://raw.githubusercontent.com/OpenITI/0750AH/master/data/0748Dhahabi/0748Dhahabi.TadhkiratHuffaz/\
+             0748Dhahabi.TadhkiratHuffaz.JK000532-ara1.mARkdown",
+        ),
+        _ => None,
+    }
+}
+
+/// Where isnady-data keeps this work (its catalog's library), or None (`source_entries._own_location`).
+fn own_location(work: &str) -> Option<String> {
+    use crate::sources::repos;
+    let mut chosen = vec![repos::selected()];
+    if let Some(d) = repos::find(&crate::sources::tables().default_id) {
+        chosen.push(d);
+    }
+    for repo in chosen {
+        let Ok((cat, _)) = repos::catalog(&repo, false) else {
+            continue;
+        };
+        for item in cat["library"].as_array().into_iter().flatten() {
+            if item["entries"].as_str() == Some(work) {
+                if let Some(loc) = item["location"].as_str().filter(|l| !l.is_empty()) {
+                    return Some(crate::sources::absolute(
+                        repo.url.as_deref().unwrap_or(""),
+                        loc,
+                    ));
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Download a work once and keep its entries (`source_entries.fetch`): from isnady-data first, from the OpenITI
+/// corpus when isnady-data cannot give it; how many entries.
+pub fn fetch(work: &str, say: &dyn Fn(&str)) -> Result<usize, String> {
+    say(&format!(
+        "Downloading {} (about {} MB)",
+        work_title(work, "en"),
+        work_size(work)
+    ));
+    let places: Vec<String> = own_location(work)
+        .into_iter()
+        .chain(corpus_url(work).map(String::from))
+        .collect();
+    let mut last = format!("no place to download {work} from");
+    for place in places {
+        match crate::sources::read_bytes(&place, Some(600)) {
+            Ok(raw) => {
+                say("Reading the entries");
+                let text = String::from_utf8_lossy(&raw).to_string();
+                return crate::sources::importers::openiti_work::store(work, &text, &place)
+                    .map_err(|e| e.to_string());
+            }
+            Err(e) => last = e.to_string(),
+        }
+    }
+    Err(last)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

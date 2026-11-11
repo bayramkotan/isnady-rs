@@ -1078,11 +1078,6 @@ pub fn export(conn: Option<&Connection>, a: &Export, say: Say) -> Res<PathBuf> {
         ));
     }
     let target = crate::paths::expand_user(&a.target.to_string_lossy());
-    if fmt == "pdf" {
-        return Err(format!(
-            "PDF is not in isnady-rs {VERSION} yet; the Python isnady writes it on the same data: iy export … --format pdf"
-        ));
-    }
     if DOCUMENT_KINDS.contains(&kind_) {
         let conn = need()?;
         let (ids, title) = match kind_ {
@@ -1155,7 +1150,7 @@ pub fn export(conn: Option<&Connection>, a: &Export, say: Say) -> Res<PathBuf> {
         if let Some(d) = target.parent() {
             let _ = std::fs::create_dir_all(d);
         }
-        if ["html", "md", "txt", "epub", "docx"].contains(&fmt) {
+        if ["html", "md", "txt", "epub", "docx", "pdf"].contains(&fmt) {
             let mut w = Some(F::DocumentWriter::new(fmt, &target, &title, &subtitle)?);
             let mut sections = Sections {
                 section: None,

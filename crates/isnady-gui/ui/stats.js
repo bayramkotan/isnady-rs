@@ -1523,14 +1523,15 @@ function statsExportMenu(button) {
   closeMenus();
   const r = button.getBoundingClientRect();
   const items = [
-    act("This section as PDF…", later(["Statistics", "This section as PDF…"])),
+    act("This section as PDF…", () => statsExportPage("section", "pdf")),
     act("This section as a web page (HTML)…", () => statsExportPage("section", "html")),
-    act("This section as one picture (PNG)…", later(["Statistics", "This section as one picture (PNG)…"])),
+    act("This section as one picture (PNG)…", () => statsPicture("png", t(ST_SECTIONS[ST.section][1]), t("isnady statistics — {scope}", { scope: statsScopeName() }) + " — " + t(ST_SECTIONS[ST.section][1]), statsSectionCards("section"))),
     SEP,
-    act("Every section as PDF…", later(["Statistics", "Every section as PDF…"])),
+    act("Every section as PDF…", () => statsExportPage("all", "pdf")),
     act("Every section as a web page (HTML)…", () => statsExportPage("all", "html")),
     SEP,
-    act("Every table as Excel (a sheet each)…", later(["Statistics", "Every table as Excel (a sheet each)…"])),
+    act("Every table as Excel (a sheet each)…", () => statsAskPath(t("Export"), "isnady-" + stSafe(statsScopeName()) + ".xlsx", (path) =>
+      invoke("stats_workbook", { path, tables: statsTables() }).then(statsSaid, statsFail))),
     act("Every table as CSV files (a folder)…", () => statsExportPage("all", "csv")),
     act("The computed results (JSON)…", () => statsExportPage("all", "json")),
   ];
@@ -1543,16 +1544,17 @@ function statsArm(card, button) {
   const name = card.dataset.name;
   const tb = ST.tables.get(card.dataset.card);
   const items = [
-    act("Picture (PNG)…", later(["Statistics", "⤓", "Picture (PNG)…"])),
-    act("Vector picture (SVG)…", later(["Statistics", "⤓", "Vector picture (SVG)…"])),
-    act("PDF…", later(["Statistics", "⤓", "PDF…"])),
+    act("Picture (PNG)…", () => statsPicture("png", name, "", [["", [card]]])),
+    act("Vector picture (SVG)…", () => statsPicture("svg", name, "", [["", [card]]])),
+    act("PDF…", () => statsAskPath(t("Export"), `isnady-${stSafe(name)}.pdf`, (path) => statsPdf(path, name, [["", [card]]], "finding, pdf"))),
     act("Web page (HTML)…", () => statsAskPath(t("Export"), `isnady-${stSafe(name)}.html`, (path) =>
       invoke("stats_write", { path, text: statsHtml(name, [["", [card]]]), what: "finding, html" }).then(statsSaid, statsFail))),
   ];
   if (tb) {
     items.push(SEP, act("Figures (CSV)…", () => statsAskPath(t("Export"), `isnady-${stSafe(name)}.csv`, (path) =>
       invoke("stats_csv", { path, header: tb.header, rows: tb.rows }).then(statsSaid, statsFail))));
-    items.push(act("Figures (Excel)…", later(["Statistics", "⤓", "Figures (Excel)…"])));
+    items.push(act("Figures (Excel)…", () => statsAskPath(t("Export"), `isnady-${stSafe(name)}.xlsx`, (path) =>
+      invoke("stats_xlsx", { path, name, header: tb.header, rows: tb.rows }).then(statsSaid, statsFail))));
   }
   openMenu(() => items, { x: isRtl() ? r.left : r.right - 220, y: r.bottom, top: r.top, flipUp: true, alignEnd: isRtl() });
 }
@@ -1599,6 +1601,124 @@ function statsHtml(title, sections) {
 .st-card{margin-bottom:16px} table.figs{border-collapse:collapse;font-size:.85em;margin:.4em 0 1.6em} table.figs td,table.figs th{border:1px solid var(--border);padding:3px 8px} details{margin-bottom:1.4em}</style></head><body>${body}</body></html>`;
 }
 
+// A finding (or a section) as a picture (stats_export.save_png, save_svg): the cards as the page draws them, with
+// the page's styles and the typefaces it uses, in an SVG (vector, readable in any browser); PNG is that SVG drawn on
+// a canvas at twice the size.
+const ST_FONTS = new Map();
+
+async function stFontData(url) {
+  if (!ST_FONTS.has(url)) {
+    ST_FONTS.set(url, fetch(url).then((r) => r.blob()).then((b) => new Promise((ok) => {
+      const fr = new FileReader();
+      fr.onload = () => ok(fr.result);
+      fr.readAsDataURL(b);
+    })).catch(() => url));
+  }
+  return ST_FONTS.get(url);
+}
+
+async function statsSvg(title, sections) {
+  const page = getComputedStyle(document.body);
+  const used = (page.fontFamily + "," + getComputedStyle(document.documentElement).getPropertyValue("--heading") + ",Amiri").toLowerCase();
+  let css = [...document.styleSheets].map((s) => { try { return [...s.cssRules].map((r) => r.cssText).join("\n"); } catch (_) { return ""; } }).join("\n");
+  // the typefaces the cards are drawn in go inside the picture; the others are left out
+  const faces = [...css.matchAll(/@font-face\s*{[^}]*}/g)].map((m) => m[0]);
+  for (const face of faces) {
+    const family = (face.match(/font-family:\s*"?([^";]+)"?/) || [])[1] || "";
+    const src = (face.match(/url\("?([^")]+)"?\)/) || [])[1];
+    if (!src || !used.includes(family.toLowerCase())) { css = css.replace(face, ""); continue; }
+    css = css.replace(src, await stFontData(new URL(src, location.href).href));
+  }
+  const vars = getComputedStyle(document.documentElement);
+  const root = ["window", "surface", "border", "ink", "muted", "lapis", "lapis-soft", "gold", "ui", "ui-size", "heading", "scale"]
+    .map((k) => `--${k}:${vars.getPropertyValue("--" + k)}`).join(";");
+  const width = Math.max(...sections.flatMap(([, cards]) => cards.map((c) => c.getBoundingClientRect().width)), 400);
+  const box = document.createElement("div");
+  box.style.cssText = `position:fixed;left:-20000px;top:0;width:${width}px;padding:16px;box-sizing:content-box;background:var(--window);color:var(--ink);font-family:${page.fontFamily}`;
+  box.innerHTML = title ? `<div style="font-weight:700;font-size:1.2em;margin:0 0 10px">${esc(title)}</div>` : "";
+  for (const [heading, cards] of sections) {
+    if (heading) box.insertAdjacentHTML("beforeend", `<div style="font-weight:700;margin:14px 0 6px">${esc(heading)}</div>`);
+    for (const card of cards) {
+      const copy = card.cloneNode(true);
+      for (const x of copy.querySelectorAll(".st-arm, .st-foot")) x.remove();
+      copy.style.marginBottom = "12px";
+      box.appendChild(copy);
+    }
+  }
+  document.body.appendChild(box);
+  const w = Math.ceil(box.getBoundingClientRect().width), h = Math.ceil(box.getBoundingClientRect().height);
+  box.style.cssText = `width:${width}px;padding:16px;background:${vars.getPropertyValue("--window")};color:${vars.getPropertyValue("--ink")};font-family:${page.fontFamily};${root}`;
+  const style = document.createElement("style");
+  style.textContent = css;
+  box.insertBefore(style, box.firstChild);
+  const xhtml = new XMLSerializer().serializeToString(box);
+  box.remove();
+  return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`, w, h };
+}
+
+async function statsPng(title, sections) {
+  const { svg, w, h } = await statsSvg(title, sections);
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await img.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = w * 2;
+  canvas.height = h * 2;
+  const g = canvas.getContext("2d");
+  g.scale(2, 2);
+  g.drawImage(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+// Findings as PDF (stats_export.save_pdf): each drawn as the page draws it, at twice the size, as a JPEG picture
+async function statsPdf(path, title, sections, what) {
+  document.body.classList.add("busy");
+  try {
+    const parts = [];
+    for (const [heading, cards] of sections) {
+      const pictures = [];
+      for (const card of cards) {
+        const { svg, w, h } = await statsSvg("", [["", [card]]]);
+        const img = new Image();
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = w * 2;
+        canvas.height = h * 2;
+        const g = canvas.getContext("2d");
+        g.fillStyle = "#ffffff";
+        g.fillRect(0, 0, canvas.width, canvas.height);
+        g.scale(2, 2);
+        g.drawImage(img, 0, 0);
+        pictures.push([canvas.toDataURL("image/jpeg", 0.92), w * 0.75]);
+      }
+      parts.push([heading, pictures]);
+    }
+    statsSaid(await invoke("stats_pdf", { path, title, parts, what }));
+  } catch (e) { statsFail(e); } finally { document.body.classList.remove("busy"); }
+}
+
+function statsPicture(kind, name, title, sections) {
+  statsAskPath(t("Export"), `isnady-${stSafe(name)}.${kind}`, async (path) => {
+    document.body.classList.add("busy");
+    try {
+      const args = kind === "png" ? { png: await statsPng(title, sections) } : { svg: (await statsSvg(title, sections)).svg };
+      statsSaid(await invoke("stats_picture", { path, ...args, what: kind }));
+    } catch (e) { statsFail(e); } finally { document.body.classList.remove("busy"); }
+  });
+}
+
+function statsTables() {
+  const tables = [];
+  for (const [, cards] of statsSectionCards("all")) {
+    for (const card of cards) {
+      const tb = ST.tables.get(card.dataset.card);
+      if (tb) tables.push([card.dataset.name, tb.header, tb.rows]);
+    }
+  }
+  return tables;
+}
+
 function statsExportPage(which, fmt) {
   const scope = statsScopeName();
   let title = t("isnady statistics — {scope}", { scope });
@@ -1618,6 +1738,8 @@ function statsExportPage(which, fmt) {
       }
       invoke("stats_csv_folder", { folder, tables }).then(statsSaid, statsFail);
     });
+  } else if (fmt === "pdf") {
+    statsAskPath(t("Export"), base + ".pdf", (path) => statsPdf(path, title, statsSectionCards(which), `${which}, pdf`));
   } else {
     statsAskPath(t("Export"), base + ".json", (path) =>
       invoke("stats_json", { path, results: { scope, corpus: ST.result, graders: ST.gresult } }).then(statsSaid, statsFail));

@@ -256,3 +256,160 @@ pub fn stats_json(path: String, results: Value) -> Result<String, String> {
     logged("all, json", &path);
     Ok(paths::expand_user(&path).display().to_string())
 }
+
+fn sheet(
+    name: &str,
+    header: &[Value],
+    rows: &[Vec<Value>],
+    meta: bool,
+) -> isnady_core::formats::Table {
+    let columns: Vec<String> = header.iter().map(isnady_core::config::py_str).collect();
+    let rows = rows
+        .iter()
+        .map(|r| {
+            let mut m = serde_json::Map::new();
+            for (c, v) in columns.iter().zip(r) {
+                m.insert(c.clone(), v.clone());
+            }
+            m
+        })
+        .collect();
+    let mut table = isnady_core::formats::Table {
+        title: name.into(),
+        columns,
+        rows,
+        ..Default::default()
+    };
+    if meta {
+        table
+            .meta
+            .insert("isnady".into(), json!(isnady_core::VERSION));
+        table.meta.insert("kind".into(), json!("statistics"));
+    }
+    table
+}
+
+/// The figures behind one finding as Excel (`save_table`, xlsx).
+#[tauri::command]
+pub fn stats_xlsx(
+    path: String,
+    name: String,
+    header: Vec<Value>,
+    rows: Vec<Vec<Value>>,
+) -> Result<String, String> {
+    let p = paths::expand_user(&path);
+    let written =
+        isnady_core::formats::write_table(&sheet(&name, &header, &rows, true), "xlsx", &p)?;
+    logged("finding, xlsx", &path);
+    Ok(written.display().to_string())
+}
+
+/// Every table as Excel, a sheet each (`save_workbook`).
+#[tauri::command]
+pub fn stats_workbook(
+    path: String,
+    tables: Vec<(String, Vec<Value>, Vec<Vec<Value>>)>,
+) -> Result<String, String> {
+    let p = paths::expand_user(&path);
+    let sheets: Vec<_> = tables
+        .iter()
+        .map(|(n, h, r)| sheet(n, h, r, false))
+        .collect();
+    isnady_core::formats::write_workbook(&sheets, &p)?;
+    logged("all, xlsx", &path);
+    Ok(p.display().to_string())
+}
+
+/// A picture the page drew (PNG as base64, or SVG text) written out (`save_png`, `save_svg`).
+#[tauri::command]
+pub fn stats_picture(
+    path: String,
+    png: Option<String>,
+    svg: Option<String>,
+    what: String,
+) -> Result<String, String> {
+    let p = paths::expand_user(&path);
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent).map_err(err)?;
+    }
+    match (png, svg) {
+        (Some(b64), _) => {
+            let bytes =
+                unbase64(b64.split(',').next_back().unwrap_or("")).ok_or("not a picture")?;
+            std::fs::write(&p, bytes).map_err(err)?;
+        }
+        (None, Some(text)) => std::fs::write(&p, text).map_err(err)?,
+        _ => return Err("nothing to write".into()),
+    }
+    logged(&what, &path);
+    Ok(p.display().to_string())
+}
+
+/// Standard base64 (what canvas.toDataURL gives) to bytes.
+fn unbase64(text: &str) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(text.len() * 3 / 4);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in text.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            b'=' | b'\n' | b'\r' | b' ' => continue,
+            _ => return None,
+        } as u32;
+        acc = (acc << 6) | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    Some(out)
+}
+
+/// Findings as PDF, a heading over each section and each finding as the page draws it (`save_pdf`).
+#[tauri::command]
+pub async fn stats_pdf(
+    path: String,
+    title: String,
+    parts: Vec<(String, Vec<(String, f32)>)>,
+    what: String,
+) -> Result<String, String> {
+    let p = paths::expand_user(&path);
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut pdf = isnady_core::pdf::Pdf::new(&title);
+        if !title.is_empty() {
+            pdf.paragraph(&title, 16.0, true, false, 0.0);
+            pdf.paragraph(
+                &format!("isnady-rs {}", isnady_core::VERSION),
+                8.5,
+                false,
+                true,
+                0.0,
+            );
+            pdf.space(6.0);
+        }
+        for (heading, pictures) in parts {
+            if !heading.is_empty() {
+                pdf.space(6.0);
+                pdf.paragraph(&heading, 13.0, true, false, 0.0);
+                pdf.rule();
+            }
+            for (jpeg, width) in pictures {
+                let bytes = isnady_core::sources::base64_decode(&jpeg).ok_or("not a picture")?;
+                pdf.picture_jpeg(bytes, width)?;
+                pdf.space(8.0);
+            }
+        }
+        if let Some(parent) = p.parent() {
+            std::fs::create_dir_all(parent).map_err(err)?;
+        }
+        pdf.save(&p)?;
+        logged(&what, &path);
+        Ok(p.display().to_string())
+    })
+    .await
+    .map_err(err)?
+}

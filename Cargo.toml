@@ -28,6 +28,10 @@ ureq = { version = "2", default-features = false, features = ["tls", "native-cer
 url = "2"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 rpassword = "=7.3.1"
+# the PDF writer (A5): Arabic shaped, the text in visual order, the streams compressed
+rustybuzz = "0.20"
+unicode-bidi = "0.3"
+flate2 = "1"
 # the core, with the same version as the workspace (tools/bump_version.py writes both): crates.io needs the version
 isnady-core = { path = "crates/isnady-core", version = "=0.7.4" }
 
