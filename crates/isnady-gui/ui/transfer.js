@@ -439,3 +439,55 @@ async function exportBook() {
   const chapter = BK.chapter ? await invoke("xfer_chapter_number", { node: BK.chapter }) : null;
   exportDialog("book", { book: BK.work.key, chapter });
 }
+
+// Help → Check for Updates… / Check Installation… (update_dialog, install_dialog): the copies of isnady-rs, the newest on
+// crates.io and what is new; Update brings every copy up to date where it is (cargo install), in the background
+async function helpDialog(updates) {
+  closeMenus();
+  const back = document.createElement("div");
+  back.className = "dialog-back";
+  back.innerHTML = `<div class="dialog xf xf-in" role="dialog"><div class="pd-title">${esc(t(updates ? "Check for Updates" : "Check Installation"))}</div>
+    <div class="lead" id="hd-summary">${esc(updates ? t("Asking crates.io for the latest isnady…") : t("Looking for every copy of isnady on this computer…"))}</div>
+    <textarea id="xf-preview" readonly spellcheck="false"></textarea>
+    <div class="caption">${esc(updates ? t("The same in a terminal: iy-rs update --check, iy-rs update.") : t("The same in a terminal: iy-rs doctor, iy-rs doctor --fix."))}</div>
+    <div class="pd-buttons">${updates ? "" : `<button class="quiet small" id="hd-copy">${esc(t("Copy report"))}</button>`}<span class="grow"></span>
+      <button class="primary small" id="hd-update" hidden data-tip="${esc(t("Run the update commands shown in the report, one after the other"))}">${esc(t("Update"))}</button>
+      <button class="pd-cancel" id="hd-close">${esc(t("Close"))}</button></div></div>`;
+  document.body.appendChild(back);
+  const q = (id) => back.querySelector("#" + id);
+  q("hd-close").onclick = () => back.remove();
+  back.addEventListener("keydown", (e) => { if (e.key === "Escape") back.remove(); });
+  const r = await invoke("help_check", { updates });
+  if (!back.isConnected) return;
+  let text = r.text;
+  if (updates) {
+    if (!r.latest) q("hd-summary").textContent = t("crates.io could not be reached (no internet?). Installed: isnady {v}.", { v: r.version });
+    else if (r.behind) q("hd-summary").textContent = t("A newer isnady is out ({where}).", { where: "crates.io " + r.latest });
+    else q("hd-summary").textContent = t("isnady {v} is up to date", { v: r.version }) + ".";
+    text = (r.news || []).map(([v, body]) => t("What is new in {version}:", { version: v }) + "\n" + body + "\n").join("\n") + (r.news && r.news.length ? "\n" : "") + r.text;
+  } else if (r.problems) {
+    q("hd-summary").textContent = t("{problems} thing(s) to update; see below. Update brings every copy up to date where it is installed.", { problems: r.problems });
+  } else {
+    q("hd-summary").textContent = t("One installation, isnady {version}; {commands}", { version: r.version,
+      commands: r.commands ? t("every isnady command on PATH starts it.") : t("no isnady command was found on PATH (started from a virtual environment or a shortcut?).") });
+  }
+  q("xf-preview").value = text;
+  q("hd-update").hidden = !r.fixes;
+  if (q("hd-copy")) q("hd-copy").onclick = () => copyText(text);
+  q("hd-update").onclick = async () => {
+    q("hd-update").disabled = true;
+    q("hd-summary").textContent = t("Updating every copy of isnady where it is installed…");
+    try { await invoke("help_update"); } catch (e) { q("hd-summary").textContent = String(e); return; }
+    for (;;) {
+      await new Promise((ok) => setTimeout(ok, 700));
+      const st = await invoke("help_update_status");
+      if (back.isConnected) q("xf-preview").value = st.output || "";
+      if (st.running) continue;
+      if (!back.isConnected) return;
+      q("hd-summary").textContent = st.failed
+        ? t("{failed} of {total} update command(s) did not succeed; the output is below.", { failed: st.failed, total: st.total })
+        : t("Updated. Close isnady and open it again to use the new version.");
+      return;
+    }
+  };
+}

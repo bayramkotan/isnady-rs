@@ -5,6 +5,14 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Doctor, update and the profiles in the window (A5, the first part).** `iy-rs doctor [--fix --yes --offline]` and
+  `iy-rs update [--check --yes]`: every copy cargo installed (from crates.io, a clone or git, as `.crates2.json`
+  records them) and every iy-rs and isnady-rs on PATH with the one that starts, the newest on crates.io and what is
+  new in it (isnady-rs's CHANGELOG), and each copy brought up to date where it is; nothing runs without a yes. On
+  Windows the running program steps aside so cargo can write the new one. In the window: Help → Check for Updates…
+  and Check Installation… with Update (the commands' output shown), and File → Profiles → New, Rename, Delete,
+  Export and Import, as the Python window has them.
+
 - **Search by meaning, `ai` and `tahric` (A4).** `iy-rs search --mode meaning`, `iy-rs ai build|status` and
   `iy-rs tahric BOOK NUMBER`, as the Python isnady's; core/semantic.py and core/takhrij.py are in Rust (semantic.rs,
   takhrij.rs). The index is the Python isnady's own files (ai/lsa.npz, lsa.vocab, lsa.json), numpy's format read and

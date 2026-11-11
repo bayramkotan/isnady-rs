@@ -33,6 +33,11 @@ const LOCAL = {
     "Teachers": "Hocaları", "Students": "Talebeleri", "No narrators found": "Râvi bulunamadı",
     "LATER_MENU": "isnady-rs {v}: bu henüz burada değil. Python isnady aynı verilerle yapıyor: penceresinde {menu}.",
     "the file to import, with its folder; several: with ; between them": "içe aktarılacak dosya, klasörüyle; birkaç dosya: aralarına ; koyun",
+    "Asking crates.io for the latest isnady…": "crates.io'ya isnady'nin en yeni sürümü soruluyor…",
+    "crates.io could not be reached (no internet?). Installed: isnady {v}.": "crates.io'ya ulaşılamadı (internet yok mu?). Kurulu: isnady {v}.",
+    "A newer isnady is out ({where}).": "Daha yeni bir isnady çıktı ({where}).",
+    "The same in a terminal: iy-rs update --check, iy-rs update.": "Terminalde aynısı: iy-rs update --check, iy-rs update.",
+    "The same in a terminal: iy-rs doctor, iy-rs doctor --fix.": "Terminalde aynısı: iy-rs doctor, iy-rs doctor --fix.",
   },
   ar: {
     "Number": "الرقم",
@@ -42,6 +47,11 @@ const LOCAL = {
     "Teachers": "شيوخه", "Students": "تلاميذه", "No narrators found": "لم يوجد راوٍ",
     "LATER_MENU": "isnady-rs {v}: ليس هذا هنا بعد. يفعله isnady بلغة Python على البيانات نفسها: {menu} في نافذته.",
     "the file to import, with its folder; several: with ; between them": "الملف المراد استيراده مع مجلده؛ عدة ملفات: افصل بينها بـ ;",
+    "Asking crates.io for the latest isnady…": "يُسأل crates.io عن أحدث إصدار من isnady…",
+    "crates.io could not be reached (no internet?). Installed: isnady {v}.": "تعذّر الوصول إلى crates.io (لا اتصال؟). المثبّت: isnady {v}.",
+    "A newer isnady is out ({where}).": "صدر إصدار أحدث من isnady ({where}).",
+    "The same in a terminal: iy-rs update --check, iy-rs update.": "الأمر نفسه في الطرفية: iy-rs update --check، iy-rs update.",
+    "The same in a terminal: iy-rs doctor, iy-rs doctor --fix.": "الأمر نفسه في الطرفية: iy-rs doctor، iy-rs doctor --fix.",
   },
 };
 const ENGLISH = {

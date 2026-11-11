@@ -222,8 +222,8 @@ function menus() {
       act("Search Tips", searchTips),
       act("Keyboard Shortcuts", keyboardShortcuts),
       SEP,
-      act("Check for Updates…", later(["&Help", "Check for Updates…"])),
-      act("Check Installation…", later(["&Help", "Check Installation…"])),
+      act("Check for Updates…", () => helpDialog(true)),
+      act("Check Installation…", () => helpDialog(false)),
       act("Log…", openLog, "Ctrl+Shift+L"),
       act("Licences", licences),
       act("isnady on GitHub", () => invoke("open_url", { url: WIN.repo_url })),
@@ -239,15 +239,73 @@ async function profileMenu() {
   return [
     ...list.map((p) => act(p.name || "Default", () => useProfile(p.id), "", { radio: true, checked: p.active, raw: !!p.name })),
     SEP,
-    act("New Profile…", later(["&File", "Profiles", "New Profile…"]), "",
+    act("New Profile…", profileNew, "",
       { tip: "Another person's own settings, place in the books and bookmarks; the books are shared" }),
-    act("Rename This Profile…", later(["&File", "Profiles", "Rename This Profile…"])),
-    act("Delete a Profile…", later(["&File", "Profiles", "Delete a Profile…"])),
+    act("Rename This Profile…", profileRename),
+    act("Delete a Profile…", profileDelete),
     SEP,
-    act("Export This Profile…", later(["&File", "Profiles", "Export This Profile…"]), "",
+    act("Export This Profile…", profileExport, "",
       { tip: "One file with this profile's settings, place and bookmarks — for another computer" }),
-    act("Import a Profile…", later(["&File", "Profiles", "Import a Profile…"])),
+    act("Import a Profile…", profileImport),
   ];
+}
+
+// File → Profiles (main_window._new_profile … _import_profile): each says what went wrong in a box of its own
+function profileError(e) { infoDialog(t("Profiles"), `<p>${esc(String(e))}</p>`); }
+
+async function profileNew() {
+  const name = await askText(t("New Profile"), t("Name of the new profile:"), "");
+  if (!name || !name.trim()) return;
+  try { useProfile(await invoke("profile_new", { name })); } catch (e) { profileError(e); }
+}
+
+async function profileRename() {
+  const now = (await invoke("profiles")).find((p) => p.active);
+  const name = await askText(t("Rename This Profile"), t("New name:"), (now && now.name) || t("Default"));
+  if (!name || !name.trim()) return;
+  try { await invoke("profile_rename", { name }); } catch (e) { profileError(e); }
+}
+
+async function profileDelete() {
+  const others = (await invoke("profiles")).filter((p) => p.id !== "default" && !p.active);
+  if (!others.length) {
+    infoDialog(t("Profiles"), `<p>${esc(t("There is no other profile to delete. The first profile and the one in use cannot be deleted."))}</p>`);
+    return;
+  }
+  const back = document.createElement("div");
+  back.className = "dialog-back";
+  back.innerHTML = `<div class="dialog ask" role="dialog"><div class="pd-title">${esc(t("Delete a Profile"))}</div>
+    <div>${esc(t("Its settings, place and bookmarks are deleted; the books stay."))}</div>
+    <select class="ask-input">${others.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select>
+    <div class="pd-buttons"><button class="primary small yes">${esc(t("OK"))}</button><button class="pd-cancel no">${esc(t("Cancel"))}</button></div></div>`;
+  document.body.appendChild(back);
+  back.querySelector(".no").onclick = () => back.remove();
+  back.querySelector(".yes").onclick = async () => {
+    const id = back.querySelector("select").value;
+    back.remove();
+    try { await invoke("profile_delete", { id }); } catch (e) { profileError(e); }
+  };
+}
+
+async function profileExport() {
+  const now = (await invoke("profiles")).find((p) => p.active);
+  const home = await invoke("home_folder");
+  const sep = home.includes("\\") ? "\\" : "/";
+  const path = await askText(t("Export This Profile"), t("File"), home + sep + ((now && now.name) || "default") + ".isnady-profile.zip");
+  if (!path || !path.trim()) return;
+  try {
+    const written = await invoke("profile_export", { path });
+    infoDialog(t("Profiles"), `<p>${esc(t("Written: {path}", { path: written }))}</p>`);
+  } catch (e) { profileError(e); }
+}
+
+async function profileImport() {
+  const path = await askText(t("Import a Profile"), t("isnady profile") + " (.isnady-profile.zip)", "");
+  if (!path || !path.trim()) return;
+  try {
+    const r = await invoke("profile_import", { path });
+    if (await askYesNo(t("Profiles"), t("Imported as {name}. Use it now?", { name: r.name }))) useProfile(r.id);
+  } catch (e) { profileError(e); }
 }
 
 async function useProfile(id) {

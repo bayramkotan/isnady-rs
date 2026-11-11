@@ -10,6 +10,7 @@ pub mod cache;
 pub mod config;
 pub mod db;
 pub mod difflib;
+pub mod doctor;
 pub mod formats;
 pub mod genealogy;
 pub mod grades;

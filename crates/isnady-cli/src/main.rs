@@ -3,6 +3,7 @@
 //! the Python `iy`; PARITY.md lists them.
 
 mod ai_cmd;
+mod doctor_cmd;
 mod export_cmd;
 mod sources_cmd;
 mod stats_cmd;
@@ -144,6 +145,10 @@ enum Command {
     Ai(ai_cmd::AiArgs),
     /// Other narrations of a hadith in the imported books (takhrij)
     Tahric(ai_cmd::TahricArgs),
+    /// Every copy of isnady-rs, which one each command starts, and what is out of date
+    Doctor(doctor_cmd::DoctorArgs),
+    /// Update every copy of isnady-rs where it is installed (crates.io or its clone)
+    Update(doctor_cmd::UpdateArgs),
 }
 
 #[derive(clap::Args)]
@@ -513,7 +518,12 @@ fn main() -> ExitCode {
     // no book yet (FR1): one command brings them all, as one click does in the window
     if !matches!(
         cli.command,
-        Some(Command::Version) | Some(Command::Reset { .. }) | Some(Command::Catalog(_)) | None
+        Some(Command::Version)
+            | Some(Command::Reset { .. })
+            | Some(Command::Catalog(_))
+            | Some(Command::Doctor(_))
+            | Some(Command::Update(_))
+            | None
     ) {
         let empty = db::connect(None)
             .ok()
@@ -609,6 +619,8 @@ fn run(command: Option<Command>) -> ExitCode {
         Some(Command::ImportData(a)) => export_cmd::import_data_cmd(a),
         Some(Command::Ai(a)) => ai_cmd::ai_cmd(a),
         Some(Command::Tahric(a)) => ai_cmd::tahric_cmd(a),
+        Some(Command::Doctor(a)) => doctor_cmd::doctor_cmd(a),
+        Some(Command::Update(a)) => doctor_cmd::update_cmd(a),
         Some(Command::Term(a)) => term_cmd(a),
         Some(Command::Learn(a)) => learn_cmd(a),
     }

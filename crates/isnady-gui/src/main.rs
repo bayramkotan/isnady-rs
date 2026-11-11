@@ -10,6 +10,7 @@ use isnady_core::{
     narrators, paths, people, py, quran, readmarks, sahaba, sahifa, scholars, search, sira, tables,
     works, VERSION,
 };
+mod help_page;
 mod sources_page;
 mod stats_page;
 mod transfer_page;
@@ -319,6 +320,47 @@ fn profiles() -> Vec<config::Profile> {
 #[tauri::command]
 fn use_profile(id: String) -> Result<(), String> {
     config::switch_profile(&id)
+}
+
+/// File → Profiles → New Profile… (main_window._new_profile): its id, to use it at once.
+#[tauri::command]
+fn profile_new(name: String) -> Result<String, String> {
+    config::create_profile(name.trim(), None)
+}
+
+/// File → Profiles → Rename This Profile….
+#[tauri::command]
+fn profile_rename(name: String) -> Result<(), String> {
+    config::rename_profile(&config::active_profile(), name.trim())
+}
+
+/// File → Profiles → Delete a Profile… (not the first one, not the one in use).
+#[tauri::command]
+fn profile_delete(id: String) -> Result<(), String> {
+    config::delete_profile(&id)
+}
+
+/// File → Profiles → Export This Profile…: the file written.
+#[tauri::command]
+fn profile_export(path: String) -> Result<String, String> {
+    let mut path = path.trim().to_string();
+    if !path.ends_with(config::PROFILE_EXTENSION) {
+        path.push_str(config::PROFILE_EXTENSION);
+    }
+    config::export_profile(&config::active_profile(), &path).map(|p| p.display().to_string())
+}
+
+/// File → Profiles → Import a Profile…: (id, name) of the new profile.
+#[tauri::command]
+fn profile_import(path: String) -> Result<Value, String> {
+    let id = config::import_profile(path.trim(), None)?;
+    Ok(json!({"id": id, "name": config::profile_name(&id)}))
+}
+
+/// Where a file is suggested: the home folder.
+#[tauri::command]
+fn home_folder() -> String {
+    paths::expand_user("~").display().to_string()
 }
 
 /// The languages of the imported texts, Arabic first, then the order chosen (search.list_languages).
@@ -3343,6 +3385,15 @@ fn main() {
             sources_page::src_add,
             sources_page::src_stage,
             sources_page::src_relocate,
+            profile_new,
+            profile_rename,
+            profile_delete,
+            profile_export,
+            profile_import,
+            home_folder,
+            help_page::help_check,
+            help_page::help_update,
+            help_page::help_update_status,
             transfer_page::xfer_page,
             transfer_page::xfer_chapters,
             transfer_page::xfer_chapter_number,
