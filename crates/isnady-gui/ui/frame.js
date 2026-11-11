@@ -178,8 +178,8 @@ function menus() {
       act("Data Sources…", () => openPreferences("sources"), "Ctrl+Shift+I"),
       act("Open Data Folder", () => invoke("open_data_folder")),
       SEP,
-      act("Export…", later(["&File", "Export…"]), "Ctrl+E"),
-      act("Import…", later(["&File", "Import…"]), "Ctrl+Shift+E"),
+      act("Export…", () => exportDialog("hadith"), "Ctrl+E"),
+      act("Import…", () => importDialog("book"), "Ctrl+Shift+E"),
       SEP,
       act("Profiles", null, "", { submenu: profileMenu }),
       SEP,
@@ -613,8 +613,8 @@ function shortcutAction(name) {
     "Ctrl+F": find, "Ctrl+Q": () => invoke("quit"), "F11": () => invoke("full_screen"),
     "Ctrl++": () => changeTextScale(+1),
     "Ctrl+-": () => changeTextScale(-1), "Ctrl+0": () => changeTextScale(0),
-    "Ctrl+Shift+I": () => openPreferences("sources"), "Ctrl+E": later(["&File", "Export…"]),
-    "Ctrl+Shift+E": later(["&File", "Import…"]), "Ctrl+,": () => openPreferences(),
+    "Ctrl+Shift+I": () => openPreferences("sources"), "Ctrl+E": () => exportDialog("hadith"),
+    "Ctrl+Shift+E": () => importDialog("book"), "Ctrl+,": () => openPreferences(),
     "Ctrl+Shift+L": openLog,
   };
   if (fixed[name]) return fixed[name];

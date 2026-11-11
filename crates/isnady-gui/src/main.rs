@@ -12,6 +12,7 @@ use isnady_core::{
 };
 mod sources_page;
 mod stats_page;
+mod transfer_page;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -3270,6 +3271,17 @@ fn main() {
             sources_page::src_add,
             sources_page::src_stage,
             sources_page::src_relocate,
+            transfer_page::xfer_page,
+            transfer_page::xfer_chapters,
+            transfer_page::xfer_chapter_number,
+            transfer_page::xfer_method,
+            transfer_page::xfer_preview,
+            transfer_page::xfer_export,
+            transfer_page::xfer_stop,
+            transfer_page::xfer_status,
+            transfer_page::xfer_show,
+            transfer_page::xfer_guess,
+            transfer_page::xfer_import,
             sources_page::src_job,
             sources_page::src_job_status,
             sources_page::quran_offered,

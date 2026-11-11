@@ -90,7 +90,7 @@ function booksBuild() {
   });
   $("b-marks").onclick = marksMenu;
   $("b-search").onclick = searchHere;
-  $("b-pdf").onclick = later(["&File", "Export…"]);
+  $("b-pdf").onclick = exportBook;
   $("b-body").addEventListener("scroll", () => {
     clearTimeout(BK.readingTimer);
     BK.readingTimer = setTimeout(rememberReading, 700);

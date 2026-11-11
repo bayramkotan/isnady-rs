@@ -43,6 +43,8 @@ jobs:
         run: cargo build --release --locked -p isnady
       - name: Compare
         run: python tools/parity.py --python iy --rust target/release/iy-rs
+      - name: The same files exported, the same brought in
+        run: python tools/parity_export.py --python iy --rust target/release/iy-rs
       - name: The same chains and narrators in the database
         run: python tools/parity_db.py --python iy --rust target/release/iy-rs
       - name: The same books imported by both

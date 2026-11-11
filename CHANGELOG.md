@@ -5,6 +5,22 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **Export and import (A3; Bayram: "Diğer tüm problemleri (eşitlemeleri) hallet").** `iy-rs export` and `iy-rs
+  import-data`, with every argument of the Python isnady's: hadith by number, a book or a chapter (several books,
+  all, sunni, shia; each in its own file with `--separate`), search results with the grades, books and chapter
+  chosen, bookmarks, narrators, the isnad network, settings, a profile, a backup and the statistics, as JSON, JSON
+  Lines, CSV, TSV, Excel, Markdown, HTML, text, EPUB, Word, SQLite, isnady book, GraphML and GEXF; a book, bookmarks,
+  settings, a profile and a backup brought back. core/formats.py and core/transfer.py are in Rust (formats.rs,
+  transfer.rs): the Excel, Word and EPUB files are written without a library, as the Python isnady writes them. In
+  the window: File → Export… (Ctrl+E) with its preview, progress and Stop (the export goes on when the dialog is
+  closed, its progress at the bottom of the window, then Show in folder), File → Import… (Ctrl+Shift+E), Export
+  these results on the Search page, Export on a hadith's card and in its menu, ⤓ in Books (the book or the chapter
+  being read), Export / import in Bookmarks, ⤴ Export… on a card of Data sources. PDF is the one format still to
+  come (with the Statistics' PDF). `tools/parity_export.py` exports 111 cases with both programs and compares the
+  files (the text ones byte for byte, the zipped ones entry by entry, the SQLite ones table by table), then imports
+  them with both and compares what is said and kept; it runs in the Parity workflow.
+- 4 more parity cases (241 in all).
+
 - **Importing, the rest (A2b, A2c; Bayram: "ya lütfen hepsini çöz").** Every format the Python isnady reads is read
   here too: the rijal works (`taqrib`: Ibn Hajar's ranks, tabaqat, years of death with his rule, book marks and
   cross-references; `najashi`: the Shia scale, core/shia_rijal.py), the sira and the tabaqat (`openiti-work`, with

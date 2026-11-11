@@ -35,8 +35,8 @@ function bookmarksBuild() {
   </div>`;
   $("bm-new").onclick = () => bookmarkNewFolder(null);
   $("bm-more").onclick = (e) => popupAt(e, [
-    act("Export bookmarks…", later(["&File", "Export…"])),
-    act("Import bookmarks…", later(["&File", "Import…"])),
+    act("Export bookmarks…", () => exportDialog("bookmarks")),
+    act("Import bookmarks…", () => importDialog("bookmarks")),
   ]);
   const kinds = () => [["", t("Every kind")], ...Object.keys(BM_ICONS).map((k) => [k, `${BM_ICONS[k]}  ${t(KIND_NAMES[k])}`])];
   const drawKind = () => {

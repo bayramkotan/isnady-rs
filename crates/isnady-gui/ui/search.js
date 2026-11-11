@@ -88,7 +88,7 @@ function buildSearchPage() {
   $("s-grades").onclick = openGradePicker;
   $("s-languages").onclick = openLanguagePicker;
   $("s-chapter").onclick = clearChapterScope;
-  $("s-export").onclick = later(["&File", "Export…"]);
+  $("s-export").onclick = exportSearch;
   $("go").onclick = runSearch;
   $("q").addEventListener("keydown", (e) => {
     if (e.key === "Enter") runSearch();
@@ -890,7 +890,7 @@ function card(r) {
   el.innerHTML = html;
   el.querySelector('[data-act="chain"]').onclick = () => showChain(r.key, r.number);
   if (!r.in_book) el.querySelector('[data-act="book"]').onclick = () => openInBook(r.hadith_id);
-  el.querySelector('[data-act="export"]').onclick = later(["&File", "Export…"]);
+  el.querySelector('[data-act="export"]').onclick = () => exportDialog("hadith", { refs: `${r.key}:${r.number}` });
   el.querySelector('[data-act="languages"]').onclick = () => openPreferences("books");
   const fold = el.querySelector('[data-act="fold"]');
   if (fold) {
@@ -1100,7 +1100,7 @@ async function cardMenu(e, r, el) {
       wireStar(star, "hadith", `${r.key}:${r.number}`, `${r.name} ${r.number}`, r.subtitle);
     }, "", { raw: true }),
     act("Copy", null, "", { submenu: () => copies }),
-    act("Export…", later(["&File", "Export…"])));
+    act("Export…", () => exportDialog("hadith", { refs: `${r.key}:${r.number}` })));
   popupAt(e, entries);
 }
 

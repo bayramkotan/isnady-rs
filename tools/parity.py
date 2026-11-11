@@ -267,6 +267,11 @@ CASES = [
     ["import", "table", "/nonexistent/x.csv"],
     ["quran", "remove", "nosuch-edition"],
     ["database"],
+    # export and import-data (EX1, A3): what there is; the files themselves are compared by tools/parity_export.py
+    ["export", "--list"],
+    ["export"],
+    ["export", "book", "nosuchbook"],
+    ["import-data", "bookmarks", "/nonexistent/bookmarks.json"],
     ["remove", "nosuch"],
     # the chain reader and the narrator matcher (RS17): every chain read again, every narrator identified again —
     # the report, and (tools/parity_db.py) the same rows in the database

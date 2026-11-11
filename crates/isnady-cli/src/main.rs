@@ -2,6 +2,7 @@
 //! that tools/parity.py can compare the two word for word. A command or option not ported yet says so and points to
 //! the Python `iy`; PARITY.md lists them.
 
+mod export_cmd;
 mod sources_cmd;
 mod stats_cmd;
 use clap::{Parser, Subcommand};
@@ -132,6 +133,12 @@ enum Command {
     /// History and method of hadith: how they were written down and gathered, the logic of verification, the numbers
     /// of the books imported (counted live)
     Learn(LearnArgs),
+    /// Hadith, a book or chapter, search results, bookmarks, narrators, the isnad network, settings, a profile or a
+    /// backup, in many formats (iy export --list)
+    Export(export_cmd::ExportArgs),
+    /// Bring back a book, bookmarks, settings, a profile or a backup from a file made by iy export or File → Export…
+    #[command(name = "import-data")]
+    ImportData(export_cmd::ImportDataArgs),
 }
 
 #[derive(clap::Args)]
@@ -593,6 +600,8 @@ fn run(command: Option<Command>) -> ExitCode {
         Some(Command::Quran(a)) => quran_cmd(a),
         Some(Command::Tree(a)) => tree_cmd(a),
         Some(Command::Bookmark(a)) => bookmark_cmd(a),
+        Some(Command::Export(a)) => export_cmd::export_cmd(a),
+        Some(Command::ImportData(a)) => export_cmd::import_data_cmd(a),
         Some(Command::Term(a)) => term_cmd(a),
         Some(Command::Learn(a)) => learn_cmd(a),
     }

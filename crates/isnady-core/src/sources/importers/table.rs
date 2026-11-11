@@ -83,6 +83,11 @@ fn number(v: Option<&Value>) -> (String, Option<f64>) {
 
 /// Python's csv reader (the excel dialect, not strict): the rows of a text.
 pub fn csv_rows(text: &str) -> Vec<Vec<String>> {
+    csv_rows_with(text, ',')
+}
+
+/// The same with another delimiter (a tab: the excel-tab dialect).
+pub fn csv_rows_with(text: &str, delim: char) -> Vec<Vec<String>> {
     #[derive(PartialEq)]
     enum S {
         StartRecord,
@@ -123,7 +128,7 @@ pub fn csv_rows(text: &str) -> Vec<Vec<String>> {
                         };
                     } else if c == '"' {
                         state = S::InQuoted;
-                    } else if c == ',' {
+                    } else if c == delim {
                         row.push(std::mem::take(&mut field));
                     } else {
                         field.push(c);
@@ -139,7 +144,7 @@ pub fn csv_rows(text: &str) -> Vec<Vec<String>> {
                         } else {
                             S::StartRecord
                         };
-                    } else if c == ',' {
+                    } else if c == delim {
                         row.push(std::mem::take(&mut field));
                         state = S::StartField;
                     } else {
@@ -157,7 +162,7 @@ pub fn csv_rows(text: &str) -> Vec<Vec<String>> {
                     if c == '"' {
                         field.push('"');
                         state = S::InQuoted;
-                    } else if c == ',' {
+                    } else if c == delim {
                         row.push(std::mem::take(&mut field));
                         state = S::StartField;
                     } else if c == '\n' || c == '\r' {

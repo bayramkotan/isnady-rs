@@ -10,6 +10,7 @@ pub mod cache;
 pub mod config;
 pub mod db;
 pub mod difflib;
+pub mod formats;
 pub mod genealogy;
 pub mod grades;
 pub mod huffaz;
@@ -55,6 +56,7 @@ pub mod sources;
 pub mod stats;
 pub mod tables;
 pub mod takhrij;
+pub mod transfer;
 pub mod works;
 
 /// The version, the same number as the Python isnady's.

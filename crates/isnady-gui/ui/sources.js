@@ -136,7 +136,7 @@ function srcCard(e) {
     srcButton(st.imported ? t("Update") : t("Import"), "import", { primary: !st.imported, args: srcArgs(e) }),
     srcButton(t("Remove data"), "remove", { allowed: st.imported, args, tip: st.imported ? "" : t("Nothing of it is imported yet") }),
     srcButton("📚 " + t("Open in Books"), "open", { allowed: !!e.work_key, args: { key: e.work_key }, tip: e.work_key ? "" : t("Import it first; then it is read in Books") }),
-    srcButton("⤴ " + t("Export…"), "export", { allowed: st.imported && e.kind === "hadith" && !!e.book,
+    srcButton("⤴ " + t("Export…"), "export", { args: { book: e.book || "" }, allowed: st.imported && e.kind === "hadith" && !!e.book,
       tip: !st.imported ? t("Import it first") : t("Export writes hadith collections (EPUB, PDF, CSV …); this kind is read in Books") }),
   ];
   if (!e.builtin) buttons.push(srcButton(t("Delete from list"), "delete", { args }));
@@ -494,7 +494,8 @@ async function srcAct(action, a, button) {
       pfClose();
       return openBookAt(a.key);
     case "export":
-      return later(["&File", "Export…"])();
+      pfClose();
+      return exportDialog("book", { book: a.book });
     case "open-folder":
       return invoke("open_data_folder");
     case "change-folder": {

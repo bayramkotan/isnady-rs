@@ -32,6 +32,7 @@ const LOCAL = {
     "Sunni": "Sünnî", "Shia": "Şiî", "All": "Hepsi", "Other": "Diğer",
     "Teachers": "Hocaları", "Students": "Talebeleri", "No narrators found": "Râvi bulunamadı",
     "LATER_MENU": "isnady-rs {v}: bu henüz burada değil. Python isnady aynı verilerle yapıyor: penceresinde {menu}.",
+    "the file to import, with its folder; several: with ; between them": "içe aktarılacak dosya, klasörüyle; birkaç dosya: aralarına ; koyun",
   },
   ar: {
     "Number": "الرقم",
@@ -40,6 +41,7 @@ const LOCAL = {
     "Sunni": "سني", "Shia": "شيعي", "All": "الكل", "Other": "أخرى",
     "Teachers": "شيوخه", "Students": "تلاميذه", "No narrators found": "لم يوجد راوٍ",
     "LATER_MENU": "isnady-rs {v}: ليس هذا هنا بعد. يفعله isnady بلغة Python على البيانات نفسها: {menu} في نافذته.",
+    "the file to import, with its folder; several: with ; between them": "الملف المراد استيراده مع مجلده؛ عدة ملفات: افصل بينها بـ ;",
   },
 };
 const ENGLISH = {
