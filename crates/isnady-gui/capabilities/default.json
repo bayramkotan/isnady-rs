@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "The main window: isnady's own commands only",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "dialog:default"]
 }

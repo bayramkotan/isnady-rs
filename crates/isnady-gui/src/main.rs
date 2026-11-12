@@ -357,6 +357,58 @@ fn profile_import(path: String) -> Result<Value, String> {
     Ok(json!({"id": id, "name": config::profile_name(&id)}))
 }
 
+/// The system's own file dialog (QFileDialog in the Python window): "save" a file, "open" one or several, or a
+/// "folder"; the paths chosen, [] when it was closed. `suggested` is the file or folder offered first; `filters`
+/// (name, [extensions]) the kinds of file shown.
+#[tauri::command]
+async fn choose_path(
+    app: tauri::AppHandle,
+    mode: String,
+    title: String,
+    suggested: String,
+    filters: Vec<(String, Vec<String>)>,
+    multiple: bool,
+) -> Vec<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut d = app.dialog().file().set_title(&title);
+    let start = paths::expand_user(&suggested);
+    if !suggested.is_empty() {
+        if mode == "folder" || start.is_dir() {
+            d = d.set_directory(&start);
+        } else {
+            if let Some(dir) = start.parent().filter(|p| p.is_dir()) {
+                d = d.set_directory(dir);
+            }
+            if let Some(name) = start.file_name() {
+                d = d.set_file_name(name.to_string_lossy());
+            }
+        }
+    }
+    for (name, exts) in &filters {
+        let exts: Vec<&str> = exts.iter().map(String::as_str).collect();
+        d = d.add_filter(name, &exts);
+    }
+    let shown =
+        |p: tauri_plugin_dialog::FilePath| p.into_path().ok().map(|p| p.display().to_string());
+    tauri::async_runtime::spawn_blocking(move || match mode.as_str() {
+        "save" => d.blocking_save_file().and_then(shown).into_iter().collect(),
+        "folder" => d
+            .blocking_pick_folder()
+            .and_then(shown)
+            .into_iter()
+            .collect(),
+        _ if multiple => d
+            .blocking_pick_files()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(shown)
+            .collect(),
+        _ => d.blocking_pick_file().and_then(shown).into_iter().collect(),
+    })
+    .await
+    .unwrap_or_default()
+}
+
 /// Where a file is suggested: the home folder.
 #[tauri::command]
 fn home_folder() -> String {
@@ -3338,6 +3390,7 @@ fn random_number(state: tauri::State<Data>, book: String) -> Result<Option<Strin
 fn main() {
     isnady_core::log::setup("window");
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(Data(Mutex::new(None)))
         .manage(Cites(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
@@ -3406,6 +3459,7 @@ fn main() {
             profile_export,
             profile_import,
             home_folder,
+            choose_path,
             source_fetch,
             help_page::help_check,
             help_page::help_update,

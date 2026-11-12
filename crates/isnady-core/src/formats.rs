@@ -683,15 +683,19 @@ fn section_pdf(pdf: &mut crate::pdf::Pdf, s: &Section) {
         if !e.heading.is_empty() {
             pdf.paragraph(&e.heading, 11.5, true, false, 0.0);
         }
+        // as section_html lays them out: Arabic on its own, right to left; the others after their label
         for (label, text) in &e.paragraphs {
             if text.is_empty() {
                 continue;
             }
-            if !label.is_empty() {
-                pdf.paragraph(label, 8.5, true, true, 0.0);
+            if rtl(text) {
+                pdf.paragraph(text, 13.0, false, false, 0.0);
+            } else if !label.is_empty() {
+                pdf.paragraph(&format!("{label}: {text}"), 10.5, false, false, 0.0);
+            } else {
+                pdf.paragraph(text, 10.5, false, false, 0.0);
             }
-            let arabic = rtl(text);
-            pdf.paragraph(text, if arabic { 13.0 } else { 10.5 }, false, false, 0.0);
+            pdf.space(3.0);
         }
         if !e.note.is_empty() {
             pdf.paragraph(&e.note, 8.5, false, true, 0.0);

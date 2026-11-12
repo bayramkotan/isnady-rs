@@ -5,6 +5,21 @@ is a release of the other. The text of each GitHub Release is taken from its sec
 
 ## [Unreleased]
 
+- **The parity check's PDFs on GitHub.** The runner had no libEGL, so the Python isnady could not load Qt to write
+  its PDFs and 3 of 114 exports failed there (not on our machines). The parity workflow now installs the libraries Qt
+  needs (libegl1, libgl1, libxkbcommon0, libfontconfig1, libdbus-1-3) and first checks that Qt starts.
+
+- **The last differences made the same (Bayram, 2026-11-11: "sen önce eşitle bunları!").** The meaning index: both
+  programs learn the concepts by the same randomized subspace iteration from the same start (LSA3; the Python isnady
+  no longer uses ARPACK), so `iy-rs ai build` and `iy ai build` write the same lsa.npz, array for array, and
+  `tools/parity_ai.py` now demands that. Doctor and update: each program's report takes in the other's (`iy-rs
+  doctor` shows what `iy doctor` says, `iy-rs update` updates both), in the command line and in Help → Check
+  Installation and Check for Updates. PDF: a hadith export laid out as the Python page lays it out (the Arabic on
+  its own, right to left; the translations after their label). The window chooses its files in the system's own
+  dialog (tauri-plugin-dialog), as the Python window does: Export, Import (Choose…, several at once), the
+  Statistics, the profiles. `sahifa::export` (isnady-data's books of the written sources) is here too, the same as
+  the Python isnady's.
+
 - **PDF, pictures, Excel and the classical works (A5, the rest).** isnady's own PDF writer (`pdf.rs`): Amiri
   embedded (SIL OFL, in `data/fonts`), the Arabic shaped by rustybuzz and set in the bidirectional order, lines
   broken by width, tables with their columns fitted, the text searchable and copyable, pictures placed as JPEG. With

@@ -267,9 +267,16 @@ async function exportDialog(kind, preset) {
     const sep = d.home.includes("\\") ? "\\" : "/";
     let name = suggested(a);
     if (many) name = name.replace(/\.[^.]*$/, "").split(".isnady-book")[0];
-    let path = await askText(many ? t("Export: the folder for the files") : t("Export"), many ? t("Folder") : t("File"), d.home + sep + name);
-    if (!path || !path.trim()) return;
-    path = path.trim();
+    let path;
+    if (many) {
+      const [folder] = await choosePath("folder", t("Export: the folder for the files"), d.home);
+      if (!folder) return;
+      path = folder + sep + name;
+    } else {
+      const ext = d.suffix[fmt].slice(d.suffix[fmt].lastIndexOf(".") + 1);
+      [path] = await choosePath("save", t("Export"), d.home + sep + name, [[t(d.labels[fmt] || fmt), [ext]]]);
+      if (!path) return;
+    }
     const suffix = d.suffix[fmt];
     if (!many && !path.endsWith(suffix) && !path.endsWith(suffix.slice(suffix.lastIndexOf(".")))) path += suffix;
     try {
@@ -340,7 +347,7 @@ async function importDialog(kind) {
     <div class="xf-form">
     ${row(t("What"), `<select id="xi-kind">${kinds.map((k) => `<option value="${k.key}">${esc(t(XF_KIND_TEXT[k.key]))}</option>`).join("")}</select>`)}
     ${row("", `<div class="caption" id="xi-help"></div>`)}
-    ${row(t("File"), `<input type="text" id="xi-file" spellcheck="false" placeholder="${esc(t("the file to import, with its folder; several: with ; between them"))}">`)}
+    ${row(t("File"), `<div class="xf-pick"><input type="text" id="xi-file" spellcheck="false" placeholder="${esc(t("the file to import, with its folder; several: with ; between them"))}"><button class="quiet small" id="xi-choose">${esc(t("Choose…"))}</button></div>`)}
     ${row("", `<div class="caption" id="xi-detected"></div>`)}
     ${row("", `<label class="src-check"><input type="checkbox" id="xi-replace"> ${esc(t("Replace what is there (otherwise added to it)"))}</label>`, "xi-replace-row")}
     ${row(t("Folder"), `<input type="text" id="xi-folder" placeholder="${esc(t("optional: a folder to put them in, e.g. Imported"))}">`, "xi-folder-row")}
@@ -414,6 +421,12 @@ async function importDialog(kind) {
   q("xi-kind").onchange = kindChanged;
   q("xi-file").oninput = detect;
   q("xi-go").onclick = go;
+  q("xi-choose").onclick = async () => {         // several at once (Bayram, 2026-10-24), as the Python window
+    const kind = kindNow();
+    const exts = [...new Set(kinds.find((k) => k.key === kind).import.map((f) => d.suffix[f].replace(/^\./, "")))];
+    const names = await choosePath("open", t("Import"), d.home, [[t("isnady files"), exts.concat(["json"])], [t("All files"), ["*"]]], true);
+    if (names.length) { q("xi-file").value = names.join(" ; "); detect(); }
+  };
   q("xi-close").onclick = () => back.remove();
   back.addEventListener("keydown", (e) => { if (e.key === "Escape") back.remove(); });
   kindChanged();
@@ -491,3 +504,14 @@ async function helpDialog(updates) {
     }
   };
 }
+
+// The system's own file dialog (core: choose_path): the paths chosen, [] when it was closed
+async function choosePath(mode, title, suggested, filters, multiple) {
+  try {
+    return await invoke("choose_path", { mode, title, suggested: suggested || "", filters: filters || [], multiple: !!multiple });
+  } catch (e) {
+    infoDialog(title, `<p>${esc(String(e))}</p>`);
+    return [];
+  }
+}
+

@@ -1491,25 +1491,19 @@ function statsDisputed(r, graders, labels) {
 
 // ------------------------------------------------------------------ export (stats_export.py)
 
+// Where a file goes, in the system's own dialog (QFileDialog.getSaveFileName / getExistingDirectory in the Python
+// window): a name with an extension is a file; without one, a folder is chosen and the name made in it
 function statsAskPath(title, file, done) {
-  invoke("stats_home").then((home) => {
+  invoke("stats_home").then(async (home) => {
     const sep = home.includes("\\") ? "\\" : "/";
-    const back = document.createElement("div");
-    back.className = "dialog-back";
-    back.innerHTML = `<div class="dialog small" role="dialog"><h2>${esc(title)}</h2><div class="dialog-body">
-      <input type="text" class="st-path" spellcheck="false" value="${esc(home + sep + file)}"></div>
-      <div class="dialog-buttons"><button class="primary" data-a="ok">${esc(t("Save"))}</button> <button class="quiet" data-a="no">${esc(t("Cancel"))}</button></div></div>`;
-    const input = back.querySelector("input");
-    const go = () => { const p = input.value.trim(); back.remove(); if (p) done(p); };
-    back.onclick = (e) => {
-      const b = e.target.closest("[data-a]");
-      if (!b) return;
-      if (b.dataset.a === "ok") go(); else back.remove();
-    };
-    input.onkeydown = (e) => { if (e.key === "Enter") go(); if (e.key === "Escape") back.remove(); };
-    document.body.appendChild(back);
-    input.focus();
-    input.setSelectionRange(input.value.lastIndexOf(sep) + 1, input.value.length);
+    const ext = (file.match(/\.([a-z0-9]+)$/i) || [])[1];
+    if (!ext) {
+      const [folder] = await choosePath("folder", title, home);
+      if (folder) done(folder + sep + file);
+      return;
+    }
+    const [path] = await choosePath("save", title, home + sep + file, [[ext.toUpperCase(), [ext]]]);
+    if (path) done(path);
   });
 }
 

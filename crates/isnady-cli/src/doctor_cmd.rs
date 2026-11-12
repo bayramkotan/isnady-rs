@@ -46,15 +46,53 @@ fn run(plan: &[Vec<String>], yes: bool) {
 pub fn doctor_cmd(a: DoctorArgs) -> ExitCode {
     let lang = isnady_core::i18n::ui_language();
     let report = doctor::diagnose(!a.offline);
+    let other = doctor::other_command();
+    let mut other_code = 0;
     println!("{}", doctor::as_text(&report, &lang));
+    let fix_other = |code: &mut i32| {
+        if let Some(exe) = &other {
+            println!("\n— {}: {} —", doctor::OTHER_NAME, exe.display());
+            let mut args = vec!["doctor", "--fix"];
+            if a.yes {
+                args.push("--yes");
+            }
+            if a.offline {
+                args.push("--offline");
+            }
+            *code = doctor::other_run(&args, false).0;
+        }
+    };
+    if let (Some(exe), false) = (&other, a.fix) {
+        // the other isnady's copies too (TEK PROJE)
+        let args: Vec<&str> = if a.offline {
+            vec!["doctor", "--offline"]
+        } else {
+            vec!["doctor"]
+        };
+        let (code, out) = doctor::other_run(&args, true);
+        other_code = code;
+        println!("\n— {}: {} —\n{out}", doctor::OTHER_NAME, exe.display());
+    }
     if !a.fix || report.fixes.is_empty() {
-        return ExitCode::from(if report.problems.is_empty() { 0 } else { 1 });
+        if a.fix {
+            fix_other(&mut other_code);
+        }
+        return ExitCode::from(if report.problems.is_empty() && other_code == 0 {
+            0
+        } else {
+            1
+        });
     }
     println!();
     run(&report.fixes, a.yes);
     let after = doctor::diagnose(!a.offline);
     println!("\nAfter updating:\n{}", doctor::as_text(&after, &lang));
-    ExitCode::from(if after.problems.is_empty() { 0 } else { 1 })
+    fix_other(&mut other_code);
+    ExitCode::from(if after.problems.is_empty() && other_code == 0 {
+        0
+    } else {
+        1
+    })
 }
 
 pub fn update_cmd(a: UpdateArgs) -> ExitCode {
@@ -77,7 +115,24 @@ pub fn update_cmd(a: UpdateArgs) -> ExitCode {
         }
     }
     if a.check {
+        if let Some(exe) = doctor::other_command() {
+            // the other isnady too (TEK PROJE)
+            let (_code, out) = doctor::other_run(&["update", "--check"], true);
+            println!("\n— {}: {} —\n{out}", doctor::OTHER_NAME, exe.display());
+        }
         return ExitCode::SUCCESS;
+    }
+    let mut other_code = 0;
+    if let Some(exe) = doctor::other_command() {
+        // the other isnady first: it is not this program, so nothing stands in its way
+        println!("— {}: {} —", doctor::OTHER_NAME, exe.display());
+        let args: Vec<&str> = if a.yes {
+            vec!["update", "--yes"]
+        } else {
+            vec!["update"]
+        };
+        other_code = doctor::other_run(&args, false).0;
+        println!();
     }
     let report = doctor::diagnose(true);
     if report.fixes.is_empty() {
@@ -89,11 +144,11 @@ pub fn update_cmd(a: UpdateArgs) -> ExitCode {
                 None => " (crates.io could not be reached).".to_string(),
             }
         );
-        return ExitCode::SUCCESS;
+        return ExitCode::from(if other_code == 0 { 0 } else { 1 });
     }
     run(&report.fixes, a.yes);
     let after = doctor::diagnose(true);
-    if after.problems.is_empty() {
+    if after.problems.is_empty() && other_code == 0 {
         println!("\nEvery copy is up to date.");
         ExitCode::SUCCESS
     } else {

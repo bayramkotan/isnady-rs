@@ -7,8 +7,8 @@
 //! none of its words. Nothing is downloaded; the model is learnt on this computer from the sources imported here.
 //!
 //! The index is the Python isnady's own files (`ai/lsa.npz`, `ai/lsa.vocab`, `ai/lsa.json`): built by either
-//! program, read by both. The Python isnady finds the concepts with ARPACK (scipy's svds); here a randomized subspace
-//! iteration finds the same subspace — the scores depend only on that subspace, not on the vectors chosen in it.
+//! program, read by both. The both programs find the concepts by the same randomized
+//! subspace iteration from the same start (LSA3), so they write the same index.
 
 use rusqlite::{Connection, OptionalExtension};
 use serde_json::{json, Map, Value};
@@ -20,7 +20,7 @@ use std::sync::Mutex;
 use crate::py::thousands;
 use crate::search::{SearchQuery, SearchResult};
 
-pub const METHOD_ID: &str = "isnady-lsa-2";
+pub const METHOD_ID: &str = "isnady-lsa-3";
 pub const DEFAULT_DIMS: usize = 200;
 const MIN_DF: usize = 3;
 const MAX_DF_SHARE: f64 = 0.4;
@@ -757,30 +757,24 @@ fn jacobi(mut a: Vec<f64>, l: usize) -> (Vec<f64>, Vec<f64>) {
 }
 
 /// The k right singular vectors of A with the largest singular values (k × cols, rows first): a randomized
-/// subspace iteration (Halko, Martinsson and Tropp 2011), with more power steps and oversampling than usual so the
-/// subspace is the one ARPACK finds.
+/// subspace iteration (Halko, Martinsson and Tropp 2011) from a fixed start, step for step as the Python isnady's
+/// `semantic.top_right_vectors` (LSA3), so the two programs learn the same concepts.
 fn top_right_vectors(a: &Csr, k: usize, say: &dyn Fn(&str)) -> Vec<f64> {
-    let extra: usize = std::env::var("ISNADY_LSA_EXTRA")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(60);
+    let extra: usize = 60;
     let l = (k + extra).min(a.rows.min(a.cols));
     let at = transpose(a);
-    // a fixed start: the same index every time on the same data
-    let mut seed: u64 = 0x9E37_79B9_7F4A_7C15;
+    // splitmix64 of 0, 1, 2 …, row by row: the Python isnady starts from the same numbers
     let mut omega = vec![0f64; a.cols * l];
-    for v in omega.iter_mut() {
-        seed ^= seed << 13;
-        seed ^= seed >> 7;
-        seed ^= seed << 17;
-        *v = (seed >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0;
+    for (i, v) in omega.iter_mut().enumerate() {
+        let mut z = (i as u64).wrapping_add(0x9E37_79B9_7F4A_7C15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^= z >> 31;
+        *v = (z >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0;
     }
     let mut y = mul(a, &omega, l);
     orthonormalize(&mut y, l);
-    let steps: usize = std::env::var("ISNADY_LSA_STEPS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(16);
+    let steps: usize = 16;
     for step in 0..steps {
         let mut z = mul(&at, &y, l);
         orthonormalize(&mut z, l);
@@ -809,6 +803,13 @@ fn top_right_vectors(a: &Csr, k: usize, say: &dyn Fn(&str)) -> Vec<f64> {
         for (c, o) in row.iter_mut().enumerate() {
             let b = &bt[c * l..(c + 1) * l];
             *o = (0..l).map(|i| b[i] * vectors[i * l + e]).sum::<f64>() / s;
+        }
+        // each vector's sign fixed, as the Python isnady fixes it: its largest value is positive
+        let big = row
+            .iter()
+            .fold(0f64, |m, v| if v.abs() > m.abs() { *v } else { m });
+        if big < 0.0 {
+            row.iter_mut().for_each(|v| *v = -*v);
         }
     }
     out
@@ -888,10 +889,14 @@ pub fn build(conn: &Connection, dims: usize, say: &dyn Fn(&str)) -> Result<Value
                     .map(|&j| (j, (1.0 + (c as f64).ln()) as f32 * idf[j]))
             })
             .collect();
-        // as scipy keeps the row (the terms from the last to the first), the squares summed in float32 in that
-        // order, then × (1 / norm)
+        // kept from the last term to the first, as scipy keeps the row; its length summed in float64 and kept in
+        // float32, then × (1 / length), as the Python isnady does it
         row.sort_unstable_by_key(|b| std::cmp::Reverse(b.0));
-        let norm = row.iter().map(|(_, v)| *v * *v).sum::<f32>().sqrt();
+        let norm = row
+            .iter()
+            .map(|(_, v)| (*v as f64) * (*v as f64))
+            .sum::<f64>()
+            .sqrt() as f32;
         let inverse = 1.0f32 / if norm == 0.0 { 1.0 } else { norm };
         for (j, v) in row {
             indices.push(j);
@@ -929,7 +934,11 @@ pub fn build(conn: &Connection, dims: usize, say: &dyn Fn(&str)) -> Result<Value
     let mut doc_vectors: Vec<u16> = Vec::with_capacity(n * k);
     for row in vecs.chunks(k) {
         let row32: Vec<f32> = row.iter().map(|v| *v as f32).collect();
-        let len = row32.iter().map(|v| v * v).sum::<f32>().sqrt();
+        let len = row32
+            .iter()
+            .map(|v| (*v as f64) * (*v as f64))
+            .sum::<f64>()
+            .sqrt() as f32;
         let len = if len == 0.0 { 1.0 } else { len };
         doc_vectors.extend(row32.iter().map(|v| f32_to_f16(v / len)));
     }

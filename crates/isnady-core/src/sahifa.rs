@@ -437,6 +437,58 @@ pub fn summary(c: &Counted) -> Vec<Summary> {
         .collect()
 }
 
+/// A text in its languages as the Python isnady keeps them (en, tr, ar first).
+fn text_value(t: &Text) -> serde_json::Value {
+    let mut keys: Vec<&String> = t.keys().collect();
+    keys.sort_by_key(|k| {
+        (
+            ["en", "tr", "ar"].iter().position(|x| x == k).unwrap_or(9),
+            k.as_str(),
+        )
+    });
+    let mut m = serde_json::Map::new();
+    for k in keys {
+        m.insert(k.clone(), serde_json::Value::String(t[k].clone()));
+    }
+    serde_json::Value::Object(m)
+}
+
+/// Every written source as a book for isnady-data (sahifa/<road>/<book>.json): its texts in three languages and its
+/// hadith as [book, number] of the books they stand in — read from the database imported here (`sahifa.export`).
+pub fn export(conn: &Connection) -> rusqlite::Result<Vec<serde_json::Value>> {
+    use serde_json::json;
+    let c = counted(conn)?;
+    let mut out = vec![];
+    for s in sources(None) {
+        let ids = hadith(&c, &s.id);
+        let rows = refs(conn, &ids)?;
+        let mut item = json!({
+            "schema": "isnady-sahifa/1", "id": s.book, "source": s.id, "road": s.road, "layer": s.layer,
+            "title": text_value(&s.title), "lead": text_value(&s.lead), "how": text_value(&s.how),
+            "hadith": rows.iter().map(|(_h, k, n)| json!([k, n])).collect::<Vec<_>>(),
+        });
+        if s.id == "hammam" {
+            let mut parallels_of = serde_json::Map::new();
+            for (hid, _key, num) in &rows {
+                let p = parallels(&c, *hid);
+                if !p.is_empty() {
+                    let found = refs(conn, &p)?;
+                    parallels_of.insert(
+                        num.clone(),
+                        json!(found
+                            .iter()
+                            .map(|(_x, k, n)| json!([k, n]))
+                            .collect::<Vec<_>>()),
+                    );
+                }
+            }
+            item["parallels"] = serde_json::Value::Object(parallels_of);
+        }
+        out.push(item);
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

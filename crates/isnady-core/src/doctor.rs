@@ -436,3 +436,76 @@ pub fn step_aside() {
     let _ = std::fs::remove_file(&old);
     let _ = std::fs::rename(&me, &old);
 }
+
+// The other isnady (TEK PROJE): the Python isnady has its own copies (pip's); each program's report and update take
+// in the other's, so `iy-rs doctor` and `iy doctor` say the same and `iy-rs update` brings both up to date.
+pub const OTHER: &str = "iy";
+pub const OTHER_NAME: &str = "isnady (Python)";
+const NESTED: &str = "ISNADY_DOCTOR_NESTED";
+
+/// The other program on PATH, or None (and None when this report is itself the other's).
+pub fn other_command() -> Option<PathBuf> {
+    if std::env::var_os(NESTED).is_some() {
+        return None;
+    }
+    let dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    let names: Vec<String> = if cfg!(windows) {
+        vec![
+            format!("{OTHER}.exe"),
+            format!("{OTHER}.cmd"),
+            format!("{OTHER}.bat"),
+        ]
+    } else {
+        vec![OTHER.to_string()]
+    };
+    dirs.iter()
+        .flat_map(|d| names.iter().map(move |n| d.join(n)))
+        .find(|p| p.is_file())
+}
+
+/// Run the other program's doctor or update (it does not call this one back); (exit code, what it printed). With
+/// `capture` false its output goes straight to the terminal, and it may ask.
+pub fn other_run(args: &[&str], capture: bool) -> (i32, String) {
+    let Some(exe) = other_command() else {
+        return (0, String::new());
+    };
+    let mut cmd = std::process::Command::new(exe);
+    cmd.args(args)
+        .env(NESTED, "1")
+        .env("PYTHONIOENCODING", "utf-8");
+    if capture {
+        cmd.stdin(std::process::Stdio::null());
+        match cmd.output() {
+            Ok(o) => (
+                o.status.code().unwrap_or(1),
+                String::from_utf8_lossy(&o.stdout).trim_end().to_string(),
+            ),
+            Err(e) => (1, e.to_string()),
+        }
+    } else {
+        match cmd.status() {
+            Ok(s) => (s.code().unwrap_or(1), String::new()),
+            Err(e) => (1, e.to_string()),
+        }
+    }
+}
+
+/// What the other isnady says of its copies, under a heading of its own; "" when it is not on this computer.
+pub fn other_text(offline: bool) -> String {
+    let Some(exe) = other_command() else {
+        return String::new();
+    };
+    let args: Vec<&str> = if offline {
+        vec!["doctor", "--offline"]
+    } else {
+        vec!["doctor"]
+    };
+    let (_code, out) = other_run(&args, true);
+    if out.is_empty() {
+        String::new()
+    } else {
+        format!("\n\n— {OTHER_NAME}: {} —\n{out}", exe.display())
+    }
+}

@@ -291,8 +291,9 @@ async function profileExport() {
   const now = (await invoke("profiles")).find((p) => p.active);
   const home = await invoke("home_folder");
   const sep = home.includes("\\") ? "\\" : "/";
-  const path = await askText(t("Export This Profile"), t("File"), home + sep + ((now && now.name) || "default") + ".isnady-profile.zip");
-  if (!path || !path.trim()) return;
+  const [path] = await choosePath("save", t("Export This Profile"), home + sep + ((now && now.name) || "default") + ".isnady-profile.zip",
+    [[t("isnady profile"), ["zip"]]]);
+  if (!path) return;
   try {
     const written = await invoke("profile_export", { path });
     infoDialog(t("Profiles"), `<p>${esc(t("Written: {path}", { path: written }))}</p>`);
@@ -300,8 +301,8 @@ async function profileExport() {
 }
 
 async function profileImport() {
-  const path = await askText(t("Import a Profile"), t("isnady profile") + " (.isnady-profile.zip)", "");
-  if (!path || !path.trim()) return;
+  const [path] = await choosePath("open", t("Import a Profile"), await invoke("home_folder"), [[t("isnady profile"), ["zip"]]]);
+  if (!path) return;
   try {
     const r = await invoke("profile_import", { path });
     if (await askYesNo(t("Profiles"), t("Imported as {name}. Use it now?", { name: r.name }))) useProfile(r.id);

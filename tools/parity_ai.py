@@ -2,10 +2,9 @@
 
 1. The Python isnady builds the index (`iy ai build`) in a copy of the data folder; then both programs read it:
    `iy ai status`, searches by meaning and `iy tahric` must print the same, word for word.
-2. iy-rs builds it in another copy: the takhrij pairs must be the same rows; the vocabulary, the idf, the hadith and
-   the TF-IDF matrix's rows the same (its values within one step of float16); the concepts the same subspace as
-   ARPACK's (the Python isnady's svds) up to a small angle — a randomized iteration finds it, not ARPACK. The Python
-   isnady must read iy-rs's index, and its searches find mostly the same hadith.
+2. iy-rs builds it in another copy: the takhrij pairs must be the same rows, and the index the same files — every
+   array of lsa.npz, lsa.vocab and lsa.json (apart from the time): both programs find the concepts by the same
+   subspace iteration from the same start (LSA3). The Python isnady reads iy-rs's index and finds the same hadith.
 
     python tools/parity_ai.py --data-dir DIR [--python "python -m isnady"] [--rust target/release/iy-rs]
 
@@ -100,23 +99,22 @@ def main() -> int:
         P, R = np.load(os.path.join(pyd, "ai", "lsa.npz")), np.load(os.path.join(rsd, "ai", "lsa.npz"))
         vocab = [open(os.path.join(d, "ai", "lsa.vocab"), encoding="utf-8").read() for d in (pyd, rsd)]
         check("the vocabulary", vocab[0] == vocab[1])
-        for k in ("idf", "doc_ids", "x_indptr", "x_indices", "x_shape"):
-            check(f"lsa.npz {k}", np.array_equal(P[k], R[k]))
-        step = np.abs(P["x_data"].astype(np.float32) - R["x_data"].astype(np.float32))
-        check("lsa.npz x_data (within one float16 step)", bool(np.all(step <= np.abs(P["x_data"].astype(np.float32)) / 512 + 1e-7)),
-              f"{int(np.sum(step > 0)):,} of {len(step):,} one step apart")
-        qp, _ = np.linalg.qr(P["components"].astype(np.float64).T)
-        qr, _ = np.linalg.qr(R["components"].astype(np.float64).T)
-        cos = np.sort(np.linalg.svd(qp.T @ qr, compute_uv=False))
-        check("the concepts: the same subspace", cos[len(cos) // 10] > 0.99 and cos.mean() > 0.99,
-              f"cosines of the angles: mean {cos.mean():.4f}, lowest {cos[0]:.4f}")
+        for k in P.files:
+            same = P[k].shape == R[k].shape and np.array_equal(P[k], R[k])
+            check(f"lsa.npz {k}", same, "" if same else f"{int(np.sum(P[k] != R[k])) if P[k].shape == R[k].shape else 'other shape'} values differ")
+        import json
+        metas = [json.loads(open(os.path.join(d, "ai", "lsa.json"), encoding="utf-8").read()) for d in (pyd, rsd)]
+        for m in metas:
+            m.pop("seconds", None)
+            m.pop("built_at", None)
+        check("lsa.json (apart from the time)", metas[0] == metas[1])
         shared = total = 0
         for words in QUERIES[:8]:
             args = ["search", "--mode", "meaning"] + words + ["--limit", "10"]
             found = [set(re.findall(r"^(.+ #\S+)   meaning", run(py, args, env)[1], re.M)) for env in (envp, envr)]
             shared += len(found[0] & found[1])
-            total += max(len(found[0]), 1)
-        check("the Python isnady reads iy-rs's index; the same hadith found", shared >= 0.8 * total,
+            total += len(found[0] | found[1])
+        check("the Python isnady reads iy-rs's index; the same hadith found", shared == total,
               f"{shared} of {total} in the first ten")
     finally:
         shutil.rmtree(pyd, ignore_errors=True)

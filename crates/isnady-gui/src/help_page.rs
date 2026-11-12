@@ -26,7 +26,7 @@ pub async fn help_check(updates: bool) -> Value {
     let lang = i18n::ui_language();
     let report = doctor::diagnose(true);
     let mut out = json!({
-        "text": doctor::as_text(&report, &lang),
+        "text": doctor::as_text(&report, &lang) + &doctor::other_text(false),
         "problems": report.problems.len(),
         "fixes": report.fixes.len(),
         "version": report.running_version,
@@ -95,6 +95,15 @@ pub fn help_update() -> Result<(), String> {
                     failed += 1;
                     say(&format!("  {e}"));
                 }
+            }
+        }
+        if let Some(exe) = doctor::other_command() {
+            // the Python isnady too, where it is installed (TEK PROJE)
+            say(&format!("$ {} update --yes", exe.display()));
+            let (code, out) = doctor::other_run(&["update", "--yes"], true);
+            say(&out);
+            if code != 0 {
+                failed += 1;
             }
         }
         isnady_core::log::info(
