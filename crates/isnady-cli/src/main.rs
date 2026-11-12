@@ -55,7 +55,8 @@ enum Command {
     Formats,
     /// Built-in sources and your own: list, import, updates, update, remove, add, delete
     Catalog(sources_cmd::CatalogArgs),
-    /// Use a ready database from a file on this computer (isnady.db or the isnady-db zip of isnady-data)
+    /// A ready database: download isnady-data's, or use one from a file on this computer (isnady.db or the isnady-db
+    /// zip of isnady-data)
     Database(sources_cmd::DatabaseArgs),
     /// Data repositories: list, use, show, add, remove (isnady's own is the default)
     Repo(sources_cmd::RepoArgs),
@@ -518,6 +519,7 @@ fn main() -> ExitCode {
             | Some(Command::Catalog(_))
             | Some(Command::Doctor(_))
             | Some(Command::Update(_))
+            | Some(Command::Database(_))
             | None
     ) {
         let empty = db::connect(None)
@@ -528,7 +530,7 @@ fn main() -> ExitCode {
             })
             .unwrap_or(true);
         if empty {
-            eprintln!("isnady has no books yet. Import every hadith book and rijal work of isnady-data with one command: iy catalog import --all");
+            eprintln!("isnady has no books yet. Import every hadith book and rijal work of isnady-data with one command: iy catalog import --all — or download the ready database: iy database download");
         }
         // an import cut short the last time (ROB1)
         if let Some((titles, started)) = isnady_core::sources::imports::interrupted() {

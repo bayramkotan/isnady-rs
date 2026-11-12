@@ -260,6 +260,7 @@ async function start() {
   $("c-body").addEventListener("click", chainsClick);
   setTimeout(sahifaWarm, 4000);          // the written sources counted in the background (main_window: warm)
   if (s.catch_up) catchUp();
+  setTimeout(() => offerFirstImport().catch(() => {}), 400);     // FR1: an empty database, asked at each start
   if (s.interrupted) SEARCH.notice = s.interrupted;
   const open = s.open || "";
   if (open.startsWith("chain:")) {

@@ -971,6 +971,8 @@ input.bp-spin { width: 80px; padding: 4px 8px; }
 .bp-latin { color: var(--lapis); font-weight: 600; white-space: nowrap; }
 .hcard.focus, .c-card.focus { border: 2px solid var(--gold); }
 .dialog.ask { width: min(420px, calc(100vw - 32px)); gap: 10px; padding: 18px 20px 14px; }
+.dialog.ask.wide { width: min(560px, calc(100vw - 32px)); }
+.dialog.ask > div:not(.pd-title):not(.pd-buttons) { white-space: pre-line; }   /* the paragraphs of a question, as QMessageBox */
 .ask-input { width: 100%; box-sizing: border-box; }
 .bp-item .tb { white-space: normal; }
 

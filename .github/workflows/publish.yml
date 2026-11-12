@@ -1,8 +1,10 @@
 name: crates.io
 
-# isnady-core and isnady (iy-rs) on crates.io: cargo install isnady. Called by the Release workflow for every tag,
-# or by hand (gh workflow run publish.yml). A version already on crates.io is left as it is. Needs the repository
-# secret CARGO_REGISTRY_TOKEN (crates.io → Account Settings → API Tokens, scopes publish-new and publish-update).
+# The three crates on crates.io, in the order they need each other: isnady-core, isnady (cargo install isnady →
+# iy-rs) and isnady-gui (cargo install isnady-gui → the window isnady-rs). Called by the Release workflow after the
+# GitHub Release, or by hand (gh workflow run publish.yml) for a release whose crates.io step failed. A version
+# already on crates.io is left as it is, so running it twice does no harm. Needs the repository secret
+# CARGO_REGISTRY_TOKEN (crates.io → Account Settings → API Tokens, scopes publish-new and publish-update).
 on:
   workflow_call:
     secrets:
@@ -10,27 +12,42 @@ on:
         required: true
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: crates-io
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      CARGO_TERM_COLOR: always
+      AGENT: "isnady-rs release (github.com/bayramkotan/isnady-rs)"
     steps:
       - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
       - name: Publish what is not there yet
         run: |
           version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          for crate in isnady-core isnady; do
-            if curl -sf -A "isnady-rs release (github.com/bayramkotan/isnady-rs)" \
-                 "https://crates.io/api/v1/crates/${crate}/${version}" > /dev/null; then
-              echo "${crate} ${version} is already on crates.io"
+          there() { curl -sf -A "$AGENT" "https://crates.io/api/v1/crates/$1/${version}" > /dev/null; }
+          for crate in isnady-core isnady isnady-gui; do
+            if there "$crate"; then
+              echo "$crate ${version} is already on crates.io"
               continue
             fi
-            cargo publish --locked -p "${crate}"
+            # isnady-gui is not built again from its package: tauri-build writes its schemas (gen/) beside its
+            # sources, which cargo's check refuses; CI builds it from the same files (the test and bundle jobs)
+            if [ "$crate" = isnady-gui ]; then
+              cargo publish --locked --no-verify -p "$crate"
+            else
+              cargo publish --locked -p "$crate"
+            fi
             # the next crate needs this one in the index
-            for i in $(seq 1 30); do
-              curl -sf -A "isnady-rs release (github.com/bayramkotan/isnady-rs)" \
-                "https://crates.io/api/v1/crates/${crate}/${version}" > /dev/null && break
-              sleep 10
-            done
+            for i in $(seq 1 60); do there "$crate" && break; sleep 10; done
+            there "$crate" || { echo "$crate ${version} did not appear on crates.io"; exit 1; }
+            echo "$crate ${version} published"
           done

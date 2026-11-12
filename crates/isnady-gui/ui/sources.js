@@ -154,7 +154,7 @@ function srcFolderCard(d) {
   return `<div class="ncard pf-card"><div class="src-head"><div class="ncard-title">${esc(t("Data folder"))}</div><span class="caption">${esc(how)}</span></div>
     <div class="lead">${esc(f.path)}</div>
     <div class="caption">${esc(t("The database, your settings and your own sources live here. A new folder is used from the next start of isnady. A ready database (isnady.db, or the isnady-db zip of isnady-data) can be taken from a file on this computer instead of importing book by book."))}</div>
-    <div class="src-bar"><button class="quiet" data-src="open-folder">${esc(t("Open"))}</button>${srcButton(t("Change…"), "change-folder", { allowed: !env })}${srcButton(t("Use default"), "default-folder", { allowed: !env && f.source !== "default" })}${srcButton(t("Use a ready database…"), "ready")}</div></div>`;
+    <div class="src-bar"><button class="quiet" data-src="open-folder">${esc(t("Open"))}</button>${srcButton(t("Change…"), "change-folder", { allowed: !env })}${srcButton(t("Use default"), "default-folder", { allowed: !env && f.source !== "default" })}${srcButton(t("Download the ready database…"), "download")}${srcButton(t("Use a ready database…"), "ready")}</div></div>`;
 }
 
 function srcDraw() {
@@ -307,10 +307,101 @@ function srcTicked(card) {
   return boxes.filter((x) => x.checked).map((x) => x.dataset.code);
 }
 
+// what isnady-data's ready database holds, for the dialogs that offer it (sources_page.ready_offer_text)
+function readyOfferText(o) {
+  return t("{date}: {books} books, {hadith:,} hadith, {narrators:,} narrators — every chain already read and every narrator already matched. {size:,} MB.",
+    { date: o.date || "?", books: o.books, hadith: srcN(o.hadith), narrators: srcN(o.narrators), size: srcN(o.mb) });
+}
+
+// how much of the ready database has come (Worker._ready_download)
+function readyProgress(st) {
+  return st.total ? t("Downloading the ready database… {done:,} of {total:,} MB", { done: srcN(st.done), total: srcN(st.total) })
+    : t("Downloading the ready database… {done:,} MB", { done: srcN(st.done) });
+}
+
+// a ready database is staged: it is used from the next start; quit now? (sources_page.ask_quit_for_ready)
+async function askQuitForReady() {
+  if (await askYesNo(t("Ready database"), t("The ready database is waiting; it is used from the next start of isnady. Your database is kept beside it as isnady.<date>.bak.db.\n\nQuit isnady now?"))) invoke("quit");
+}
+
+// the first start (FR1, MainWindow.offer_first_import): no book yet — import isnady-data's books in the background, or
+// download its ready database (DB-READY), asked for briefly so that an offline start is not held up
+async function offerFirstImport() {
+  const f = await invoke("first_start");
+  if (!f.empty || !f.books && !f.rijal) return;
+  let offer = null;
+  try {
+    offer = await invoke("ready_available", { timeout: 5 });
+    if (!offer.usable) offer = null;
+  } catch (_) { offer = null; }
+  let text = t("isnady has no books yet. Import the {books} hadith books and the {rijal} rijal works of isnady-data now? Languages: {langs} (others can be added in File → Data Sources).\n\nThe import runs in the background and the window can be used meanwhile; the progress is shown at the bottom.",
+    { books: f.books, rijal: f.rijal, langs: f.languages.map((x) => t(x)).join(", ") });
+  if (offer) text += "\n\n" + t("Or download the ready database of isnady-data, used from the next start:") + " " + readyOfferText(offer);
+  const choice = await new Promise((resolve) => {
+    const back = document.createElement("div");
+    back.className = "dialog-back";
+    back.innerHTML = `<div class="dialog ask wide" role="dialog"><div class="pd-title">${esc(t("Import the books?"))}</div><div>${esc(text)}</div>
+      <div class="pd-buttons"><button class="primary small" data-a="all">${esc(t("Import all"))}</button>${offer ? `<button class="quiet" data-a="ready">${esc(t("Download the ready database"))}</button>` : ""}<button class="pd-cancel" data-a="">${esc(t("Not now"))}</button></div></div>`;
+    back.onclick = (e) => {
+      const x = e.target.closest("[data-a]");
+      if (!x) return;
+      back.remove();
+      resolve(x.dataset.a);
+    };
+    document.body.appendChild(back);
+    back.querySelector("[data-a=all]").focus();
+  });
+  if (choice === "all") await backgroundJob(t("Importing the books of isnady-data…"), "import_all", {});
+  else if (choice === "ready") await backgroundJob(t("Downloading the ready database…"), "ready_download", { offer });
+}
+
+// a job of the Data Sources page run from elsewhere (the first start): what it does said at the foot of the window
+// (MainWindow.import_in_background, download_ready_in_background)
+async function backgroundJob(first, action, args) {
+  let bar = $("catchup");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "catchup";
+    bar.className = "catchup";
+    document.body.appendChild(bar);
+  }
+  bar.textContent = first;
+  try {
+    await invoke("src_job", { action, args });
+  } catch (e) {
+    bar.textContent = t("Failed: ") + String(e);
+    setTimeout(() => bar.remove(), 15000);
+    return;
+  }
+  for (;;) {
+    await new Promise((ok) => setTimeout(ok, 700));
+    const st = await invoke("src_job_status");
+    if (st.running) {
+      if (st.text) bar.textContent = t(st.text);
+      else if (st.done) bar.textContent = readyProgress(st);
+      continue;
+    }
+    const r = st.result || {};
+    bar.textContent = srcDone(r);
+    setTimeout(() => bar.remove(), 15000);
+    if (r.action === "ready_download" && !r.error) {
+      await askQuitForReady();
+    } else {                                   // the books are in: the window reads them (MainWindow._data_imported)
+      const s = await invoke("start");
+      APP.books = s.books;
+      APP.hadith = s.hadith;
+      await fillSearchFilters();
+      if (CURRENT) show(CURRENT);
+    }
+    return;
+  }
+}
+
 // what the Worker says when it is done (sources_page.Worker)
 function srcDone(r) {
   if (r.error) return t("Failed: ") + t(r.error);
   if (r.action === "refresh") return "";
+  if (r.action === "ready_download") return t("The ready database is downloaded: {books} books, {hadith:,} hadith. It takes the place of your database at the next start of isnady.", { books: r.books, hadith: srcN(r.hadith) });
   const fail = r.failed && r.failed.length ? ". " + t("Failed:") + " " + r.failed.map(([a, b]) => `${a} (${t(b)})`).join("; ") : "";
   const who = r.narrators ? "; " + t("{identified:,} of {links:,} narrators in chains identified ({share:.1f}%)",
     { identified: r.narrators.identified, links: r.narrators.links, share: 100 * r.narrators.identified / r.narrators.links }) : "";
@@ -343,12 +434,14 @@ async function srcJob(first, action, args) {
     const st = await invoke("src_job_status");
     if (st.running) {
       if (st.text) srcSay(t(st.text));
+      else if (st.done) srcSay(readyProgress(st));
       continue;
     }
     SRC.busy = false;
     await srcLoad();
     srcSay(srcDone(st.result || {}));
     PF.booksChanged = true;
+    if (action === "ready_download" && st.result && !st.result.error) await askQuitForReady();
     return;
   }
 }
@@ -510,8 +603,26 @@ async function srcAct(action, a, button) {
       if (mode) await srcRelocate(null, mode);
       return;
     }
+    case "download": {
+      let o;
+      try {
+        o = await invoke("ready_available", { timeout: 20 });
+      } catch (e) {
+        infoDialog(t("Ready database"), `<p>${esc(String(e))}</p>`);
+        return;
+      }
+      if (!o.usable) {
+        infoDialog(t("Ready database"), `<p>${esc(t("The ready database of isnady-data is newer (schema {schema}) than this isnady reads. Update isnady first: Help → Check for Updates.", { schema: o.schema }))}</p>`);
+        return;
+      }
+      if (!(await askYesNo(t("Ready database"), t("Download the ready database of isnady-data?") + "\n\n" + readyOfferText(o) + "\n\n"
+        + t("It takes the place of your database at the next start of isnady; your database is kept beside it as isnady.<date>.bak.db.")))) return;
+      await srcJob(t("Downloading the ready database…"), "ready_download", { offer: o });
+      return;
+    }
     case "ready": {
-      const path = await askText(t("A ready isnady database"), t("isnady database") + " (isnady-db-*.zip isnady*.db *.zip *.db)", "");
+      // the system's own dialog, as the Python window's QFileDialog
+      const [path] = await choosePath("open", t("A ready isnady database"), "", [[t("isnady database"), ["zip", "db"]]]);
       if (!path || !path.trim()) return;
       let info;
       try {

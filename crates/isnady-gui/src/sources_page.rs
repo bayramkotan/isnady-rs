@@ -359,6 +359,70 @@ pub async fn src_stage(path: String) -> Result<Value, String> {
     .map_err(err)?
 }
 
+/// The ready database of isnady-data as its database.json says (DB-READY): what the dialogs offer. `timeout` short
+/// at the first start, so that an offline start is not held up.
+#[tauri::command]
+pub async fn ready_available(timeout: Option<u64>) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let o = store::available(timeout)?;
+        Ok(json!({"date": o.date, "schema": o.schema, "books": o.books, "hadith": o.hadith,
+            "texts": o.texts, "narrators": o.narrators, "grades": o.grades, "size": o.size, "mb": store::megabytes(o.size),
+            "sha256": o.sha256, "file": o.file, "url": o.url, "usable": o.usable}))
+    })
+    .await
+    .map_err(err)?
+}
+
+fn offer_of(v: &Value) -> Result<store::ReadyOffer, String> {
+    let int = |k: &str| v[k].as_i64().unwrap_or(0);
+    let text = |k: &str| v[k].as_str().unwrap_or("").to_string();
+    if text("url").is_empty() {
+        return Err(
+            "The ready database of isnady-data cannot be read: database.json names no file.".into(),
+        );
+    }
+    Ok(store::ReadyOffer {
+        date: text("date"),
+        schema: int("schema"),
+        books: int("books"),
+        hadith: int("hadith"),
+        texts: int("texts"),
+        narrators: int("narrators"),
+        grades: int("grades"),
+        size: v["size"].as_u64().unwrap_or(0),
+        sha256: text("sha256"),
+        file: text("file"),
+        url: text("url"),
+        usable: v["usable"].as_bool().unwrap_or(false),
+    })
+}
+
+/// The first start (FR1, `MainWindow.offer_first_import`): whether the database is empty, and what Import all
+/// would bring (the hadith books and rijal works of the repository, the languages it imports them in).
+#[tauri::command]
+pub async fn first_start() -> Value {
+    tauri::async_runtime::spawn_blocking(|| {
+        let empty = isnady_core::db::connect(None)
+            .ok()
+            .map(|c| {
+                c.query_row("SELECT 1 FROM hadiths LIMIT 1", [], |_| Ok(()))
+                    .is_err()
+            })
+            .unwrap_or(true); // no database yet is empty too (the Python window: conn is None)
+        let running = JOB.lock().map(|j| j.running).unwrap_or(true);
+        if !empty || running {
+            return json!({"empty": false});
+        }
+        let entries = catalog::builtin_entries(None).unwrap_or_default();
+        json!({"empty": true,
+            "books": entries.iter().filter(|e| e.kind == "hadith").count(),
+            "rijal": entries.iter().filter(|e| e.kind == "rijal").count(),
+            "languages": catalog::DEFAULT_LANGUAGES.iter().map(|c| catalog::language_label(c)).collect::<Vec<_>>()})
+    })
+    .await
+    .unwrap_or_else(|_| json!({"empty": false}))
+}
+
 /// Change… / Use default: another data folder from the next start.
 #[tauri::command]
 pub fn src_relocate(target: Option<String>, mode: String) -> Result<String, String> {
@@ -371,12 +435,17 @@ struct Job {
     running: bool,
     text: String,
     result: Value,
+    // a download (the ready database): how much has come of how much (Worker's progress, in bytes)
+    done: u64,
+    total: u64,
 }
 
 static JOB: std::sync::Mutex<Job> = std::sync::Mutex::new(Job {
     running: false,
     text: String::new(),
     result: Value::Null,
+    done: 0,
+    total: 0,
 });
 
 fn job_say(m: &str) {
@@ -409,6 +478,21 @@ fn strings(v: &Value) -> Vec<String> {
 /// One import of the page, as its Worker does it: "import" (one entry, its languages and credentials),
 /// "import_all" (the languages ticked on each card), "update" (what is new or changed), "add_languages".
 fn run_job(action: &str, args: &Value) -> Result<Value, String> {
+    if action == "ready_download" {
+        // DB-READY: isnady-data's ready database (the offer the page or the first start was shown), downloaded,
+        // checked and staged for the next start; no database is opened for it (Worker._ready_download)
+        let offer = offer_of(&args["offer"])?;
+        let mut progress = |done: u64, total: u64| {
+            if let Ok(mut j) = JOB.lock() {
+                j.done = done;
+                j.total = total;
+            }
+        };
+        let info = store::download(&offer, &mut progress)?;
+        return Ok(
+            json!({"action": action, "books": info.books, "hadith": info.hadith, "schema": info.schema}),
+        );
+    }
     let conn = store::connect_rw(None)?;
     match action {
         "import_all" => {
@@ -562,6 +646,8 @@ pub fn src_job(action: String, args: Value) -> Result<(), String> {
         j.running = true;
         j.text = String::new();
         j.result = Value::Null;
+        j.done = 0;
+        j.total = 0;
     }
     std::thread::spawn(move || {
         let started = std::time::Instant::now();
@@ -589,8 +675,9 @@ pub fn src_job(action: String, args: Value) -> Result<(), String> {
 #[tauri::command]
 pub fn src_job_status() -> Value {
     match JOB.lock() {
-        Ok(j) => json!({"running": j.running, "text": j.text, "result": j.result}),
-        Err(_) => json!({"running": false, "text": "", "result": null}),
+        Ok(j) => json!({"running": j.running, "text": j.text, "result": j.result,
+            "done": store::megabytes(j.done), "total": store::megabytes(j.total)}),
+        Err(_) => json!({"running": false, "text": "", "result": null, "done": 0, "total": 0}),
     }
 }
 

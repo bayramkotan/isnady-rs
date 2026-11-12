@@ -3,7 +3,33 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
-## [Unreleased]
+## [0.7.5] — 2026-11-12
+
+- **The ready database in one download (DB-READY, the feature of 0.7.5, made in both programs at once).**
+  `iy-rs database download [--check]` as `iy database download`: isnady-data's database.json read
+  (`ISNADY_DATABASE_INFO` for another), the zip downloaded into the data folder as it comes (`sources::save_to`),
+  its size and sha256 checked, staged and put in place, the old database kept; the same words and exit codes for a
+  good file, a wrong sha256, a wrong size, a newer schema and a missing database.json (`tools/parity_ready.py`,
+  11 of 11, in the Parity workflow). A ready database is read in SQLite's immutable mode, leaving no `-wal`/`-shm`
+  beside the staged copy. **The first start (FR1) in the window**, which isnady-rs did not have: no book yet →
+  Import the books? with Import all and, when isnady-data has one, Download the ready database, both in the background
+  at the foot of the window; Data sources → Data folder → Download the ready database…; Use a ready database… now in
+  the system's own file dialog; the paragraphs of a question kept apart, as in a QMessageBox.
+- **Portable applications and installers (A6).** The Release workflow makes, besides `iy-rs` for each system, the
+  window bundled by tauri-cli: Windows `isnady-rs-V-windows-x86_64-setup.exe` (NSIS, for the user, English, Turkish
+  and Arabic), `…-windows-x86_64.msi` and the portable `…-windows-x86_64-portable.exe`; Linux the portable
+  `isnady-rs-V-linux-x86_64.AppImage` and `isnady-rs-V-linux-amd64.deb`; macOS `isnady-rs-V-macos-arm64.dmg` /
+  `…-macos-x86_64.dmg` and the `.app` zipped (`tools/release_files.py` names them); every file in `SHA256SUMS.txt`.
+  A folder named `isnady-data` beside a portable copy keeps everything there, found as the Python isnady finds it
+  (`paths::app_location`: beside the AppImage, beside the .app, beside the .exe). `isnady-gui` is published to
+  crates.io after `isnady-core` and `isnady` (`cargo install isnady-gui`).
+- **The workflows remade.** CI: style and clippy (`-D warnings`), the tests on Linux, Windows and macOS, the crates
+  packaged as crates.io takes them (`isnady-core` and `isnady` built from their packages), the window bundled on the
+  three systems as a release bundles it, and the parity with the Python isnady's main; a newer push cancels the run
+  before it, every job with a time limit, the builds cached (rust-cache). Release: the tag checked, the parity with the
+  Python isnady of the same tag (no longer its main), every build on four systems, then the Release (created or its
+  files replaced) and crates.io, nothing published unless every build succeeded; "Run workflow" builds a tag again.
+  crates.io: the three crates in order, each waited for in the index, a version already there left as it is.
 
 - **The parity check's PDFs on GitHub.** The runner had no libEGL, so the Python isnady could not load Qt to write
   its PDFs and 3 of 114 exports failed there (not on our machines). The parity workflow now installs the libraries Qt

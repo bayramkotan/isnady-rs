@@ -331,6 +331,98 @@ pub fn read_bytes(location: &str, timeout: Option<u64>) -> Result<Vec<u8>, Resou
     std::fs::read(&path).map_err(|e| ResourceError(format!("{}: {e}", path.display())))
 }
 
+/// A large file (the ready database) written to disk as it comes, not held in memory: a URL or a local file
+/// (`fetch.save_to`). `progress(done, total)` after every MiB (total 0 when the server does not say). The bytes written.
+pub fn save_to(
+    location: &str,
+    target: &Path,
+    progress: &mut dyn FnMut(u64, u64),
+    timeout: Option<u64>,
+) -> Result<u64, ResourceError> {
+    use std::io::{Read as _, Write as _};
+    if let Some(dir) = target.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let (mut source, total): (Box<dyn std::io::Read>, u64) = if is_url(location) {
+        let secs = timeout.unwrap_or(TIMEOUT_SECONDS);
+        let agent = ureq::AgentBuilder::new()
+            .timeout_connect(Duration::from_secs(secs))
+            .timeout_read(Duration::from_secs(secs))
+            .try_proxy_from_env(true)
+            .build();
+        match agent
+            .get(location)
+            .set("User-Agent", &user_agent())
+            .set("Accept", "application/json, */*")
+            .call()
+        {
+            Ok(r) => {
+                let total = r
+                    .header("Content-Length")
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0);
+                (Box::new(r.into_reader()), total)
+            }
+            Err(ureq::Error::Status(404, _)) => {
+                return Err(ResourceError(format!("Not found (404): {location}")))
+            }
+            Err(ureq::Error::Status(code, _)) => {
+                return Err(ResourceError(format!(
+                    "HTTP {code} while reading {location}"
+                )))
+            }
+            Err(e) => {
+                let text = e.to_string();
+                return Err(ResourceError(
+                    if text.to_lowercase().contains("timed out") {
+                        format!("Timed out after {secs}s: {location}")
+                    } else {
+                        format!("Could not reach {location}: {text}")
+                    },
+                ));
+            }
+        }
+    } else {
+        let path = match location.strip_prefix("file://") {
+            Some(rest) => std::path::PathBuf::from(rest),
+            None => paths::expand_user(location),
+        };
+        if !path.is_file() {
+            return Err(ResourceError(format!("File not found: {}", path.display())));
+        }
+        let total = path.metadata().map(|m| m.len()).unwrap_or(0);
+        let f = std::fs::File::open(&path)
+            .map_err(|e| ResourceError(format!("{}: {e}", path.display())))?;
+        (Box::new(f), total)
+    };
+    let fail = |e: std::io::Error| {
+        let _ = std::fs::remove_file(target);
+        ResourceError(format!("Could not reach {location}: {e}"))
+    };
+    let mut out = std::fs::File::create(target)
+        .map_err(|e| ResourceError(format!("{}: {e}", target.display())))?;
+    let mut block = vec![0u8; 1 << 20];
+    let mut done = 0u64;
+    loop {
+        // a whole MiB (or the end) before each progress call, as Python's read(1 MiB)
+        let mut filled = 0;
+        while filled < block.len() {
+            let n = source.read(&mut block[filled..]).map_err(fail)?;
+            if n == 0 {
+                break;
+            }
+            filled += n;
+        }
+        if filled == 0 {
+            break;
+        }
+        out.write_all(&block[..filled]).map_err(fail)?;
+        done += filled as u64;
+        progress(done, total);
+    }
+    Ok(done)
+}
+
 /// The licence's tier: A may be shared further, B with conditions, C (unknown) not (`db.tier_for_license`).
 pub fn tier_for_license(license: Option<&str>) -> String {
     const A: [&str; 11] = [

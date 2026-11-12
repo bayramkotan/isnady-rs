@@ -5,7 +5,7 @@ members = ["crates/isnady-core", "crates/isnady-cli", "crates/isnady-gui"]
 # One version for the whole workspace, always the same number as the Python isnady (Bayram, 2026-11-03:
 # "sürüm numaraları birebir aynı olsun"). tools/bump_version.py writes it.
 [workspace.package]
-version = "0.7.4"
+version = "0.7.5"
 edition = "2021"
 license = "MIT"
 authors = ["Bayram Kotan"]
@@ -33,7 +33,7 @@ rustybuzz = "0.20"
 unicode-bidi = "0.3"
 flate2 = "1"
 # the core, with the same version as the workspace (tools/bump_version.py writes both): crates.io needs the version
-isnady-core = { path = "crates/isnady-core", version = "=0.7.4" }
+isnady-core = { path = "crates/isnady-core", version = "=0.7.5" }
 
 [profile.release]
 lto = true

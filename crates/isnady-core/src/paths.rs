@@ -83,10 +83,35 @@ pub fn chosen_data_dir() -> Option<PathBuf> {
     }
 }
 
+/// The folder the portable application sits in, as the Python isnady's `app_location`: beside the AppImage (whose
+/// program runs from a mount of its own), beside the macOS .app (…/isnady-rs.app/Contents/MacOS/isnady-rs), or
+/// beside the Windows .exe and every other program.
+pub fn app_location() -> Option<PathBuf> {
+    if let Some(image) = env::var_os("APPIMAGE").filter(|v| !v.is_empty()) {
+        let image = PathBuf::from(image);
+        let image = if cfg!(windows) {
+            image
+        } else {
+            image.canonicalize().unwrap_or(image)
+        };
+        return image.parent().map(Path::to_path_buf);
+    }
+    // (not canonicalized on Windows, where that would write \\?\C:\…)
+    let exe = env::current_exe().ok()?;
+    let exe = if cfg!(windows) {
+        exe
+    } else {
+        exe.canonicalize().unwrap_or(exe)
+    };
+    if cfg!(target_os = "macos") && exe.to_string_lossy().contains(".app/Contents/MacOS") {
+        return exe.ancestors().nth(4).map(Path::to_path_buf);
+    }
+    exe.parent().map(Path::to_path_buf)
+}
+
 /// A folder named isnady-data beside this program, for a portable copy (a USB stick).
 pub fn portable_data_dir() -> Option<PathBuf> {
-    let exe = env::current_exe().ok()?;
-    let candidate = exe.parent()?.join(PORTABLE_DIR_NAME);
+    let candidate = app_location()?.join(PORTABLE_DIR_NAME);
     if candidate.is_dir() {
         Some(candidate)
     } else {

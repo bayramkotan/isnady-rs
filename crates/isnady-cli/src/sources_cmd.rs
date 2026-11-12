@@ -655,24 +655,78 @@ pub fn catalog_cmd(a: CatalogArgs) -> ExitCode {
 
 #[derive(Args)]
 pub struct DatabaseArgs {
-    #[arg(default_value = "show", value_parser = ["show", "use"])]
+    #[arg(default_value = "show", value_parser = ["show", "use", "download"])]
     action: String,
     /// use: isnady.db or isnady-db-<date>.zip
     file: Option<String>,
+    /// download: only say what the ready database holds
+    #[arg(long)]
+    check: bool,
 }
 
-/// iy-rs database [use FILE].
+/// iy-rs database download [--check]: isnady-data's ready database, downloaded, checked and staged (DB-READY).
+fn database_download(check: bool) -> Result<store::ReadyInfo, ExitCode> {
+    use std::io::{IsTerminal, Write};
+    let offer = store::available(None).map_err(|e| {
+        eprintln!("{e}");
+        ExitCode::from(1)
+    })?;
+    println!(
+        "The ready database of isnady-data, {} (schema {})",
+        store::describe(&offer),
+        offer.schema
+    );
+    if !offer.usable {
+        eprintln!(
+            "It is newer than this isnady reads (schema {}). Update isnady first: iy update",
+            isnady_core::sources::tables().schema_version
+        );
+        return Err(ExitCode::from(1));
+    }
+    if check {
+        println!("Download it and use it: iy database download");
+        return Err(ExitCode::SUCCESS);
+    }
+    let tty = std::io::stderr().is_terminal();
+    let mut progress = |done: u64, total: u64| {
+        if tty {
+            let share = (100 * done)
+                .checked_div(total)
+                .map(|p| format!("{p}%, "))
+                .unwrap_or_default();
+            eprint!("\r  {share}{} MB", thousands(store::megabytes(done) as i64));
+            let _ = std::io::stderr().flush();
+        }
+    };
+    let out = store::download(&offer, &mut progress);
+    if tty {
+        eprintln!();
+    }
+    out.map_err(|e| {
+        eprintln!("{e}");
+        ExitCode::from(1)
+    })
+}
+
+/// iy-rs database [use FILE | download [--check]].
 pub fn database_cmd(a: DatabaseArgs) -> ExitCode {
-    if a.action == "use" {
-        let Some(file) = a.file.filter(|f| !f.is_empty()) else {
-            eprintln!("Give the file: iy database use ~/Downloads/isnady-db-2026-10-10.zip");
-            return ExitCode::from(2);
-        };
-        let info = match store::stage(&file) {
-            Ok(i) => i,
-            Err(e) => {
-                eprintln!("{e}");
-                return ExitCode::from(1);
+    if a.action == "use" || a.action == "download" {
+        let info = if a.action == "download" {
+            match database_download(a.check) {
+                Ok(i) => i,
+                Err(code) => return code,
+            }
+        } else {
+            let Some(file) = a.file.filter(|f| !f.is_empty()) else {
+                eprintln!("Give the file: iy database use ~/Downloads/isnady-db-2026-10-10.zip");
+                return ExitCode::from(2);
+            };
+            match store::stage(&file) {
+                Ok(i) => i,
+                Err(e) => {
+                    eprintln!("{e}");
+                    return ExitCode::from(1);
+                }
             }
         };
         match store::apply_pending() {

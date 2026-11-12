@@ -1672,7 +1672,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
 name = "isnady"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "clap",
  "isnady-core",
@@ -1682,7 +1682,7 @@ dependencies = [
 
 [[package]]
 name = "isnady-core"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "caseless",
  "chrono",
@@ -1703,7 +1703,7 @@ dependencies = [
 
 [[package]]
 name = "isnady-gui"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "chrono",
  "isnady-core",

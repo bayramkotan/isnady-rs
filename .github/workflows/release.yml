@@ -1,97 +1,153 @@
 name: Release
 
-# A tag vX.Y.Z (the same number as the Python isnady's): iy-rs and the window isnady-rs built for Windows, Linux and
-# macOS, and a GitHub Release with them and the CHANGELOG section of that version.
+# One release, everywhere at once. A tag vX.Y.Z — the number the Python isnady was released with the same day
+# (tools/release_check.py checks the tag, Cargo.toml and CHANGELOG.md agree) — is checked, compared with that
+# Python isnady (parity.yml), built on every system, and only when every build has succeeded published:
+#
+#   iy-rs (the command line)  an archive for each system: Windows, Linux, macOS (Apple silicon and Intel)
+#   isnady-rs (the window)    Windows: an installer (-setup.exe), an .msi and a portable .exe (nothing installed)
+#                             Linux:   a portable AppImage and a .deb
+#                             macOS:   a .dmg and the .app zipped, for Apple silicon and for Intel
+#   crates.io                 isnady-core, isnady (cargo install isnady → iy-rs), isnady-gui (→ isnady-rs)
+#
+# Every file of the Release is listed in SHA256SUMS.txt. "Run workflow" (gh workflow run release.yml -f tag=vX.Y.Z)
+# builds a tag already pushed again and replaces its files on the Release; it does not publish to crates.io again.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: the tag to build again (vX.Y.Z)
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+  CARGO_TERM_COLOR: always
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: The tag, Cargo.toml and CHANGELOG.md agree
-        run: python tools/release_check.py "${GITHUB_REF_NAME}"
+        run: python tools/release_check.py "$TAG" --notes release-notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
 
   parity:
     needs: check
     uses: ./.github/workflows/parity.yml
     with:
-      # the Python isnady's main, released with the same number just before (parity.py's first case checks that the
-      # two versions are the same number); a fix pushed after its tag is then compared too
-      isnady: main
+      # the Python isnady of the same tag, released just before (parity.py's first case checks the two numbers agree)
+      isnady: ${{ inputs.tag || github.ref_name }}
 
   build:
     needs: parity
+    name: build (${{ matrix.name }})
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
-          - os: ubuntu-22.04          # an older glibc: the binary runs on older and newer Linux alike
+          - os: ubuntu-22.04          # an older glibc: the AppImage and the binaries run on older and newer Linux alike
             name: linux-x86_64
+            bundles: appimage,deb
           - os: windows-latest
             name: windows-x86_64
+            bundles: nsis,msi
           - os: macos-15              # Apple silicon
             name: macos-arm64
+            bundles: app,dmg
           - os: macos-15-intel        # Intel
             name: macos-x86_64
+            bundles: app,dmg
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
-      - name: The window's libraries (Linux)
+        with:
+          ref: ${{ env.TAG }}
+      - name: The window's libraries and the AppImage's tools (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
-      - name: Build
-        run: cargo build --release --locked
+        run: >
+          sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev
+          libayatana-appindicator3-dev patchelf file xdg-utils
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.name }}
+      - name: tauri-cli (the window's bundler)
+        run: cargo install tauri-cli --version "^2" --locked
       - name: Test
         run: cargo test --release --locked
-      - name: Package
+      - name: iy-rs
+        run: cargo build --release --locked -p isnady
+      - name: The window, bundled
+        working-directory: crates/isnady-gui
+        run: cargo tauri build --ci --bundles ${{ matrix.bundles }} -- --locked
+      - name: Gather the files under their release names
+        shell: bash
+        run: python tools/release_files.py "${{ matrix.name }}" dist
+      - name: What was built runs and says its number
         shell: bash
         run: |
           version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          dir="iy-rs-${version}-${{ matrix.name }}"
-          mkdir -p "dist/$dir"
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            cp target/release/iy-rs.exe target/release/isnady-rs.exe "dist/$dir/"
-            cp README.md PARITY.md LICENSE "dist/$dir/"
-            (cd dist && 7z a "$dir.zip" "$dir" > /dev/null)
-          else
-            cp target/release/iy-rs target/release/isnady-rs "dist/$dir/"
-            cp README.md PARITY.md LICENSE "dist/$dir/"
-            (cd dist && tar czf "$dir.tar.gz" "$dir")
-          fi
-          rm -rf "dist/$dir"
+          exe=target/release/iy-rs; [ "${{ runner.os }}" = Windows ] && exe=target/release/iy-rs.exe
+          "$exe" -V | tee version.txt
+          grep -q "$version" version.txt
+          ls -l dist
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.name }}
+          name: build-${{ matrix.name }}
           path: dist/*
+          if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          path: dist
-          merge-multiple: true
-      - name: Create the GitHub Release
+          path: artifacts
+      - name: Gather the files and their checksums
+        run: |
+          mkdir release
+          find artifacts -path 'artifacts/build-*' -type f -exec cp {} release/ \;
+          cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Create the GitHub Release (or replace its files)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 tools/release_check.py "${GITHUB_REF_NAME}" --notes notes.md
-          (cd dist && sha256sum * > SHA256SUMS.txt)
-          gh release create "${GITHUB_REF_NAME}" dist/* --title "isnady-rs ${GITHUB_REF_NAME#v}" --notes-file notes.md \
-            || gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" release/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "isnady-rs ${TAG#v}" --notes-file artifacts/release-notes/release-notes.md
+          fi
 
   crates:
     needs: release
+    if: github.event_name == 'push'
     uses: ./.github/workflows/publish.yml
     secrets: inherit

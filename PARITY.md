@@ -5,13 +5,13 @@ folder, the database, the settings, the recent searches and the version number. 
 of isnady-rs with the same number. This table says what the Rust one does so far. Whatever it does not do yet, the
 Python `iy` does on the same data.
 
-**Version 0.7.4** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
+**Version 0.7.5** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
 
 ## Command line
 
 | Command (Python `iy …`) | isnady-rs (`iy-rs …`) | Notes |
 |---|---|---|
-| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.4 (Rust)` |
+| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.5 (Rust)` |
 | `iy datadir` (show) | ✅ | `ISNADY_DATA_DIR`, a portable `isnady-data` folder, `location.json`, the platform default. Same order as Python. |
 | `iy datadir PATH` (move) | ✅ | `--as-is`, `--default`; the data copied there (the old folder kept) and location.json written as Python writes it |
 | `iy config list, get, set, reset` | ✅ | every setting with its default; validated as `config.validate` validates it; settings.json written as Python writes it |
@@ -39,6 +39,7 @@ Python `iy` does on the same data.
 | `iy quran …` | ✅ | the suras, a sura or verses with the translations shown (`--edition`) and the hadith that name each (`--hadith`), `search`, `editions` (downloaded), `remove`. `download` and the editions to download (A2) |
 | `iy stats …` | ✅ | plain (what the database holds), `corpus`, `narrators`, `chains`, `grades`, `books`, `model`, `lab`, `graders`, `--book` (a book, `@shia`, `@all`), `--grader`, `--csv`, `--recompute`, `--limit`, `--explain`; the same figures to the last digit, the same saved results (derived/*.json) |
 | `iy repo list, use, show, add, remove`, `iy formats`, `iy database [use FILE]`, `iy remove KEY` | ✅ | the repositories in Python's order, the catalog read from the network and kept a day in repos/ (the same file), user_repositories.json; a ready database checked and put in place at the next start, the old one kept as isnady.<date>.bak.db |
+| `iy database download [--check]` (DB-READY, 0.7.5) | ✅ | isnady-data's database.json read (`ISNADY_DATABASE_INFO` for another), the zip downloaded into the data folder as it comes, its size and sha256 checked, staged and put in place; the same words, the same exit codes and the same databases left behind for a good file, a wrong sha256, a wrong size, a newer schema, a missing database.json (`tools/parity_ready.py`, 11 of 11) |
 | `iy catalog list, updates, languages, remove, add, delete` | ✅ | each book by kind and road with what of it is imported; what is new or changed in the repository (the same imported.json); a language taken out of every book; user_sources.json written as Python writes it |
 | `iy catalog import [ID \| --all]`, `update`, `languages add`, `iy import FORMAT LOCATION`, `iy quran download`, `iy quran editions` | ✅ every format: `isnady`, `isnady-sahifa`, `taqrib`, `najashi`, `openiti-work` (with the entries the written lives quote, sources/siyar.db and tadhkira.db), `isnady-quran` (sources/quran.db), `fawazahmed0`, `table` (CSV or JSON, in parts) | with `--language`, `--repo`, the credentials (asked, never stored), the repository's moved book and the origin when its copy cannot be read, the books downloaded ahead, the note of an import cut short; then the search index, the chains and the narrators once (the years of death read again when the rule changed, `rijal.fix_death_years`). Imported by both into empty folders, every table is the same row for row, the databases beside it too, and imported.json (`tools/parity_db.py --import`): the whole of isnady-data in Arabic (49 sources, 371,319 of 524,826 links identified), books of fawazahmed0, hadith-json, Thaqalayn, LK and Open-Hadith-Data |
 | `iy bookmark list, folders, add, remove, export, import` | ✅ | `--folder`, `--title`, `--note`; the same bookmarks.json |
@@ -71,7 +72,8 @@ Python `iy` does on the same data.
 | Learn | ✅ as the Python page draws it: the glossary in colour in three languages, the chips, the list, a term's card; History and method with its live numbers |
 | Narrators | ✅ as the Python page draws it: All / Sunni / Shia, the overview of each road, the search as you type (the famous ones by any spelling first), ★ the famous ones group by group, the filters (generation, Ibn Hajar's rank or the Imami assessment, the six books by Ibn Hajar's marks) with Clear filters, the list 200 at a time and the next ones at its end, its right-click menu; a narrator: the name card (the name he is known by, the parts of his name, ☆), his life (written, or read from the data; the classical entry when downloaded), what the critics say (the entry as written, every verdict with the glossary on the hover, tabaqa, death, Open his entry in the book, Ibn Hajar's marks opening their books), teachers and students, the compilers, the hadith (each opens its chain). |
 | Statistics | ✅ as the Python page draws it: the books, the nine sections with every finding, its plain words, chart, figures on hover, How to read it and Save as CSV; Recompute; Export as a web page, CSV files, JSON. PDF, a picture (PNG, SVG) and Excel too: a finding, a section or all of them, each drawn as the page draws it |
-| Data sources | ✅ as the Python page draws it (Preferences → Data sources, File → Data Sources…): the repository chosen with where its catalog came from, Refresh, a folder or an address added, Remove from list, Use the default; the books by kind and road, each card with its tags, what it is, its languages, what of it is imported, Remove data, Open in Books; Get updates (what changed); the languages for every book (Remove from every book); your own sources (Add a source…, Delete from list); the data folder (Open, Change…, Use default, Use a ready database…). Import, Update, Import all (in the languages ticked on each card), Get updates, Add to every book, in the background with what it does said under the repository, the credentials asked; the Qur'an's card (its languages ticked) and **Translators…** (the translations of 98 languages, isnady-data's first); in the Qur'an reader ➕ Translations…, Download {language}, Download the Qur'an |
+| Data sources | ✅ as the Python page draws it (Preferences → Data sources, File → Data Sources…): the repository chosen with where its catalog came from, Refresh, a folder or an address added, Remove from list, Use the default; the books by kind and road, each card with its tags, what it is, its languages, what of it is imported, Remove data, Open in Books; Get updates (what changed); the languages for every book (Remove from every book); your own sources (Add a source…, Delete from list); the data folder (Open, Change…, Use default, Download the ready database…, Use a ready database… in the system's own file dialog). Import, Update, Import all (in the languages ticked on each card), Get updates, Add to every book, in the background with what it does said under the repository, the credentials asked; the Qur'an's card (its languages ticked) and **Translators…** (the translations of 98 languages, isnady-data's first); in the Qur'an reader ➕ Translations…, Download {language}, Download the Qur'an |
+| The first start (FR1) | ✅ as the Python window asks it: no book yet → Import the books? with the hadith books, the rijal works and the languages of Import all, and, when isnady-data has a ready database this isnady can open, Download the ready database (its date, books, hadith, narrators and size); Import all and the download run in the background, said at the foot of the window; after the download, Quit isnady now? (DB-READY, 0.7.5) |
 
 ## The core
 
@@ -121,7 +123,7 @@ Python `iy` does on the same data.
   release. It imports a few books with the Python isnady of the same tag, then compares. A release is not built when
   they differ.
 - **One rule, two places.** A rule changed in one isnady is changed in the other in the same release. Where Python
-  left a choice open, both now make it the same way (0.7.4: spellings of equal frequency are ordered by the word,
+  left a choice open, both now make it the same way (0.7.5: spellings of equal frequency are ordered by the word,
   in both).
 - **The same word lists.** The names list, the Companions' names, the Ma'sumun, the transmission terms, the
   Turkish of the chain's words and the patterns that cut a name are not copied by hand: `tools/gen_tables.py` writes
@@ -129,5 +131,11 @@ Python `iy` does on the same data.
   `--check` that they are still the Python isnady's.
 - **The same README.** isnady-rs's README is isnady's README, word for word, under a head of its own
   (`tools/sync_readme.py`).
-- **The same places.** The Python isnady is on PyPI and npm. isnady-rs is on crates.io (`cargo install isnady`) and
-  in GitHub Releases. Both are published by their workflows for every tag.
+- **The same places.** The Python isnady is on PyPI and npm, its portable applications in its GitHub Releases.
+  isnady-rs is on crates.io (`isnady-core`, `isnady` → `iy-rs`, `isnady-gui` → the window) and in its GitHub Releases:
+  the window's installers and portable copies for Windows (-setup.exe, .msi, portable .exe), Linux (AppImage, .deb)
+  and macOS (.dmg, the .app zipped; Apple silicon and Intel), `iy-rs` for each, `SHA256SUMS.txt`. Both are published
+  by their workflows for every tag, only when every build succeeded; CI bundles the window on the three systems on
+  every push, so a release never meets a broken bundler first.
+- **The same ready database.** `tools/parity_ready.py` makes a ready database and wrong ones beside it, and both
+  programs download them into empty folders: the same words, exit codes and databases.

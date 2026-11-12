@@ -3452,6 +3452,8 @@ fn main() {
             sources_page::src_delete,
             sources_page::src_add,
             sources_page::src_stage,
+            sources_page::ready_available,
+            sources_page::first_start,
             sources_page::src_relocate,
             profile_new,
             profile_rename,

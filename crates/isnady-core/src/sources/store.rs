@@ -198,8 +198,15 @@ fn check(path: &Path) -> Result<ReadyInfo, String> {
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
+    // immutable: a database copied in WAL mode is read without leaving -wal and -shm files beside it
+    let uri = url::Url::from_file_path(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()))
+        .map(|u| format!("{u}?mode=ro&immutable=1"))
+        .unwrap_or_else(|_| path.display().to_string());
     let read = || -> rusqlite::Result<ReadyInfo> {
-        let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        let conn = Connection::open_with_flags(
+            &uri,
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_URI,
+        )?;
         Ok(ReadyInfo {
             schema: conn.query_row("PRAGMA user_version", [], |r| r.get(0))?,
             books: conn.query_row("SELECT COUNT(*) FROM collections", [], |r| r.get(0))?,
@@ -317,6 +324,144 @@ pub fn apply_pending() -> std::io::Result<Option<PathBuf>> {
     }
     std::fs::rename(&incoming, &current)?;
     Ok(backup)
+}
+
+// ------------------------------------------------------------------ the ready database of isnady-data (DB-READY)
+pub const INFO_URL: &str =
+    "https://raw.githubusercontent.com/bayramkotan/isnady-data/main/database.json";
+
+/// Where isnady-data's database.json is read (`ready.info_location`): ISNADY_DATABASE_INFO, else isnady-data's own.
+pub fn info_location() -> String {
+    std::env::var("ISNADY_DATABASE_INFO")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| INFO_URL.to_string())
+}
+
+/// A size in whole megabytes (10^6), rounded half up (`ready.megabytes`).
+pub fn megabytes(size: u64) -> u64 {
+    (size + 500_000) / 1_000_000
+}
+
+/// isnady-data's ready database as its database.json describes it (`ready.available`).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ReadyOffer {
+    pub date: String,
+    pub schema: i64,
+    pub books: i64,
+    pub hadith: i64,
+    pub texts: i64,
+    pub narrators: i64,
+    pub grades: i64,
+    pub size: u64,
+    pub sha256: String,
+    pub file: String,
+    pub url: String,
+    pub usable: bool,
+}
+
+/// Read isnady-data's database.json: the url made absolute, `usable` when this isnady can open it.
+pub fn available(timeout: Option<u64>) -> Result<ReadyOffer, String> {
+    let where_ = info_location();
+    let cannot = |e: String| format!("The ready database of isnady-data cannot be read: {e}");
+    let bytes = super::read_bytes(&where_, timeout).map_err(|e| cannot(e.0))?;
+    let v: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| cannot(e.to_string()))?;
+    let url = v
+        .get("url")
+        .and_then(|x| x.as_str())
+        .filter(|x| !x.is_empty())
+        .ok_or_else(|| cannot("database.json names no file.".into()))?;
+    let url = super::resolve(&where_, url);
+    let int = |k: &str| -> i64 {
+        match v.get(k) {
+            Some(serde_json::Value::Number(n)) => n.as_i64().unwrap_or(0),
+            Some(serde_json::Value::String(t)) => t.trim().parse().unwrap_or(0),
+            _ => 0,
+        }
+    };
+    let text = |k: &str| -> String { v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string() };
+    let file = Some(text("file"))
+        .filter(|f| !f.is_empty())
+        .unwrap_or_else(|| {
+            Path::new(&url)
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default()
+        });
+    let schema = int("schema");
+    Ok(ReadyOffer {
+        date: text("date"),
+        schema,
+        books: int("books"),
+        hadith: int("hadith"),
+        texts: int("texts"),
+        narrators: int("narrators"),
+        grades: int("grades"),
+        size: int("size").max(0) as u64,
+        sha256: text("sha256"),
+        file,
+        url,
+        usable: schema <= tables().schema_version,
+    })
+}
+
+/// One line: the date, the books, the hadith and the size (`ready.describe`).
+pub fn describe(o: &ReadyOffer) -> String {
+    use crate::py::thousands;
+    format!(
+        "{}: {} books, {} hadith, {} narrators, {} MB",
+        if o.date.is_empty() { "?" } else { &o.date },
+        o.books,
+        thousands(o.hadith),
+        thousands(o.narrators),
+        thousands(megabytes(o.size) as i64)
+    )
+}
+
+/// Download isnady-data's ready database into the data folder, check its size and sha256 and stage it for the next
+/// start (`ready.download`); `progress(done, total)` while it comes.
+pub fn download(
+    offer: &ReadyOffer,
+    progress: &mut dyn FnMut(u64, u64),
+) -> Result<ReadyInfo, String> {
+    use crate::py::thousands;
+    if !offer.usable {
+        return Err(format!(
+            "The ready database of isnady-data is newer (schema {}) than this isnady reads ({}). Update isnady first.",
+            offer.schema,
+            tables().schema_version
+        ));
+    }
+    let name = Path::new(&offer.file)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "isnady-db.zip".into());
+    let target = incoming_path().with_file_name(&name);
+    let part = target.with_file_name(format!("{name}.part"));
+    let result = (|| {
+        let got = super::save_to(&offer.url, &part, progress, None)
+            .map_err(|e| format!("The ready database could not be downloaded: {}", e.0))?;
+        if offer.size > 0 && got != offer.size {
+            return Err(format!(
+                "The download is incomplete ({} of {} bytes); try again.",
+                thousands(got as i64),
+                thousands(offer.size as i64)
+            ));
+        }
+        if !offer.sha256.is_empty() && sha256_hex(&part).map_err(|e| e.to_string())? != offer.sha256
+        {
+            return Err(format!(
+                "{} does not match the sha256 in database.json: the download is incomplete or the file was \
+                 changed; try again.",
+                offer.file
+            ));
+        }
+        std::fs::rename(&part, &target).map_err(|e| e.to_string())?;
+        stage(&target.display().to_string())
+    })();
+    let _ = std::fs::remove_file(&part);
+    let _ = std::fs::remove_file(&target);
+    result
 }
 
 /// Whether a source with this key is imported.

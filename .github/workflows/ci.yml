@@ -1,27 +1,112 @@
 name: CI
 
+# Every push to main and every pull request: the style and lints, the tests on the three systems, the three crates
+# packaged as crates.io would take them, the window bundled on the three systems as a release bundles it, and the
+# comparison with the Python isnady's main (parity.yml). A newer push to the same branch cancels the run before it.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  LINUX_LIBS: libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: The window's libraries
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
+      - uses: Swatinem/rust-cache@v2
+      - name: Style
+        run: cargo fmt --all --check
+      - name: Lints (warnings are errors)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
   test:
+    name: test (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - name: The window's libraries (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
-      - name: Build and test
-        run: |
-          cargo fmt --check
-          cargo build --release --locked
-          cargo test --release --locked
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --locked
+      - name: Test
+        run: cargo test --release --locked
+
+  package:
+    # what cargo publish would send, in order (the core, then iy-rs and the window)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - name: isnady-core and isnady, each built from its packaged sources alone
+        run: cargo publish --dry-run --locked -p isnady-core -p isnady
+      # isnady-gui is built by the test and bundle jobs: tauri-build writes its schemas beside its sources, which
+      # cargo's own check of a package refuses
+      - name: The three crates packaged
+        run: cargo package --locked --workspace --no-verify && ls -l target/package/*.crate
+
+  bundle:
+    # the window bundled on each system as the Release workflow bundles it, so a release never finds a broken
+    # bundler first: the AppImage and the .deb, the installer, the .msi and the portable .exe, the .dmg and the .app
+    name: bundle (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            name: linux-x86_64
+            bundles: appimage,deb
+          - os: windows-latest
+            name: windows-x86_64
+            bundles: nsis,msi
+          - os: macos-15
+            name: macos-arm64
+            bundles: app,dmg
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+      - name: The window's libraries and the AppImage's tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS patchelf file xdg-utils
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: bundle-${{ matrix.name }}
+      - name: tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+      - name: iy-rs
+        run: cargo build --release --locked -p isnady
+      - name: The window, bundled
+        working-directory: crates/isnady-gui
+        run: cargo tauri build --ci --bundles ${{ matrix.bundles }} -- --locked
+      - name: Under the release names
+        shell: bash
+        run: python tools/release_files.py "${{ matrix.name }}" dist && ls -l dist
 
   parity:
     uses: ./.github/workflows/parity.yml

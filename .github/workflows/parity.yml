@@ -49,6 +49,8 @@ jobs:
         run: python tools/parity.py --python iy --rust target/release/iy-rs
       - name: The same files exported, the same brought in
         run: python tools/parity_export.py --python iy --rust target/release/iy-rs
+      - name: The same ready database downloaded and used
+        run: python tools/parity_ready.py --python iy --rust target/release/iy-rs
       - name: The same meaning index and takhrij
         run: python tools/parity_ai.py --python iy --rust target/release/iy-rs
       - name: The same chains and narrators in the database
