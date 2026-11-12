@@ -29,7 +29,7 @@ jobs:
       - name: The Python isnady of the same version
         run: python -m pip install "isnady[ai] @ git+https://github.com/bayramkotan/isnady@${{ inputs.isnady }}"
       - name: Qt starts
-        run: python -c "from PySide6 import QtGui; print('Qt', QtGui.qVersion())"
+        run: python -c "from PySide6 import QtCore, QtGui; print('Qt', QtCore.qVersion())"
       - name: A few books, imported by the Python isnady
         run: |
           iy catalog import al_arbain_al_nawawiyya --language ara --language eng --language tur
