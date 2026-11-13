@@ -540,8 +540,19 @@ pub fn read(conn: &Connection, person_id: i64, langs: Langs) -> Option<Life> {
             names(&rel.students[..rel.students.len().min(3)]),
         ));
     }
+    // the rijal work his entry is from (al-Najashi, al-Tusi's Fihrist or his Rijal; the Taqrib)
+    let work = who.key.split(':').next().unwrap_or("");
     let mut sources = vec![
-        source_name(if shia { "najashi" } else { "taqrib" }, lang),
+        source_name(
+            if shia && ["najashi", "tusi_fihrist", "tusi_rijal"].contains(&work) {
+                work
+            } else if shia {
+                "najashi"
+            } else {
+                "taqrib"
+            },
+            lang,
+        ),
         tr(lang, "the chains of the books imported here", &[]),
     ];
     let mut entries = Vec::new();

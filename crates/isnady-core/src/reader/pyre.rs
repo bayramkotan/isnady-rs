@@ -365,6 +365,11 @@ pub fn split(s: &str) -> Vec<&str> {
         .collect()
 }
 
+/// `s.lstrip(chars)`.
+pub fn lstrip<'a>(s: &'a str, chars: &str) -> &'a str {
+    s.trim_start_matches(|c: char| chars.contains(c))
+}
+
 /// `s.strip(chars)`.
 pub fn strip<'a>(s: &'a str, chars: &str) -> &'a str {
     s.trim_matches(|c| chars.contains(c))

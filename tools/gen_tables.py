@@ -602,6 +602,8 @@ def parser() -> str:
             "vague_forms": sorted(traditions.VAGUE_FORMS),
             "compiler_teachers": {k: dict(v) for k, v in traditions.COMPILER_TEACHERS.items()},
             "min_attested": __import__("isnady.core.tahwil_meet", fromlist=["x"]).MIN_ATTESTED,
+            "shia_tiers": dict(narrators._SHIA_TIERS),
+            "spelling_start": sorted(narrators._SPELLING_START), "spelling": sorted(narrators._SPELLING),
         },
     }
     return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"

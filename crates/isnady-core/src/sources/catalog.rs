@@ -90,6 +90,8 @@ pub fn entry_from_catalog(raw: &Value, repo_id: &str, base: &str) -> Option<Entr
     let fixed = match format_id.as_str() {
         "taqrib" => Some(("openiti-taqrib", "Ibn Hajar, Taqrib al-Tahdhib")),
         "najashi" => Some(("openiti-najashi", "al-Najashi, Rijal")),
+        "tusi_rijal" => Some(("openiti-tusi-rijal", "al-Tusi, Rijal")),
+        "tusi_fihrist" => Some(("openiti-tusi-fihrist", "al-Tusi, al-Fihrist")),
         _ => None,
     };
     let mut source_key = nonempty(raw, "source_key");

@@ -38,6 +38,8 @@ jobs:
           iy catalog import sifat_al_shia_al_shaykh_al_saduq
           iy catalog import taqrib_al_tahdhib_ibn_hajar_al_asqalani
           iy catalog import rijal_al_najashi_ahmad_ibn_ali_al_najashi
+          iy catalog import al_fihrist_muhammad_ibn_al_hasan_al_tusi
+          iy catalog import rijal_al_tusi_muhammad_ibn_al_hasan_al_tusi
           iy search النيات > /dev/null
           iy chain nawawi 1 > /dev/null
           iy book > /dev/null
@@ -61,5 +63,6 @@ jobs:
           --import al_arbain_al_nawawiyya --import al_shamail_al_muhammadiyya_al_tirmidhi
           --import sahifat_hammam_ibn_munabbih
           --import taqrib_al_tahdhib_ibn_hajar_al_asqalani --import rijal_al_najashi_ahmad_ibn_ali_al_najashi
+          --import al_fihrist_muhammad_ibn_al_hasan_al_tusi --import rijal_al_tusi_muhammad_ibn_al_hasan_al_tusi
           --import tadhkirat_al_huffaz_al_dhahabi --import al_quran_al_karim
           --import hadith-json/nawawi-hj --import thaqalayn/zuhd

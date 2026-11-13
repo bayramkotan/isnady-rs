@@ -1,4 +1,4 @@
-//! Who is who in a chain (`link_narrators` of core/narrators.py, isnady-narrators-17, with core/tahwil_meet.py): the
+//! Who is who in a chain (`link_narrators` of core/narrators.py, isnady-narrators-18, with core/tahwil_meet.py): the
 //! names read from the chains linked to the narrators of the rijal works by the same evidence, in the same order —
 //! the name, the book's mark, the generations, the relatives, the teacher and the student, the client, the bare
 //! name, the famous one — so that both programs identify the same narrator at every link.
@@ -38,6 +38,9 @@ pub struct Matcher {
     pub vague_forms: Vec<String>,
     pub compiler_teachers: HashMap<String, HashMap<String, String>>,
     pub min_attested: usize,
+    pub shia_tiers: HashMap<String, i64>,
+    pub spelling_start: HashSet<String>,
+    pub spelling: HashSet<String>,
 }
 
 #[derive(Deserialize)]
@@ -88,6 +91,29 @@ pub fn tokens(name: &str) -> Vec<String> {
         .collect()
 }
 
+/// `without_spelling`: a rijal entry's name without Ibn Hajar's words on how it is spelt ("سماك بكسر اوله وتخفيف
+/// الميم بن حرب" is "سماك بن حرب").
+pub fn without_spelling(toks: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut inside = false;
+    for w in toks {
+        if m().spelling_start.contains(w) {
+            inside = true;
+            continue;
+        }
+        if inside && m().spelling.contains(w) {
+            continue;
+        }
+        inside = false;
+        out.push(w.clone());
+    }
+    out
+}
+
+fn chars(w: &str) -> usize {
+    w.chars().count()
+}
+
 fn is_subsequence(short: &[String], long: &[String]) -> bool {
     let mut it = long.iter();
     short.iter().all(|w| it.any(|x| x == w))
@@ -104,6 +130,12 @@ pub struct Index {
     pub death: HashMap<i64, i64>,
     pub famous: HashMap<String, i64>,
     pub authors: HashMap<String, i64>,
+    /// the Shia rijal work a person is from, in the order a name is looked up in them (al-Najashi 0)
+    pub tier: HashMap<i64, i64>,
+    /// never a candidate: the unnamed of the Taqrib, an entry repeated in al-Tusi's Rijal
+    hidden: HashSet<i64>,
+    /// `full` in the persons' order, for the names looked up inside the entries (`_elsewhere`)
+    order: Vec<i64>,
     found: RefCell<HashMap<Vec<String>, Rc<Set>>>,
 }
 
@@ -120,11 +152,17 @@ impl Index {
             death: HashMap::new(),
             famous: HashMap::new(),
             authors: HashMap::new(),
+            tier: HashMap::new(),
+            hidden: HashSet::new(),
+            order: Vec::new(),
             found: RefCell::new(HashMap::new()),
         };
         let mut unnamed: HashSet<i64> = HashSet::new();
+        let mut repeated: HashSet<i64> = HashSet::new();
+        let mut seen_in: HashSet<(String, Vec<String>)> = HashSet::new();
         let mut stmt = conn.prepare(
-            "SELECT id, tabaqa, name_ar, key, death_year_ah FROM persons WHERE COALESCE(tradition, 'sunni') = ?",
+            "SELECT id, tabaqa, name_ar, key, death_year_ah FROM persons WHERE COALESCE(tradition, 'sunni') = ? \
+             ORDER BY id",
         )?;
         let rows = stmt.query_map([tradition], |r| {
             Ok((
@@ -142,6 +180,18 @@ impl Index {
                 ix.death.insert(pid, d);
             }
             let name = name.unwrap_or_default();
+            let prefix = key
+                .as_deref()
+                .unwrap_or("")
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            let tier = m().shia_tiers.get(&prefix).copied();
+            ix.tier.insert(pid, tier.unwrap_or(0));
+            if tier.is_some() && !seen_in.insert((prefix, tokens(&name))) {
+                repeated.insert(pid);
+            }
             if tabaqa.is_none() && tradition == "sunni" && !name.is_empty() {
                 let plain = normalize(&name);
                 if mp("_COMPANION").is_search(&plain) && !mp("_UNSURE").is_search(&plain) {
@@ -149,7 +199,8 @@ impl Index {
                 }
             }
             ix.tabaqa.insert(pid, tabaqa);
-            ix.full.insert(pid, tokens(&name));
+            ix.full.insert(pid, without_spelling(&tokens(&name)));
+            ix.order.push(pid);
             if let Some(k) = &key {
                 if let Some(num) = k.strip_prefix("taqrib:") {
                     if !num.is_empty() && num.chars().all(|c| c.is_ascii_digit()) {
@@ -182,6 +233,7 @@ impl Index {
             let (pid, mark) = row?;
             ix.marks.entry(pid).or_default().insert(mark);
         }
+        ix.hidden = unnamed.union(&repeated).copied().collect();
         let mut stmt = conn.prepare(
             "SELECT n.person_id, n.name, n.kind FROM person_names n JOIN persons p ON p.id = n.person_id \
              WHERE COALESCE(p.tradition, 'sunni') = ?",
@@ -194,10 +246,10 @@ impl Index {
             ))
         })? {
             let (pid, name, kind) = row?;
-            if unnamed.contains(&pid) {
+            if unnamed.contains(&pid) || repeated.contains(&pid) {
                 continue;
             }
-            let toks = tokens(&name);
+            let toks = without_spelling(&tokens(&name));
             let full_kind = kind.as_deref() == Some("full");
             if !full_kind && toks.iter().skip(1).any(|t| t == "عن") {
                 continue;
@@ -260,9 +312,76 @@ impl Index {
         for variant in article_variants(toks) {
             found.extend(self.rule_matches(&variant));
         }
+        if found.is_empty() && toks.iter().any(|w| chars(w) > 3 && w.ends_with('ا')) {
+            // "سمعت أنسا": the name after a verb, with the alif of the accusative
+            let bare: Vec<String> = toks
+                .iter()
+                .map(|w| {
+                    if chars(w) > 3 && w.ends_with('ا') {
+                        w[..w.len() - 'ا'.len_utf8()].to_string()
+                    } else {
+                        w.clone()
+                    }
+                })
+                .collect();
+            found = self.exact.get(&bare.join(" ")).cloned().unwrap_or_default();
+            for variant in article_variants(&bare) {
+                found.extend(self.rule_matches(&variant));
+            }
+        }
+        if found.is_empty() && !toks.iter().any(|t| t == "بن") && toks.len() <= 4 {
+            found = self.elsewhere(toks);
+        }
+        if found.len() > 1 {
+            // the earliest rijal work that has him (al-Najashi, then al-Tusi's Fihrist, then his Rijal)
+            let tier = |p: &i64| self.tier.get(p).copied().unwrap_or(0);
+            let first = found.iter().map(tier).min().unwrap_or(0);
+            found.retain(|p| tier(p) == first);
+        }
         let hit = Rc::new(found);
         self.found.borrow_mut().insert(toks.to_vec(), hit.clone());
         hit
+    }
+
+    /// `_elsewhere`: a name without "بن" that begins no entry — a kunya, a nisba, an ism with his nisba — found
+    /// inside the entries' names.
+    fn elsewhere(&self, toks: &[String]) -> Set {
+        let mut found = Set::new();
+        // (lead, rest): the kunya's two words as written; [] for a lone nisba; None for an ism and his nisba
+        let (lead, rest): (Option<&[String]>, &[String]) = if toks[0] == "ابو" || toks[0] == "ام"
+        {
+            if toks.len() < 2 {
+                return found;
+            }
+            (Some(&toks[..2]), &toks[2..])
+        } else if toks.len() == 1 {
+            if !(toks[0].starts_with("ال") && chars(&toks[0]) > 4) {
+                return found;
+            }
+            (Some(&toks[..0]), toks)
+        } else {
+            (None, &toks[1..])
+        };
+        for pid in &self.order {
+            if self.hidden.contains(pid) {
+                continue;
+            }
+            let name = &self.full[pid];
+            let hit = match lead {
+                None => {
+                    name.first() == toks.first()
+                        && is_subsequence(rest, name.get(1..).unwrap_or(&[]))
+                }
+                Some(l) if !l.is_empty() => (0..name.len().saturating_sub(1)).any(|i| {
+                    name[i] == l[0] && name[i + 1] == l[1] && is_subsequence(rest, &name[i + 2..])
+                }),
+                Some(_) => is_subsequence(rest, name.get(1..).unwrap_or(&[])),
+            };
+            if hit {
+                found.insert(*pid);
+            }
+        }
+        found
     }
 
     fn rule_matches(&self, toks: &[String]) -> Set {
@@ -418,9 +537,17 @@ fn link_kind(raw: &str) -> &'static str {
 
 fn teacher_name(collection: &str, raw: &str) -> String {
     let n = normalize(raw);
+    let mut name = strip(&n, " ،,").to_string();
+    // "أبي ره", "أبي رضي الله عنه": the honorific after the name (al-Saduq's books)
+    for tail in [" رضي الله عنه", " رحمه الله", " ره", " رض"] {
+        if let Some(head) = name.strip_suffix(tail) {
+            name = head.trim_end().to_string();
+            break;
+        }
+    }
     m().compiler_teachers
         .get(collection)
-        .and_then(|t| t.get(strip(&n, " ،,")))
+        .and_then(|t| t.get(&name))
         .cloned()
         .unwrap_or_default()
 }

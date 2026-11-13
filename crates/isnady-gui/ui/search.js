@@ -759,7 +759,7 @@ function personCard(row) {
       const en = t(en0);
       parts.push([dot(rankColor(P.shia_color[rank])) + esc(firstPart(en)), `${ar} — ${en}\n${t(meaning)}`]);
     } else {
-      parts.push([esc(t("no judgment")), t("al-Najashi names him without judging him.")]);
+      parts.push([esc(t("no judgment")), t("The rijal work names him without judging him.")]);
     }
     if (row.madhhab) parts.push([esc(t(P.madhhabs[row.madhhab] || row.madhhab)), t("His school, as the critic gives it.")]);
   } else if (rank) {

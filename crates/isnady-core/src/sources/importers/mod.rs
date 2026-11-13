@@ -82,6 +82,8 @@ pub fn run(
         "isnady-sahifa" => sahifa_book::run(conn, source, say),
         "taqrib" => rijal_works::taqrib(conn, source, say),
         "najashi" => rijal_works::by_profile("najashi", conn, source, say),
+        "tusi_rijal" => rijal_works::by_profile("tusi_rijal", conn, source, say),
+        "tusi_fihrist" => rijal_works::by_profile("tusi_fihrist", conn, source, say),
         "openiti-work" => openiti_work::run(conn, source, options, say),
         "fawazahmed0" => fawazahmed0::run(conn, source, options, say),
         "table" => table::run(conn, source, options, say),

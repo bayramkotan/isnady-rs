@@ -404,6 +404,16 @@
 "taqrib",
 "OpenITI mARkdown — Ibn Hajar, Taqrib al-Tahdhib",
 "Narrators with Ibn Hajar's verdict, rank, tabaqa, death year and book marks"
+],
+[
+"tusi_fihrist",
+"OpenITI mARkdown — al-Fihrist — al-Tusi",
+"Narrators of al-Fihrist — al-Tusi, with the critic's words read on the shia scale"
+],
+[
+"tusi_rijal",
+"OpenITI mARkdown — Rijal al-Tusi",
+"Narrators of Rijal al-Tusi, with the critic's words read on the shia scale"
 ]
 ],
 "repositories": [

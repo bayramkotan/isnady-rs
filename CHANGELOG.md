@@ -3,6 +3,36 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.7.6] — 2026-11-14
+
+- **More narrators known (narrator identity, the feature of 0.7.6, made in both programs at once; Bayram,
+  2026-11-13: "Buyuk bir problem coz ki hem rust hem de python da yeni versiyonu (0.7.6) yapalim" → "Evet, râvi
+  kimliği").** Measured on the whole of isnady-data (133,756 hadith): the chains were already read (97.8% fully), but
+  a quarter of the Sunni links and nearly half of the Shia links named nobody. Now:
+  - **al-Tusi's *Fihrist* and *Rijal* (OpenITI)**, the other pillars of Imami rijal, beside al-Najashi: formats
+    `tusi_fihrist` (910 authors) and `tusi_rijal` (6,429 companions of the Prophet and of each Imam), in isnady-data
+    under `rijal/shia/`, read on the Shia scale like al-Najashi. A name of a Shia chain is looked up in al-Najashi first,
+    then in the Fihrist, then in the Rijal: a man found in an earlier book is that book's entry, the later books only
+    add the men it lacks (al-Hasan b. Mahbub, al-Husayn b. Sa'id, al-Nadr b. Suwayd …); the same man written the same
+    way under two Imams in the Rijal is one narrator. The rijal reader also takes the entries it had missed: a page
+    mark before the dash ("### $ 580 ms018 - …", three more in al-Najashi: 1,269), the Fihrist's bracketed numbers, and
+    the editions' footnote numbers inside a name.
+  - **Ibn Hajar's spelling notes left out of the names looked up**: "سماك بكسر أوله وتخفيف الميم بن حرب" is "سماك بن
+    حرب" — 1,952 entries of the Taqrib carried such words between the ism and "بن" and were nobody's name in the
+    chains (Simak b. Harb, Haywa b. Shurayh al-Tujibi, 'Abd al-Rahman b. Jawshan …). The entries keep them.
+  - **A name without "بن" found inside the entries' names** when no entry begins with it: a kunya ("أبي الصباح
+    الكناني", "أبو أحمد الزبيري"), a lone nisba ("القعنبي", "الوشاء"), an ism with its nisba ("عمرو الناقد", "خالد
+    الحذاء", "ثابت البناني"); the accusative's alif ("سمعت أنسا", "جابرا"); al-Saduq's "حدثنا أبي" (and "أبي ره",
+    رحمه الله) at the head of his chains is his father 'Ali b. al-Husayn b. Babawayh.
+  - **Result:** narrators identified 76.7% → 79.4% of the Sunni links, 53.8% → 66.8% of the Shia links (al-Kafi
+    65% → 75%), measured on the full isnady-data; the chains are read as before. A narrator's life names the rijal work
+    his entry is from; the Narrators page and the cards say the Shia narrators come from al-Najashi and al-Tusi.
+    Matcher isnady-narrators-18: every database identifies its narrators again once, at the first start.
+  The same as the Python isnady, table by table on the full isnady-data: persons, names, verdicts, works, every
+  chain and every link with its narrator, confidence and candidates (both imported al-Najashi, the Fihrist and the
+  Rijal into the same database and identified its 758,582 links). The parity workflow imports al-Tusi's two books
+  too.
+
 ## [0.7.5] — 2026-11-12
 
 - **The ready database in one download (DB-READY, the feature of 0.7.5, made in both programs at once).**

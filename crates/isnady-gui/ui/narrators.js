@@ -347,7 +347,7 @@ function openInBookOf(id) {
 function showEmpty() {
   let html = `<div class="ncard"><div class="hero-title np-hero">${esc(t("No narrators yet"))}</div>`;
   if (NARR.road !== "shia") html += `<div class="lead">${esc(t("Sunni narrators come from Ibn Hajar's Taqrib al-Tahdhib — 8,824 narrators with his verdict on each; every name in the chains of the Sunni books is matched to its narrator."))}</div>`;
-  if (NARR.road !== "sunni") html += `<div class="lead">${esc(t("Shia narrators come from al-Najashi's Rijal — 1,266 authors and narrators with his judgment on each, read in the Imami terms (reliability and creed); the chains of the Shia books are matched to them."))}</div>`;
+  if (NARR.road !== "sunni") html += `<div class="lead">${esc(t("Shia narrators come from al-Najashi's Rijal and from al-Tusi's Fihrist and Rijal — the authors and narrators with their judgment on each, read in the Imami terms (reliability and creed); a name is looked up in al-Najashi first, then in al-Tusi, and the chains of the Shia books are matched to them."))}</div>`;
   html += `<div><button class="primary" id="n-sources">${esc(t("Open Data Sources"))}</button></div></div>`;
   $("n-view").innerHTML = html;
   $("n-sources").onclick = () => openPreferences("sources");

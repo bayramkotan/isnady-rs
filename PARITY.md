@@ -5,13 +5,13 @@ folder, the database, the settings, the recent searches and the version number. 
 of isnady-rs with the same number. This table says what the Rust one does so far. Whatever it does not do yet, the
 Python `iy` does on the same data.
 
-**Version 0.7.5** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
+**Version 0.7.6** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
 
 ## Command line
 
 | Command (Python `iy …`) | isnady-rs (`iy-rs …`) | Notes |
 |---|---|---|
-| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.5 (Rust)` |
+| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.6 (Rust)` |
 | `iy datadir` (show) | ✅ | `ISNADY_DATA_DIR`, a portable `isnady-data` folder, `location.json`, the platform default. Same order as Python. |
 | `iy datadir PATH` (move) | ✅ | `--as-is`, `--default`; the data copied there (the old folder kept) and location.json written as Python writes it |
 | `iy config list, get, set, reset` | ✅ | every setting with its default; validated as `config.validate` validates it; settings.json written as Python writes it |
@@ -40,6 +40,7 @@ Python `iy` does on the same data.
 | `iy stats …` | ✅ | plain (what the database holds), `corpus`, `narrators`, `chains`, `grades`, `books`, `model`, `lab`, `graders`, `--book` (a book, `@shia`, `@all`), `--grader`, `--csv`, `--recompute`, `--limit`, `--explain`; the same figures to the last digit, the same saved results (derived/*.json) |
 | `iy repo list, use, show, add, remove`, `iy formats`, `iy database [use FILE]`, `iy remove KEY` | ✅ | the repositories in Python's order, the catalog read from the network and kept a day in repos/ (the same file), user_repositories.json; a ready database checked and put in place at the next start, the old one kept as isnady.<date>.bak.db |
 | `iy database download [--check]` (DB-READY, 0.7.5) | ✅ | isnady-data's database.json read (`ISNADY_DATABASE_INFO` for another), the zip downloaded into the data folder as it comes, its size and sha256 checked, staged and put in place; the same words, the same exit codes and the same databases left behind for a good file, a wrong sha256, a wrong size, a newer schema, a missing database.json (`tools/parity_ready.py`, 11 of 11) |
+| `iy import tusi_fihrist`, `tusi_rijal`; narrator identity (0.7.6) | ✅ | al-Tusi's Fihrist and Rijal read as the Python isnady reads them (the same 910 and 6,429 entries, the same verdicts); the Shia names looked up in al-Najashi, then the Fihrist, then the Rijal; Ibn Hajar's spelling notes left out of the names; a kunya, a nisba, an ism with its nisba found inside the names; al-Saduq's father — on the full isnady-data every table the same, 758,582 links with the same narrator, confidence and candidates |
 | `iy catalog list, updates, languages, remove, add, delete` | ✅ | each book by kind and road with what of it is imported; what is new or changed in the repository (the same imported.json); a language taken out of every book; user_sources.json written as Python writes it |
 | `iy catalog import [ID \| --all]`, `update`, `languages add`, `iy import FORMAT LOCATION`, `iy quran download`, `iy quran editions` | ✅ every format: `isnady`, `isnady-sahifa`, `taqrib`, `najashi`, `openiti-work` (with the entries the written lives quote, sources/siyar.db and tadhkira.db), `isnady-quran` (sources/quran.db), `fawazahmed0`, `table` (CSV or JSON, in parts) | with `--language`, `--repo`, the credentials (asked, never stored), the repository's moved book and the origin when its copy cannot be read, the books downloaded ahead, the note of an import cut short; then the search index, the chains and the narrators once (the years of death read again when the rule changed, `rijal.fix_death_years`). Imported by both into empty folders, every table is the same row for row, the databases beside it too, and imported.json (`tools/parity_db.py --import`): the whole of isnady-data in Arabic (49 sources, 371,319 of 524,826 links identified), books of fawazahmed0, hadith-json, Thaqalayn, LK and Open-Hadith-Data |
 | `iy bookmark list, folders, add, remove, export, import` | ✅ | `--folder`, `--title`, `--note`; the same bookmarks.json |
@@ -123,7 +124,7 @@ Python `iy` does on the same data.
   release. It imports a few books with the Python isnady of the same tag, then compares. A release is not built when
   they differ.
 - **One rule, two places.** A rule changed in one isnady is changed in the other in the same release. Where Python
-  left a choice open, both now make it the same way (0.7.5: spellings of equal frequency are ordered by the word,
+  left a choice open, both now make it the same way (0.7.4: spellings of equal frequency are ordered by the word,
   in both).
 - **The same word lists.** The names list, the Companions' names, the Ma'sumun, the transmission terms, the
   Turkish of the chain's words and the patterns that cut a name are not copied by hand: `tools/gen_tables.py` writes

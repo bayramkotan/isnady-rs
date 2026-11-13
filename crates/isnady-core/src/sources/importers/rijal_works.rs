@@ -726,17 +726,43 @@ struct Profile {
 }
 
 fn profile(key: &str) -> Option<Profile> {
-    (key == "najashi").then_some(Profile {
-        title: "Rijal al-Najashi",
-        title_ar: "رجال النجاشي",
-        author: "najashi",
-        critic: "al-Najashi",
-        tradition: "shia",
-        scheme: "shia",
-        source_key: "openiti-najashi",
-        minimum: 1000,
-        name: "al-Najashi, Rijal (OpenITI)",
-    })
+    match key {
+        "najashi" => Some(Profile {
+            title: "Rijal al-Najashi",
+            title_ar: "رجال النجاشي",
+            author: "najashi",
+            critic: "al-Najashi",
+            tradition: "shia",
+            scheme: "shia",
+            source_key: "openiti-najashi",
+            minimum: 1000,
+            name: "al-Najashi, Rijal (OpenITI)",
+        }),
+        // 0.7.6: al-Tusi's two books of men (`PROFILES` of openiti_rijal.py)
+        "tusi_rijal" => Some(Profile {
+            title: "Rijal al-Tusi",
+            title_ar: "رجال الطوسي",
+            author: "tusi",
+            critic: "al-Tusi",
+            tradition: "shia",
+            scheme: "shia",
+            source_key: "openiti-tusi-rijal",
+            minimum: 5000,
+            name: "al-Tusi, Rijal (OpenITI)",
+        }),
+        "tusi_fihrist" => Some(Profile {
+            title: "al-Fihrist — al-Tusi",
+            title_ar: "الفهرست للطوسي",
+            author: "tusi",
+            critic: "al-Tusi",
+            tradition: "shia",
+            scheme: "shia",
+            source_key: "openiti-tusi-fihrist",
+            minimum: 800,
+            name: "al-Tusi, al-Fihrist (OpenITI)",
+        }),
+        _ => None,
+    }
 }
 
 fn clean_najashi(text: &str) -> String {
@@ -746,9 +772,11 @@ fn clean_najashi(text: &str) -> String {
 
 /// The narrator's name from the start of his entry (`entry_name`).
 pub fn entry_name(text: &str) -> String {
-    let mut head = split1(pre!(r"[،,.:؛]|\s-\s"), text).swap_remove(0);
+    // the editions' footnote numbers and marks inside a name are no part of it
+    let text = pre!(r"(?<!\S)(?:\d+|#)(?=[\s،,.:؛]|$)").sub(text, " ");
+    let mut head = split1(pre!(r"[،,.:؛]|\s-\s"), pyre::lstrip(&text, " -")).swap_remove(0);
     let spaced = format!(" {head}");
-    if let Some(m) = pre!(r"\s(?:كوفي|بصري|مدني|قمي|بغدادي|عربي|ثقة|روى|يروي|له كتاب|له كتب|له نسخة|يكنى|كان|ذكره|وكان|من أصحاب|من اصحاب|ضعيف|عن|أصله|اصله|يعرف|المعروف|يقال|نزل|نزيل|سكن)(?=[\s،,.]|$)").search(&spaced) {
+    if let Some(m) = pre!(r"\s(?:كوفي|بصري|مدني|قمي|بغدادي|عربي|ثقة|روى|يروي|له كتاب|له كتب|له نسخة|يكنى|كان|ذكره|وكان|من أصحاب|من اصحاب|ضعيف|عن|أصله|اصله|يعرف|المعروف|يقال|نزل|نزيل|سكن|أسند عنه|اسند عنه|روى عنه|روى عنهما|مات|قتل|شهد)(?=[\s،,.]|$)").search(&spaced) {
         if m.start() > 0 {
             head = pyre::upto(&spaced, m.start()).to_string();
         }
@@ -773,11 +801,17 @@ fn read_plain(text: &str) -> Vec<Plain> {
     let mut out: Vec<(i64, String, Vec<String>)> = vec![];
     let mut current: Option<(i64, String, Vec<String>)> = None;
     for line in text.split('\n') {
-        if let Some(m) = pre!(r"^### \$\$? (?:\[\])?\s*(\d+)\s*-\s*(.*)$").match_(line) {
+        // the Fihrist's "### $ [12] 3 - name" (its entry number in brackets), then "### $ 12 - name", "### $ 580 ms018 - …"
+        let found = pre!(r"^### \$\$? \[(\d+)\]\s*(?:\d+)?\s*(?:ms\d+\s*)?(?:-\s*)?(.*)$")
+            .match_(line)
+            .or_else(|| {
+                pre!(r"^### \$\$? (?:\[\])?\s*(\d+)\s*(?:ms\d+\s*)?-\s*(.*)$").match_(line)
+            });
+        if let Some(m) = found {
             if let Some(c) = current.take() {
                 out.push(c);
             }
-            let name = pyre::strip(&clean_najashi(m.g(2)), " ،,.").to_string();
+            let name = pyre::strip(&clean_najashi(m.g(2)), " ،,.-").to_string();
             current = Some((m.g(1).parse().unwrap_or(0), name, vec![m.g(2).to_string()]));
         } else if line.starts_with("### ") {
             if let Some(c) = current.take() {

@@ -32,11 +32,17 @@ def main() -> int:
         for crate in ("isnady-core", "isnady", "isnady-gui"):
             t = re.sub(rf'(name = "{crate}"\nversion = ")[^"]+(")', rf"\g<1>{new}\g<2>", t)
         lock.write_text(t, encoding="utf-8", newline="\n")
-    # every mention of the version in PARITY.md and in the README's own head (never in isnady's README below it,
-    # which speaks of earlier versions too): then the README is written again from the head and isnady's README
+    # the places that state the current version in PARITY.md and in the README's own head — "Version X", "isnady X
+    # (Rust)", the badge's "-vX-" — and no others: a row that says when something came ("DB-READY, 0.7.5") keeps its
+    # number (0.7.6; before, every mention was changed). Then the README is written again from the head and isnady's.
+    o = re.escape(old)
     for name in ("PARITY.md", "tools/readme_head.md"):
         path = ROOT / name
-        path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8", newline="\n")
+        text = path.read_text(encoding="utf-8")
+        text = re.sub(rf"(Version ){o}(?!\d)", rf"\g<1>{new}", text)
+        text = re.sub(rf"(isnady ){o}( \(Rust\))", rf"\g<1>{new}\g<2>", text)
+        text = re.sub(rf"(-v){o}(-)", rf"\g<1>{new}\g<2>", text)
+        path.write_text(text, encoding="utf-8", newline="\n")
     import subprocess
 
     subprocess.run([sys.executable, str(ROOT / "tools" / "sync_readme.py")], check=False)
