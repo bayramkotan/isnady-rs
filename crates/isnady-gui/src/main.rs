@@ -1151,6 +1151,14 @@ fn catch_say(m: &str) {
 /// ensure_index → ensure_isnads → link_narrators; from the Tools menu the search index built again ("index",
 /// rebuild_index), every chain read again ("chains", rebuild_chains) or every narrator identified again
 /// ("narrators", identify_narrators).
+/// Tools → Narrator Guesses: whether isnady's own inference is on in this database (narrators.guesses_on).
+#[tauri::command]
+fn narrator_guesses_on() -> bool {
+    isnady_core::sources::store::connect_rw(None)
+        .map(|c| isnady_core::reader::matcher::guesses_on(&c))
+        .unwrap_or(false)
+}
+
 #[tauri::command]
 fn catch_up(job: Option<String>) {
     let job = job.unwrap_or_else(|| "start".into());
@@ -1181,6 +1189,14 @@ fn catch_up(job: Option<String>) {
                 }
                 "narrators" => {
                     isnady_core::reader::matcher::link_narrators(&conn, &catch_say, true)?;
+                }
+                // Tools → Narrator Guesses (isnady's Own Inference): on or off, the narrators identified again
+                "guess-on" | "guess-off" => {
+                    isnady_core::reader::matcher::set_guesses(
+                        &conn,
+                        job == "guess-on",
+                        &catch_say,
+                    )?;
                 }
                 // Tools → Build AI Indexes (Meaning, Takhrij)
                 "ai" => {
@@ -3395,6 +3411,7 @@ fn main() {
         .manage(Cites(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             start,
+            narrator_guesses_on,
             find,
             chains_overview,
             book_numbers,

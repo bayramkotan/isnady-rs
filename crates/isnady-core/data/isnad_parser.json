@@ -1602,7 +1602,7 @@
 "صاحب الزمان"
 ],
 "matcher": {
-"id": "isnady-narrators-19",
+"id": "isnady-narrators-20",
 "death_rule": "5",
 "teacher_min_tabaqa": 9,
 "patterns": {
@@ -1644,6 +1644,8 @@
 3.0,
 0.6
 ],
+"guess_confidence": 0.7,
+"trust": 0.7,
 "one_side": [
 6,
 5.0

@@ -332,7 +332,8 @@ async function catchUp(job) {
     bar.className = "catchup";
     document.body.appendChild(bar);
   }
-  const titles = { index: "Rebuild Search Index", chains: "Read Chains Again", narrators: "Identify Narrators Again" };
+  const titles = { index: "Rebuild Search Index", chains: "Read Chains Again", narrators: "Identify Narrators Again",
+    "guess-on": "Narrator Guesses (isnady's Own Inference)", "guess-off": "Narrator Guesses (isnady's Own Inference)" };
   bar.textContent = job === "ai" ? t("Building the AI indexes (meaning, takhrij)…")
     : job ? t(titles[job]) + "…" : t("Bringing the chains up to date after the new version (once)…");
   await invoke("catch_up", { job: job || null });
@@ -355,6 +356,7 @@ async function catchUp(job) {
       return;
     }
     bar.remove();
+    readGuesses();
     if ($("page-chains") && !$("page-chains").hidden) showOverview();   // the other pages read it when opened
     if (job === "index" && $("page-search") && !$("page-search").hidden && $("q") && $("q").value.trim()) runSearch(false);
   };
@@ -362,5 +364,6 @@ async function catchUp(job) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  readGuesses();
   start().catch((e) => { document.body.insertAdjacentHTML("beforeend", `<div class="notice">${esc(String(e))}</div>`); });
 });

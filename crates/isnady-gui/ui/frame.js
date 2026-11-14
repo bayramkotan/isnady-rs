@@ -157,6 +157,34 @@ function mnemonic(label) {
   return m ? m[1].toLocaleLowerCase() : "";
 }
 
+// Tools → Narrator Guesses: on or off in this database (narrators.guesses_on), read when the window starts and after
+// each change
+let NARRATOR_GUESSES = false;
+
+async function readGuesses() {
+  try { NARRATOR_GUESSES = !!(await invoke("narrator_guesses_on")); } catch (e) { NARRATOR_GUESSES = false; }
+}
+
+async function toggleGuesses() {
+  await readGuesses();
+  const on = !NARRATOR_GUESSES;
+  const text = on ? t("By default isnady links a name of a chain to a narrator only by the rijal works' own words: his name as Ibn Hajar, al-Najashi or al-Tusi gives it, the book's mark, the order of generations, his patron, his father's name in his son's entry, the compiler's own teacher.\n\nTurned on, isnady also guesses by its own rules: which teacher and student are seen together in other chains, the famous narrator of a bare name, its lists of who narrates from whom, a name found inside an entry, a father weighed from his son's nasab. These are isnady's inference, not the scholars' words: each narrator found this way is marked \"isnady's guess\" in the chain, with the reason.\n\nTurn the guesses on and identify the narrators again?") : t("Remove isnady's guesses and identify the narrators again by the rijal works' own words alone? The names only isnady's rules decided are left unidentified.");
+  const ok = await new Promise((resolve) => {
+    const back = document.createElement("div");
+    back.className = "dialog-back";
+    const body = text.split("\n\n").map((p) => `<p>${esc(p)}</p>`).join("");
+    back.innerHTML = `<div class="dialog ask" role="dialog"><div class="pd-title">${esc(t("Narrator Guesses (isnady's Own Inference)"))}</div>${body}
+      <div class="pd-buttons"><button class="primary small yes">${esc(t("Yes"))}</button><button class="pd-cancel no">${esc(t("No"))}</button></div></div>`;
+    document.body.appendChild(back);
+    const done = (v) => { back.remove(); resolve(v); };
+    back.querySelector(".yes").onclick = () => done(true);
+    back.querySelector(".no").onclick = () => done(false);
+    back.querySelector(".yes").focus();
+  });
+  if (!ok) return;
+  await catchUp(on ? "guess-on" : "guess-off");
+}
+
 function act(label, run, shortcut, extra) {
   return Object.assign({ label, run, shortcut: shortcut || "" }, extra || {});
 }
@@ -213,6 +241,8 @@ function menus() {
       act("Rebuild Search Index", () => catchUp("index")),
       act("Read Chains Again", () => catchUp("chains")),
       act("Identify Narrators Again", () => catchUp("narrators")),
+      // 0.7.8: isnady's own inference about who a narrator is — off unless turned on here (MainWindow._toggle_guesses)
+      act("Narrator Guesses (isnady's Own Inference)…", toggleGuesses, "", { box: true, isOn: () => NARRATOR_GUESSES }),
       SEP,
       act("Create Desktop Shortcut…", createShortcut),
       SEP,

@@ -3,6 +3,30 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.7.8] — 2026-11-14
+
+- **The rijal works' words, and isnady's guesses (the feature of 0.7.8, made in both programs at once; Bayram,
+  2026-11-14: "bu ravileri tanimlamayi nasil yapiyorsun??? … Nasil kafana gore tanimlarsin" → "Bu ravi tanima ile
+  ilgili fonksiyonlari/metodlari araclar altina koysan" → "sen de 0.7.8 de bunu uygula").** isnady showed what its
+  own rules decided about a narrator as if the rijal works had said it. Now:
+  - **By default a name is linked only by the rijal works' own words**: his name as Ibn Hajar, al-Najashi or al-Tusi
+    gives it, the book's mark, the order of generations, the Companion at the end, his patron named in his entry, his
+    father's name as his son's entry gives it, the compiler's own teacher (al-Kulayni's, al-Saduq's father, Malik at
+    the head of the Muwatta'), al-Najashi's entry before al-Tusi's (Bayram chose these four, 2026-11-14: "hepsi").
+  - **isnady's own inference is off unless turned on** — Tools → Narrator Guesses (isnady's Own Inference), `iy guess
+    on|off`, `iy guess` says which: the teacher and student seen together in other chains, the famous narrator of a
+    bare name, the lists of who narrates from whom (*tamyiz al-muhmal*), the names isnady knows men by, a name found
+    inside an entry, a father weighed from his son's nasab, a son taken with his father. Every narrator found this way
+    is marked in the chain "≟ isnady's guess", its reason in the tip (`iy chain`: "[isnady's guess: …]"); turned off,
+    the guesses are gone. The books' texts and the rijal entries are never changed.
+  - **On the whole of isnady-data**: by the rijal works' words alone 52.4% of the Sunni links and 56.1% of the Shia
+    links name their narrator (al-Bukhari 56.8%, Muslim 65.5%, al-Kafi 61.3%); with the guesses on, 83.8% and 67.7%
+    as in 0.7.7, 215,409 links marked as guesses. Matcher isnady-narrators-20: every database identifies its narrators
+    again once, by the rijal works' words alone until the guesses are turned on. The same as the Python isnady
+    0.7.8: on the full isnady-data every table is the same with the guesses off and on (757,548 and 758,849 links
+    with the same narrator, confidence and candidates); Tools → Narrator Guesses in the window, `iy-rs guess` in the
+    command line; the parity checks all pass.
+
 ## [0.7.7] — 2026-11-14
 
 - **Fathers and bare names (narrator identity again, the feature of 0.7.7, made in both programs at once; Bayram,

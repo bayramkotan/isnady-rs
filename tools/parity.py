@@ -283,6 +283,14 @@ CASES = [
     ["isnads"],
     ["isnads", "--rebuild"],
     ["chain", "bukhari", "1"],
+    # isnady's own inference (0.7.8): off by default, turned on (each guessed narrator marked in the chain), off again
+    ["guess"],
+    ["guess", "on"],
+    ["chain", "nawawi", "1"],
+    ["chain", "kafi", "1:4"],
+    ["guess"],
+    ["guess", "off"],
+    ["chain", "nawawi", "1"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

@@ -3,7 +3,7 @@
 <h1 align="center">isnady-rs — isnady in Rust</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/isnady--rs-v0.7.7-1D4777?style=for-the-badge&logo=rust" alt="version">
+  <img src="https://img.shields.io/badge/isnady--rs-v0.7.8-1D4777?style=for-the-badge&logo=rust" alt="version">
   <a href="https://crates.io/crates/isnady"><img src="https://img.shields.io/crates/v/isnady?style=for-the-badge&logo=rust&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/bayramkotan/isnady-rs/releases/latest"><img src="https://img.shields.io/github/v/release/bayramkotan/isnady-rs?style=for-the-badge&label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/licence-MIT-5B6878?style=for-the-badge" alt="MIT">
@@ -13,7 +13,7 @@
 database, the same settings and the same version number, and it gives the same answers. That is why this README is
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
-**Version 0.7.7 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
+**Version 0.7.8 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
 of `iy-rs` with the same options and the same output, word for word; every page, menu, dialog, theme and language of the
 Python window is in the window `isnady-rs`. The two programs import the same books into the same rows, read the same
 chains, identify the same narrators, learn the same meaning index (array for array), export the same files and take the
@@ -44,12 +44,12 @@ download`): everything already read, in one download.
 
 <p align="center">
   <a href="https://pypi.org/project/isnady/">
-    <img src="https://img.shields.io/badge/PyPI-v0.7.7-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-v0.7.8-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/isnady?style=for-the-badge&color=A47E24&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-5B6878?style=for-the-badge" alt="Platform">
   <a href="https://www.npmjs.com/package/isnady">
-    <img src="https://img.shields.io/badge/npm-v0.7.7-14304F?style=for-the-badge&logo=npm" alt="npm">
+    <img src="https://img.shields.io/badge/npm-v0.7.8-14304F?style=for-the-badge&logo=npm" alt="npm">
   </a>
   <a href="https://github.com/bayramkotan/isnady-data">
     <img src="https://img.shields.io/badge/data-isnady--data-2E6B4F?style=for-the-badge&logo=github" alt="isnady-data">
@@ -84,7 +84,7 @@ download`): everything already read, in one download.
   <img src="https://raw.githubusercontent.com/bayramkotan/isnady/main/assets/screenshots/search-arabic.png" alt="Searching النيات finds بالنيات in Sahih al-Bukhari 1, with the chain above the text" width="850">
 </p>
 
-> **Pre-alpha (0.7.7).** Search, chains of transmission, narrators, books, scholars, statistics and
+> **Pre-alpha (0.7.8).** Search, chains of transmission, narrators, books, scholars, statistics and
 > the glossary work today, Sunni and Shia, on data you import in one click. Everything is built in
 > the open, one piece at a time.
 
@@ -530,6 +530,20 @@ than choosing one. In blind, hand-checked samples of the identified names, the l
 correct. Names are kept exactly as written, with the clarifications the compilers added
 (*"— yaʿnī Ibn Muḥammad —"*).
 
+**The rijal works' words, and isnady's guesses (0.7.8).** By default a name is linked to a narrator only by what the
+rijal works themselves say: his name as Ibn Hajar, al-Najashi or al-Tusi gives it (written as they write it, or with
+the ism and father in order and the rest of the name after them), the book's mark, the order of generations, the
+Companion at the end, his patron named in his entry ("نافع مولى ابن عمر"), his father's name as his son's entry gives
+it, the compiler's own teacher (al-Kulayni's, al-Saduq's father, Malik at the head of the Muwatta'), al-Najashi's entry
+before al-Tusi's. Everything else isnady once did by its own rules — which teacher and student are seen together in
+other chains, the famous narrator of a bare name, its lists of who narrates from whom, the names it knows men by, a
+name found inside an entry, a father weighed from his son's nasab, a son taken with his father — is isnady's
+inference, not the scholars' words: it is off unless turned on (**Tools → Narrator Guesses**, `iy guess on`), and every
+narrator it finds is marked in the chain as **isnady's guess**, with its reason; turned off again (`iy guess off`), the
+guesses are gone. Nothing in the books' texts or the rijal entries is changed either way. On the whole of isnady-data,
+by the rijal works' words alone **52.4%** of the Sunni links and **56.1%** of the Shia links name their narrator
+(al-Bukhari 56.8%, Muslim 65.5%, al-Kafi 61.3%); with the guesses, 83.8% and 67.7%, the guessed ones marked.
+
 **More narrators known (0.7.6).** Ibn Hajar writes inside a name how it is spelt — "سماك بكسر أوله وتخفيف الميم بن
 حرب" — and those words had kept 1,952 of his entries from the chains' plain "سماك بن حرب"; they are now left out of
 the name looked up (the entry keeps them). A name the chains give without "بن" — a kunya, a nisba, an ism with its
@@ -540,7 +554,7 @@ companions of the Imams al-Najashi left out. On the whole of isnady-data, the na
 to 79.4%** of the Sunni links and from **53.8% to 66.8%** of the Shia links (al-Kafi 65% → 75%); the chains
 themselves are read as before. The Python isnady and isnady-rs identify the same narrator at every link.
 
-**Fathers and bare names (0.7.7).** "عن أبيه" is now read from the son's own entry far more often: the father is the
+**Fathers and bare names (0.7.7; isnady's guesses since 0.7.8).** "عن أبيه" is now read from the son's own entry far more often: the father is the
 entry that carries what the son's nasab says of him — his grandfather (with the letters' dots set aside: "الخصيب" is
 "الحصيب"), his kunya anywhere in his entry, the ancestors above him, his tribe, his patron, or the son named in it
 ("والد عطاء", "أبو المعتمر"): Mu'tamir's father is Sulayman al-Taymi, Ibn Abi Najih's Abu Najih Yasar, 'Ata' b.
@@ -559,14 +573,14 @@ programs, table by table.
 <summary><b>📊 How well it reads today</b></summary>
 <br>
 
-| | Chains (roads) | Read whole | Reaching the Prophet / a Ma'sum | Names identified |
+| | Chains (roads) | Read whole | Reaching the Prophet / a Ma'sum | Names identified (the rijal works' words / with isnady's guesses) |
 |:--|--:|--:|--:|--:|
-| Sahih al-Bukhari | 8,085 | 99.7% | 78.3% | 89.7% |
-| Sahih Muslim | 12,382 | 100.0% | 70.7% | 91.0% |
-| Sunan Abi Dawud | 6,422 | 100.0% | 76.7% | 86.6% |
-| al-Kafi (read the Shia way) | 14,436 | 98.8% | 94.6% | 75.9% |
+| Sahih al-Bukhari | 8,085 | 99.7% | 78.3% | 56.8% / 89.7% |
+| Sahih Muslim | 12,382 | 100.0% | 70.7% | 65.5% / 91.0% |
+| Sunan Abi Dawud | 6,422 | 100.0% | 76.7% | 60.1% / 86.6% |
+| al-Kafi (read the Shia way) | 14,436 | 98.8% | 94.6% | 61.3% / 75.9% |
 
-(isnady 0.5.4, chains isnady-isnad-15; the names identified: isnady 0.7.7, narrators isnady-narrators-19, on the whole
+(isnady 0.5.4, chains isnady-isnad-15; the names identified: isnady 0.7.8, narrators isnady-narrators-20, on the whole
 of isnady-data. A road of a tahwil (ح) is a chain of its own;
 "reaching" counts the chains whose last link is the Prophet ﷺ or a Ma'sum — a chain may also end with a Companion's
 own word. Only what the text says is drawn: where a book writes "وعنه" or "بهذا الإسناد", the chain of the hadith
@@ -662,7 +676,8 @@ The **Narrators** page lists every narrator of the imported rijal works — **Al
 
 **Who a name in a chain is.** A chain names its men as the narrators named each other — "Ibrahim", "Abu Ishaq",
 "al-Hasan" — and isnady reads each name against the Taqrib (or al-Najashi on road B) by the name itself, the
-generation, the books, and then by its neighbours: whom the same pair of teacher and student is in the chains where
+generation, the books, and then — only with Tools → Narrator Guesses on, each one marked as isnady's guess — by its
+neighbours: whom the same pair of teacher and student is in the chains where
 they are named in full; a client named "mawla of X" by his patron; the well-known men a bare name means in a given
 circle (Ibrahim from 'Alqama is al-Nakha'i, Abu Ishaq from al-Bara' is al-Sabi'i, al-Humaydi's Sufyan is Ibn
 'Uyayna, Abu Nu'aym's al-Thawri, "Hisham from his father" Hisham b. 'Urwa); and last, a bare name still open is the
@@ -671,8 +686,7 @@ famous man of that name when nothing else excludes him ("Anas" Anas b. Malik, "M
 to a name. On road B the same help reads al-Kulayni's chains: his teachers named short ("'Ali b. Ibrahim" b. Hashim
 al-Qummi, "Muhammad b. Yahya" al-'Attar), the nisbas and kunyas the chains use alone (al-Sakuni, al-Nawfali, Abu
 Basir, al-Halabi, Ibn Faddal) and "from his father" read from the son's full name ("'Ali b. Ibrahim from his father"
-is Ibrahim b. Hashim). About 280,000 links are identified this way — two of every three in the Sunni chains, one in
-two in the Shia ones.
+is Ibrahim b. Hashim).
 
 **Who is not a narrator.** The Prophet ﷺ named by his kunya or an epithet ("سمعت أبا القاسم ﷺ", "حدثني خليلي",
 "الصادق المصدوق") ends the chain; he is never matched to a narrator of that kunya. The man a Companion tells a story

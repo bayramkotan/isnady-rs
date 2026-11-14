@@ -85,6 +85,13 @@ enum Command {
         #[arg(long, hide = true)]
         limit: Option<usize>,
     },
+    /// isnady's own inference about who a narrator is: off (the rijal works' words alone) unless turned on; every
+    /// narrator it finds is marked as its guess
+    Guess {
+        /// turn it on or off (nothing: show which)
+        #[arg(value_parser = ["on", "off"])]
+        state: Option<String>,
+    },
     /// Read a book in its own order: the list, a book's chapters, or a chapter
     Book(BookArgs),
     /// Look up a narrator: verdict, rank, tabaqa, death, books
@@ -602,6 +609,7 @@ fn run(command: Option<Command>) -> ExitCode {
             dump,
             limit,
         }) => isnads_cmd(rebuild, dump, limit),
+        Some(Command::Guess { state }) => guess_cmd(state),
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
         Some(Command::Life(a)) => life_cmd(a),
@@ -2815,6 +2823,66 @@ const TAHWIL_NOTE: &str = " (roads joined by tahwil, a second road after a link 
 
 /// `iy isnads`: the chains read from the Arabic texts (every one again with --rebuild), how far the chains of every
 /// book were read and why the rest were kept whole; then how many of their narrators are identified.
+/// `iy guess [on|off]` (cmd_guess): isnady's own inference about who a narrator is — off unless turned on.
+fn guess_cmd(state: Option<String>) -> ExitCode {
+    let conn = match isnady_core::sources::store::connect_rw(None) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+    };
+    let say = |m: &str| println!("{m}");
+    let loaded = narrators::loaded(&conn);
+    let done = match state.as_deref() {
+        Some(s) => {
+            if !loaded {
+                println!("No rijal work imported: there are no narrators to identify.");
+                return ExitCode::from(1);
+            }
+            isnady_core::reader::matcher::set_guesses(&conn, s == "on", &say).map(|_| ())
+        }
+        None if loaded => {
+            isnady_core::reader::matcher::link_narrators(&conn, &say, false).map(|_| ())
+        }
+        None => Ok(()),
+    };
+    if let Err(e) = done {
+        eprintln!("{e}");
+        return ExitCode::from(1);
+    }
+    let on = isnady_core::reader::matcher::guesses_on(&conn);
+    let (total, found, guessed): (i64, i64, i64) = conn
+        .query_row(
+            "SELECT COUNT(*), COALESCE(SUM(person_id IS NOT NULL), 0), \
+             COALESCE(SUM(person_id IS NOT NULL AND match_confidence < 0.8), 0) FROM isnad_links",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap_or((0, 0, 0));
+    if on {
+        println!(
+            "Narrator guesses (isnady's own inference): on — narrators are identified by the rijal works' own \
+             words and by isnady's own rules, each of these marked as isnady's guess."
+        );
+    } else {
+        println!(
+            "Narrator guesses (isnady's own inference): off — narrators are identified by the rijal works' own \
+             words alone (turn on: iy guess on)."
+        );
+    }
+    if total > 0 {
+        println!(
+            "  {} of {} links identified ({:.1}%), {} of them isnady's guesses.",
+            isnady_core::py::thousands(found),
+            isnady_core::py::thousands(total),
+            100.0 * found as f64 / total as f64,
+            isnady_core::py::thousands(guessed)
+        );
+    }
+    ExitCode::SUCCESS
+}
+
 fn isnads_cmd(rebuild: bool, dump: Option<String>, limit: Option<usize>) -> ExitCode {
     if let Some(path) = dump {
         let conn = match open() {
@@ -3091,8 +3159,9 @@ fn chain_shown(conn: &db::Connection, a: &ChainArgs) -> rusqlite_conn::Result<Ex
                 let how = match link.match_confidence {
                     None => "",
                     Some(c) if c >= 0.8 => "",
-                    Some(c) if c >= 0.6 => "  [by the narrators around him]",
-                    Some(_) => "  [the famous one of this name]",
+                    Some(c) if c >= 0.7 => "  [isnady's guess: its own rules]",
+                    Some(c) if c >= 0.6 => "  [isnady's guess: the narrators around him]",
+                    Some(_) => "  [isnady's guess: the famous one of this name]",
                 };
                 println!("      = {}{how}", who.display_name);
                 println!("        {}", facts.join("; "));

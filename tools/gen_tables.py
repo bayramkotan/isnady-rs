@@ -586,6 +586,8 @@ def parser() -> str:
             "relative": narrators._RELATIVE, "relative_words": sorted(narrators._RELATIVE_WORDS),
             "kin_first_person": sorted(narrators._KIN_FIRST_PERSON),
             "edge": [narrators._EDGE_MIN, narrators._EDGE_LEAD, narrators._EDGE_CONFIDENCE],
+            # 0.7.8: isnady's own inference, marked (Tools → Narrator guesses), and the links whose pairs count as seen
+            "guess_confidence": narrators._GUESS_CONFIDENCE, "trust": narrators._TRUST,
             "one_side": [narrators._ONE_SIDE_MIN, narrators._ONE_SIDE_LEAD],
             "famous_confidence": narrators._FAMOUS_CONFIDENCE,
             "gaps": [narrators._GAP_TABAQA, narrators._GAP_OLDER, narrators._GAP_DEATH],

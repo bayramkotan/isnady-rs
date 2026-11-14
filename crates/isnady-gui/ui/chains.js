@@ -369,9 +369,15 @@ function endNode(key) {
 function identifiedHow(c) {
   if (c === null || c === undefined) return "";
   if (c >= 1.0) return t("Identified by his name as the rijal work gives it.");
-  if (c >= 0.8) return t("Identified by his name and the chain around him (his patron, the bare name's teacher or student).");
-  if (c >= 0.6) return t("Identified by the narrators around him: this teacher and student are seen with him in the chains that name him in full.");
-  return t("Taken as the famous narrator of this name: nothing else decided between those who bear it.");
+  if (c >= 0.8) return t("Identified by the rijal work's words and the chain around him: the book's mark, the generations, his patron, his father's name in his son's entry, the compiler's own teacher.");
+  if (c >= 0.7) return t("isnady's guess, by its own rules: a list of who narrates from whom, a name isnady knows him by, a name found inside an entry, or a father weighed from his son's nasab — not the rijal work's words (Tools → Narrator Guesses).");
+  if (c >= 0.6) return t("isnady's guess: the narrators around him — this teacher and student are seen with him in the chains that name him in full (Tools → Narrator Guesses).");
+  return t("isnady's guess: the famous narrator of this name — nothing else decided between those who bear it (Tools → Narrator Guesses).");
+}
+
+// a narrator isnady's own inference decided, not the rijal works' words (chain_widgets.is_guess)
+function isGuess(c) {
+  return c !== null && c !== undefined && c < 0.8;
 }
 
 
@@ -419,7 +425,7 @@ function chainNode(o) {
   if (p) {
     const how = identifiedHow(o.confidence);
     const tip = p.name_ar + (p.other_names.length ? "\n" + p.other_names.join("، ") : "") + (how ? `\n\n${how}` : "") + t("\n\nClick to open this narrator.");
-    card += `<div class="c-who" dir="rtl" data-tip="${esc(tip)}" style="font-family:${esc(ar.family)};font-size:calc(${(ar.size * 0.62).toFixed(2)}pt * ${scale})">${esc(shorten(p.display_name, 90))}</div>`;
+    card += `<div class="c-who" dir="rtl" data-tip="${esc(tip)}" style="font-family:${esc(ar.family)};font-size:calc(${(ar.size * 0.62).toFixed(2)}pt * ${scale})">${isGuess(o.confidence) ? "≟ " + esc(t("isnady's guess")) + " · " : ""}${esc(shorten(p.display_name, 90))}</div>`;
     const readingName = p.reading || p.latin;
     if (readingName) {
       card += `<div class="c-facts"${p.how ? ` data-tip="${esc(t("known by {how}", { how: p.how }))}"` : ""}><b>${esc(readingName)}</b>${p.full_reading && p.full_reading !== readingName ? ` &nbsp;·&nbsp; ${esc(p.full_reading)}` : ""}</div>`;
