@@ -14,8 +14,10 @@ import argparse
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
+import tempfile
 
 CASES = [
     ["version"],
@@ -299,6 +301,32 @@ EXAMPLE = re.compile(r"(Example: iy chain \S+) \S+")     # a number chosen at ra
 SAVED = re.compile(r"  \((?:from .*|computed and saved)\)$", re.M)
 
 
+# A case that imports changes the data folder: the program run second would find nothing left to do (0.7.9: the
+# Python isnady's "catalog update" imported every book not here, and isnady-rs had nothing to offer). Each program
+# runs it on its own copy of the data folder, in which every book not here is set aside as removed by the reader
+# except one small one (al-Dehlawi's forty, 12 KB): both import the same book, and "removed" is used.
+ALONE = {("catalog", "update"): "isnady:al_arbain_shah_waliullah_al_dehlawi"}
+SET_ASIDE = """import sys
+from isnady.core import catalog
+from isnady.data import db
+conn = db.connect()
+new = [u["entry"] for u in catalog.updates(conn) if u["why"] == "new"]
+catalog.remember(conn, [e for e in new if catalog._key(e) != sys.argv[1]], forget=True)
+"""
+
+
+def alone(cmd: list[str], args: list[str], env: dict, keep: str) -> tuple[int, str]:
+    """Run one case on a copy of the data folder (ALONE)."""
+    data = env.get("ISNADY_DATA_DIR")
+    if not data:
+        return run(cmd, args, env)
+    with tempfile.TemporaryDirectory(prefix="parity-") as d:
+        shutil.copytree(data, d, dirs_exist_ok=True)
+        own = dict(env, ISNADY_DATA_DIR=d)
+        subprocess.run([sys.executable, "-c", SET_ASIDE, keep], env=own, check=True)
+        return run(cmd, args, own)
+
+
 def run(cmd: list[str], args: list[str], env: dict) -> tuple[int, str]:
     p = subprocess.run(cmd + args, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     return p.returncode, SAVED.sub("  (saved)", EXAMPLE.sub(r"\1 N", TIME.sub(" in N ms", p.stdout)))
@@ -316,8 +344,12 @@ def main() -> int:
     py, rs = shlex.split(a.python, posix=os.name != "nt"), [a.rust]
     same = 0
     for case in CASES:
-        pc, pout = run(py, case, env)
-        rc, rout = run(rs, case, env)
+        keep = ALONE.get(tuple(case))
+        if keep:
+            (pc, pout), (rc, rout) = alone(py, case, env, keep), alone(rs, case, env, keep)
+        else:
+            pc, pout = run(py, case, env)
+            rc, rout = run(rs, case, env)
         if case == ["version"]:                      # "isnady 0.7.4" and "isnady 0.7.4 (Rust)": the same number
             pv, rv = pout.split()[1:2], rout.split()[1:2]
             ok = pv == rv
