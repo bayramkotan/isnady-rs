@@ -3,6 +3,40 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.7.7] — 2026-11-14
+
+- **Fathers and bare names (narrator identity again, the feature of 0.7.7, made in both programs at once; Bayram,
+  2026-11-14: "Once buyuk bir problem coz sonra bunu yeni versiyonda (0.7.7) da uygulayalim" → "Râvi kimliği 2").**
+  Measured on the whole of isnady-data before the work: 8,800 Sunni links "عن أبيه / حدثنا أبي / عن جده" named
+  nobody, half of them because the son before them was left between namesakes; Ghundar alone ("محمد بن جعفر") was
+  open in 3,600 links, al-Qattan and the Ansari ("يحيى بن سعيد", "يحيى") in 4,500. Now:
+  - **The father read from the son's nasab, weighed**: an entry bearing the father's ism, or his kunya anywhere in it
+    ("وهب بن عبد الله السوائي … أبو جحيفة"), counts what else of the son's nasab it carries — the grandfather and the
+    ancestors above him one by one (the letters without their dots, so a copyist's "الخصيب" is "الحصيب"; another
+    grandfather rules him out), the kunya, the ism beside the kunya, the name the son's entry gives his father ("اسم
+    أبيه معاذ"), a tribe (a city counts half), the same patron ("مولى عمر"), the son named in it ("والد عطاء", "أبو
+    المعتمر"). The heaviest is taken when he weighs two and more than any other, or alone carries something of his own;
+    up to six tabaqat before his son (Mu'tamir 9, Sulayman al-Taymi 4). Of two Shia entries as heavy, al-Najashi's.
+  - **A son between namesakes, with his father**: "سالم عن أبيه", "يعقوب، حدثنا أبي", "ابن نمير، حدثنا أبي" — of the
+    son's candidates only those whose entry gives a father can be followed by "عن أبيه"; the pair the chains have seen
+    (the student with the son, the father with his teacher), or the only one among a few, is taken, both links.
+  - **The bare names by their neighbours** (*tamyiz al-muhmal*): Ghundar and Muhammad b. Ja'far b. Abi Kathir, Yahya
+    b. Sa'id al-Qattan, the Ansari and Yahya b. Abi Kathir, the four Isma'ils (Ibn 'Ulayya, Ibn Abi Khalid, Ibn Ja'far,
+    Ibn Abi Uways), the two Jabirs, the two Jarirs, 'Ata' b. Abi Rabah, the three Hajjajs, Zuhayr b. Mu'awiya, more
+    of al-Humaydi's and Abu Nu'aym's Sufyans — each by the teachers and students that are his alone. A bare name known
+    on one side only now also stays known when the other side is identified and agrees.
+  - **Names the Taqrib writes otherwise**: "غندر", "أحمد بن يونس" (Ahmad b. 'Abd Allah b. Yunus), and "عبد بغير إضافة
+    بن حميد" (Ibn Hajar's "without a second word" left out like his other spelling notes).
+  - **Result:** narrators identified 79.4% → 83.8% of the Sunni links (al-Bukhari 84.8% → 89.7%, Muslim 86.2% →
+    91.0%, Abu Dawud 83.1% → 86.6%, Ahmad's Musnad 70.8% → 76.1%), 66.8% → 67.7% of the Shia links; the chains are
+    read as before. Matcher isnady-narrators-19: every database identifies its narrators again once, at the first
+    start. The same as the Python isnady 0.7.7: on the full isnady-data every
+    table is the same, 758,849 links with the same narrator, confidence and candidates; the parity checks all pass.
+- **CI leaves a release commit to the Release workflow**: a release pushes its commit to main and then its tag, so
+  the same commit was checked twice (Bayram, 2026-11-14: "isnady action da hicbirsey yokken, isnady-rs de 2 tane
+  farkli workflow var"). CI begins with a gate: when the title of the pushed commit is a version (vX.Y.Z:) every other
+  job is skipped, and the Release workflow of its tag tests, compares and builds it.
+
 ## [0.7.6] — 2026-11-14
 
 - **More narrators known (narrator identity, the feature of 0.7.6, made in both programs at once; Bayram,

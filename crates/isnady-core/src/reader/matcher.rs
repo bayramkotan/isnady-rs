@@ -1,4 +1,4 @@
-//! Who is who in a chain (`link_narrators` of core/narrators.py, isnady-narrators-18, with core/tahwil_meet.py): the
+//! Who is who in a chain (`link_narrators` of core/narrators.py, isnady-narrators-19, with core/tahwil_meet.py): the
 //! names read from the chains linked to the narrators of the rijal works by the same evidence, in the same order —
 //! the name, the book's mark, the generations, the relatives, the teacher and the student, the client, the bare
 //! name, the famous one — so that both programs identify the same narrator at every link.
@@ -41,6 +41,17 @@ pub struct Matcher {
     pub shia_tiers: HashMap<String, i64>,
     pub spelling_start: HashSet<String>,
     pub spelling: HashSet<String>,
+    pub father: Father,
+}
+
+/// The father read from the son's nasab and the son with his father (0.7.7).
+#[derive(Deserialize)]
+pub struct Father {
+    pub not_his_kunya: HashSet<String>,
+    pub city_nisbas: HashSet<String>,
+    pub gap: i64,
+    pub pair: (i64, usize),
+    pub rasm: (String, String),
 }
 
 #[derive(Deserialize)]
@@ -137,6 +148,10 @@ pub struct Index {
     /// `full` in the persons' order, for the names looked up inside the entries (`_elsewhere`)
     order: Vec<i64>,
     found: RefCell<HashMap<Vec<String>, Rc<Set>>>,
+    /// every narrator by the kunya his entry gives him (`_kunya_index`), made once
+    kunyas: RefCell<Option<Rc<HashMap<String, Set>>>>,
+    /// the father of each narrator asked for (`_father_of`)
+    fathers: RefCell<HashMap<i64, Option<i64>>>,
 }
 
 impl Index {
@@ -156,6 +171,8 @@ impl Index {
             hidden: HashSet::new(),
             order: Vec::new(),
             found: RefCell::new(HashMap::new()),
+            kunyas: RefCell::new(None),
+            fathers: RefCell::new(HashMap::new()),
         };
         let mut unnamed: HashSet<i64> = HashSet::new();
         let mut repeated: HashSet<i64> = HashSet::new();
@@ -901,7 +918,28 @@ pub fn by_one_side(chains: &mut [Chain]) -> i64 {
                     }
                 }
             }
-            if student.is_none() == teacher.is_none() {
+            if student.is_none() && teacher.is_none() {
+                continue;
+            }
+            if let (Some(s), Some(t)) = (student, teacher) {
+                // both known, the two-sided rule could not decide (0.7.7): the teacher alone, and the student must
+                // not have been seen with another of them more
+                let mut rows: Vec<(i64, i64)> = ch.cands[i]
+                    .iter()
+                    .map(|p| (edges.get(&(*p, t)).copied().unwrap_or(0), *p))
+                    .collect();
+                rows.sort();
+                let (best, who) = rows[rows.len() - 1];
+                let second = rows[rows.len() - 2].0;
+                let seen = |p: &i64| edges.get(&(s, *p)).copied().unwrap_or(0);
+                let most = ch.cands[i].iter().map(seen).max().unwrap_or(0);
+                if best >= one_min
+                    && best as f64 >= one_lead * second.max(1) as f64
+                    && seen(&who) >= most
+                {
+                    ch.results[i] = (Some(who), Some(edge_conf), count);
+                    found += 1;
+                }
                 continue;
             }
             let mut rows: Vec<(i64, i64)> = ch.cands[i]
@@ -945,105 +983,437 @@ pub fn by_famous(chains: &mut [Chain], famous: &HashMap<String, i64>) -> i64 {
     found
 }
 
+/// `_kunya_index`: every narrator by the kunya his entry gives him anywhere in his name.
+fn kunya_index(index: &Index) -> Rc<HashMap<String, Set>> {
+    if let Some(k) = index.kunyas.borrow().as_ref() {
+        return k.clone();
+    }
+    let not_his = &m().father.not_his_kunya;
+    let mut found: HashMap<String, Set> = HashMap::new();
+    for (pid, toks) in &index.full {
+        if index.hidden.contains(pid) {
+            continue;
+        }
+        for k in 0..toks.len().saturating_sub(1) {
+            if toks[k] == "ابو" && (k == 0 || !not_his.contains(&toks[k - 1])) {
+                found
+                    .entry(compound(toks, k + 1).join(" "))
+                    .or_default()
+                    .insert(*pid);
+            }
+        }
+    }
+    let found = Rc::new(found);
+    *index.kunyas.borrow_mut() = Some(found.clone());
+    found
+}
+
+/// `_compound`: the name that starts at toks[k] — two words for "عبد الله", "عبيد الله", one otherwise.
+fn compound(toks: &[String], k: usize) -> Vec<String> {
+    if k + 1 < toks.len() && (toks[k] == "عبد" || toks[k] == "عبيد") {
+        toks[k..k + 2].to_vec()
+    } else {
+        toks.get(k).cloned().into_iter().collect()
+    }
+}
+
+/// `_lineage`: the names of a nasab one after the other.
+fn lineage(toks: &[String]) -> Vec<Vec<String>> {
+    let mut out = Vec::new();
+    let mut k = 0;
+    while k < toks.len() {
+        let name = if (toks[k] == "ابو" || toks[k] == "ابي") && k + 1 < toks.len() {
+            let mut v = vec!["ابو".to_string()];
+            v.extend(compound(toks, k + 1));
+            v
+        } else {
+            compound(toks, k)
+        };
+        k += name.len();
+        out.push(name);
+        if k >= toks.len() || toks[k] != "بن" {
+            break;
+        }
+        k += 1;
+    }
+    out
+}
+
+/// `_patrons`: whose freedman an entry calls him.
+fn patrons(toks: &[String]) -> HashSet<Vec<String>> {
+    let mut out = HashSet::new();
+    for k in 0..toks.len().saturating_sub(1) {
+        if toks[k] == "مولي" {
+            let n = if ["عبد", "عبيد", "ابو", "ابن", "بني", "ال", "ام"]
+                .contains(&toks[k + 1].as_str())
+            {
+                2
+            } else {
+                1
+            };
+            out.insert(toks[k + 1..(k + 1 + n).min(toks.len())].to_vec());
+        }
+    }
+    out
+}
+
+/// The letters without their dots (`_RASM`).
+fn rasm(words: &[String]) -> Vec<String> {
+    let (from, to) = &m().father.rasm;
+    let map: HashMap<char, char> = from.chars().zip(to.chars()).collect();
+    words
+        .iter()
+        .map(|w| w.chars().map(|c| *map.get(&c).unwrap_or(&c)).collect())
+        .collect()
+}
+
+/// `_father_by_nasab`: the father of a narrator, read from the son's own nasab in the rijal work and found as an
+/// entry of his own, weighed by what else of the son's nasab it carries (0.7.7).
 fn father_by_nasab(index: &Index, son: i64) -> Option<i64> {
+    let fa = &m().father;
     let son_toks = index.full.get(&son).cloned().unwrap_or_default();
     let i = son_toks.iter().position(|t| t == "بن")?;
     let mut seg: Vec<String> = son_toks[i + 1..].to_vec();
-    let mut kunya: Option<String> = None;
+    if let Some(k) = seg
+        .iter()
+        .position(|t| ["او", "ويقال", "وقيل", "قيل", "يقال"].contains(&t.as_str()))
+    {
+        seg.truncate(k);
+    }
+    let mut kunya: Option<Vec<String>> = None;
     if (seg.first().map(|s| s.as_str()) == Some("ابي")
         || seg.first().map(|s| s.as_str()) == Some("ابو"))
         && seg.len() >= 2
     {
-        kunya = Some(seg[1].clone());
-        seg = seg[2..].to_vec();
+        let k = compound(&seg, 1);
+        seg = seg[1 + k.len()..].to_vec();
+        kunya = Some(k);
     }
-    let mut ism = seg
-        .first()
-        .filter(|s| {
-            !["بن", "ابن"].contains(&s.as_str())
-                && !s.starts_with("ال")
-                && !["مولي", "ابو"].contains(&s.as_str())
+    let mut ism: Option<Vec<String>> = None;
+    if let Some(first) = seg.first() {
+        if !["بن", "ابن", "مولي", "ابو", "ابي"].contains(&first.as_str())
+            && (!first.starts_with("ال")
+                || (first != "الله"
+                    && first != "الرحمن"
+                    && !first.ends_with('ي')
+                    && !first.ends_with("يه")
+                    && index
+                        .names
+                        .get(first)
+                        .is_some_and(|v| v.iter().any(|(_, _, alias)| !alias))))
+        {
+            ism = Some(compound(&seg, 0));
+        }
+    }
+    let above: Vec<Vec<String>> = if ism.is_some() {
+        lineage(&seg).into_iter().skip(1).collect()
+    } else if seg.first().map(|s| s.as_str()) == Some("بن") {
+        lineage(&seg[1..])
+    } else {
+        vec![]
+    };
+    let grand = above.first().cloned();
+    let mut told: Option<String> = None;
+    for k in 0..son_toks.len().saturating_sub(2) {
+        if son_toks[k] == "اسم" && son_toks[k + 1] == "ابيه" {
+            told = Some(son_toks[k + 2].clone());
+            break;
+        }
+    }
+    let skip_words = [
+        "وكيل",
+        "من",
+        "نزيل",
+        "يروي",
+        "اسمه",
+        "قيل",
+        "وقيل",
+        "يقال",
+        "ويقال",
+        "هو",
+        "او",
+    ];
+    let mut nisbas: HashSet<String> = son_toks
+        .iter()
+        .enumerate()
+        .filter(|(k, t)| {
+            t.starts_with("ال")
+                && chars(t) > 3
+                && *t != "الله"
+                && *t != "الرحمن"
+                && (*k == 0
+                    || !(fa.not_his_kunya.contains(&son_toks[k - 1])
+                        || skip_words.contains(&son_toks[k - 1].as_str())))
         })
-        .cloned();
-    if ism.as_deref().is_some_and(|s| s == "عبد" || s == "عبيد") && seg.len() > 1 {
-        ism = None;
-    }
-    let grand = seg
-        .iter()
-        .position(|t| t == "بن")
-        .and_then(|j| seg.get(j + 1).cloned());
-    let nisbas: HashSet<&String> = son_toks
-        .iter()
-        .filter(|t| t.starts_with("ال") && pyre::len(t) > 3 && *t != "الله" && *t != "الرحمن")
+        .map(|(_, t)| t.clone())
         .collect();
+    for w in ism.iter().flatten().chain(kunya.iter().flatten()) {
+        nisbas.remove(w);
+    }
+    let son_patrons = patrons(&son_toks);
     if ism.is_none() && kunya.is_none() {
         return None;
     }
     let low = index.t(son);
+    let son_ism: Vec<String> =
+        if ["عبد", "عبيد", "ابو"].contains(&son_toks[0].as_str()) && son_toks.len() > 1 {
+            son_toks[..2].to_vec()
+        } else {
+            son_toks[..1].to_vec()
+        };
+    let son_art: Vec<String> = {
+        let mut v = vec![match son_ism[0].strip_prefix("ال") {
+            Some(rest) => rest.to_string(),
+            None => format!("ال{}", son_ism[0]),
+        }];
+        v.extend_from_slice(&son_ism[1..]);
+        v
+    };
     let mut pool: BTreeSet<i64> = BTreeSet::new();
+    let mut bearers: Vec<i64> = Vec::new();
     if let Some(ism) = &ism {
-        for (pid, _t, alias) in index.names.get(ism).into_iter().flatten() {
-            if !alias {
-                pool.insert(*pid);
+        for (pid, toks, alias) in index.names.get(&ism[0]).into_iter().flatten() {
+            if !alias
+                && !index.hidden.contains(pid)
+                && toks.len() >= ism.len()
+                && toks[..ism.len()] == ism[..]
+            {
+                bearers.push(*pid);
             }
         }
+        pool.extend(bearers.iter().copied());
     }
     if let Some(k) = &kunya {
-        for (pid, toks, alias) in index.names.get("ابو").into_iter().flatten() {
-            if !alias && toks.get(1) == Some(k) {
-                pool.insert(*pid);
-            }
+        if let Some(found) = kunya_index(index).get(&k.join(" ")) {
+            pool.extend(found.iter().copied());
         }
     }
-    let has_kunya = |toks: &[String], k: &str| toks.windows(2).any(|w| w[0] == "ابو" && w[1] == k);
-    let mut found: BTreeSet<i64> = BTreeSet::new();
+    // (weight, tier, person, a thing of his own)
+    let mut scored: Vec<(f64, i64, i64, bool)> = Vec::new();
     for pid in pool {
-        if pid == son {
+        if pid == son || index.hidden.contains(&pid) {
             continue;
         }
         let toks = index.full.get(&pid).cloned().unwrap_or_default();
-        if let Some(ism) = &ism {
-            if !toks.iter().take(3).any(|t| t == ism) {
-                continue;
-            }
-        }
-        if let Some(k) = &kunya {
-            if ism.is_none() && !has_kunya(&toks, k) {
-                continue;
-            }
-        }
-        let mut more = 0;
-        if let Some(g) = &grand {
-            if let Some(b) = toks.iter().position(|t| t == "بن") {
-                if toks.get(b + 1) == Some(g) {
-                    more += 1;
-                }
-            }
-        }
-        if let Some(k) = &kunya {
-            if has_kunya(&toks, k) {
-                more += 1;
-            }
-        }
-        if toks.iter().any(|t| nisbas.contains(t)) {
-            more += 1;
-        }
-        if more == 0 {
+        let has_kunya = kunya.as_ref().is_some_and(|k| {
+            (0..toks.len().saturating_sub(1)).any(|j| {
+                toks[j] == "ابو"
+                    && compound(&toks, j + 1) == *k
+                    && (j == 0 || !fa.not_his_kunya.contains(&toks[j - 1]))
+            })
+        });
+        let first_is = ism
+            .as_ref()
+            .is_some_and(|w| toks.len() >= w.len() && toks[..w.len()] == w[..]);
+        let has_ism = first_is
+            || ism
+                .as_ref()
+                .is_some_and(|w| w.len() == 1 && toks.iter().take(3).any(|t| *t == w[0]));
+        if !(has_ism || has_kunya) {
             continue;
         }
-        let t = index.t(pid);
-        if let (Some(low), Some(t)) = (low, t) {
-            if !(low - 4 <= t && t <= low) {
+        let mut more = 0.0f64;
+        let mut own = false;
+        if let (Some(_), true) = (&grand, first_is) {
+            let theirs: Vec<Vec<String>> = lineage(&toks).into_iter().skip(1).collect();
+            let mut same = 0usize;
+            for (mine, his) in above.iter().zip(theirs.iter()) {
+                if rasm(mine) != rasm(his) {
+                    break;
+                }
+                same += 1;
+            }
+            if same < above.len().min(theirs.len()) {
+                continue;
+            }
+            if same > 0 {
+                more += 1.0 + same as f64;
+                own = true;
+            }
+        } else if let Some(g) = &grand {
+            let head = &toks[..toks.len().min(8)];
+            let g_rasm = rasm(g);
+            if (0..head.len().saturating_sub(1)).any(|j| {
+                head[j] == "بن" && rasm(&head[j + 1..(j + 1 + g.len()).min(head.len())]) == g_rasm
+            }) {
+                more += 2.0;
+                own = true;
+            }
+        }
+        if has_kunya {
+            more += 1.0;
+            own = true;
+            if first_is {
+                more += 1.0;
+            }
+        }
+        if let Some(told) = &told {
+            if toks.contains(told) {
+                more += 1.0;
+            }
+        }
+        let theirs: HashSet<&String> = toks.iter().collect();
+        for n in nisbas.iter().filter(|n| theirs.contains(n)) {
+            more += if fa.city_nisbas.contains(n) { 0.5 } else { 1.0 };
+        }
+        if !son_patrons.is_disjoint(&patrons(&toks)) {
+            more += 1.0;
+            own = true;
+        }
+        let n = son_ism.len();
+        for j in 0..toks.len().saturating_sub(n) {
+            if (toks[j] == "والد" || toks[j] == "ابو")
+                && (toks[j + 1..j + 1 + n] == son_ism[..] || toks[j + 1..j + 1 + n] == son_art[..])
+            {
+                if toks[j] == "والد" {
+                    more += 3.0;
+                    own = true;
+                } else {
+                    more += 1.0;
+                }
+                break;
+            }
+        }
+        if more == 0.0 {
+            continue;
+        }
+        if let (Some(low), Some(t)) = (low, index.t(pid)) {
+            if !(low - fa.gap <= t && t <= low) {
                 continue;
             }
         }
-        found.insert(pid);
+        scored.push((more, *index.tier.get(&pid).unwrap_or(&0), pid, own));
     }
-    if found.len() == 1 {
-        found.into_iter().next()
+    if scored.is_empty() {
+        return None;
+    }
+    // the heaviest first; of two as heavy, the earlier Shia book's; then the later person (Python's reverse sort)
+    scored.sort_by(|a, b| {
+        b.0.partial_cmp(&a.0)
+            .unwrap()
+            .then(a.1.cmp(&b.1))
+            .then(b.2.cmp(&a.2))
+    });
+    let (best, tier, who, own) = scored[0];
+    let second = scored[1..]
+        .iter()
+        .filter(|x| x.1 == tier)
+        .map(|x| x.0)
+        .fold(0.0f64, f64::max);
+    let alone = bearers.len() == 1 && bearers[0] == who;
+    if best > second && (best >= 2.0 || (second == 0.0 && (own || alone))) {
+        Some(who)
     } else {
         None
     }
+}
+
+/// `_father_of`: the one father a narrator's entry gives him, as by_relatives reads it.
+fn father_of(index: &Index, son: i64) -> Option<i64> {
+    if let Some(f) = index.fathers.borrow().get(&son) {
+        return *f;
+    }
+    let mut found: Set = Set::new();
+    let (toks, how) = name_tokens("ابيه", index.full.get(&son).map(|v| v.as_slice()), false);
+    if !toks.is_empty() && how == "father of the previous narrator" {
+        found = (*index.candidates(&toks)).clone();
+        if found.is_empty() && toks.iter().any(|t| t == "بن") {
+            let last = toks.len() - 1 - toks.iter().rev().position(|t| t == "بن").unwrap();
+            let cut = if last + 1 < toks.len()
+                && ["عبد", "عبيد", "ابو"].contains(&toks[last + 1].as_str())
+            {
+                last + 3
+            } else {
+                last + 2
+            };
+            found = (*index.candidates(&toks[..cut.min(toks.len())])).clone();
+        }
+        let low = index.t(son);
+        found.retain(|p| {
+            *p != son && (low.is_none() || index.t(*p).is_none() || index.t(*p) <= low)
+        });
+    }
+    if found.len() != 1 {
+        found = father_by_nasab(index, son).into_iter().collect();
+    }
+    let f = found.iter().next().copied();
+    index.fathers.borrow_mut().insert(son, f);
+    f
+}
+
+/// `by_father_pair` (0.7.7): a son open between several namesakes, and his father with him.
+pub fn by_father_pair(chains: &mut [Chain], index: &Index) -> i64 {
+    let (_, edge_lead, edge_conf) = m().edge;
+    let (pair_min, pair_few) = m().father.pair;
+    let mut edges = HashMap::new();
+    for ch in chains.iter() {
+        let r = &ch.results;
+        for i in 0..r.len().saturating_sub(1) {
+            if let (Some(a), Some(b)) = (r[i].0, r[i + 1].0) {
+                if r[i].1.unwrap_or(0.0) >= 0.8 && r[i + 1].1.unwrap_or(0.0) >= 0.8 {
+                    *edges.entry((a, b)).or_insert(0i64) += 1;
+                }
+            }
+        }
+    }
+    let mut found = 0;
+    for ch in chains.iter_mut() {
+        let n = ch.results.len();
+        for i in 0..n.saturating_sub(1) {
+            if ch.results[i].0.is_some()
+                || ch.cands[i].len() < 2
+                || ch.results[i + 1].0.is_some()
+                || i + 1 >= ch.names.len()
+                || !(ch.names[i + 1] == "ابيه" || ch.names[i + 1] == "ابوه")
+            {
+                continue;
+            }
+            let student = if i > 0 { ch.results[i - 1].0 } else { None };
+            let teacher = if i + 2 < n { ch.results[i + 2].0 } else { None };
+            let mut rows: Vec<(i64, i64, i64)> = Vec::new();
+            for c in &ch.cands[i] {
+                let Some(f) = father_of(index, *c) else {
+                    continue;
+                };
+                if let (Some(tt), Some(tf)) = (teacher.and_then(|t| index.t(t)), index.t(f)) {
+                    if tt > tf {
+                        continue;
+                    }
+                }
+                let score = student.map_or(0, |s| edges.get(&(s, *c)).copied().unwrap_or(0))
+                    + teacher.map_or(0, |t| edges.get(&(f, t)).copied().unwrap_or(0));
+                rows.push((score, *c, f));
+            }
+            if rows.is_empty() {
+                continue;
+            }
+            rows.sort();
+            let (best, c, f) = rows[rows.len() - 1];
+            let second = if rows.len() > 1 {
+                rows[rows.len() - 2].0
+            } else {
+                0
+            };
+            let alone = rows.len() == 1
+                && ch.cands[i].len() <= pair_few
+                && (student.is_some() || teacher.is_some());
+            if alone
+                || (best >= pair_min && best as f64 >= edge_lead * second as f64 && best > second)
+            {
+                ch.results[i] = (Some(c), Some(edge_conf), ch.results[i].2);
+                let cnt = if ch.results[i + 1].2 == 0 {
+                    1
+                } else {
+                    ch.results[i + 1].2
+                };
+                ch.results[i + 1] = (Some(f), Some(edge_conf), cnt);
+                ch.cands[i] = [c].into_iter().collect();
+                ch.cands[i + 1] = [f].into_iter().collect();
+                found += 2;
+            }
+        }
+    }
+    found
 }
 
 pub fn by_relatives(chains: &mut [Chain], index: &Index) -> i64 {
@@ -1315,6 +1685,12 @@ pub fn link_narrators(
             by_neighbours(pairs);
         }
         if by_one_side(pairs) > 0 {
+            by_neighbours(pairs);
+            if by_relatives(pairs, index) > 0 {
+                by_neighbours(pairs);
+            }
+        }
+        if by_father_pair(pairs, index) > 0 {
             by_neighbours(pairs);
             if by_relatives(pairs, index) > 0 {
                 by_neighbours(pairs);

@@ -604,6 +604,10 @@ def parser() -> str:
             "min_attested": __import__("isnady.core.tahwil_meet", fromlist=["x"]).MIN_ATTESTED,
             "shia_tiers": dict(narrators._SHIA_TIERS),
             "spelling_start": sorted(narrators._SPELLING_START), "spelling": sorted(narrators._SPELLING),
+            # 0.7.7: the father read from the son's nasab (_father_by_nasab) and the son with his father (by_father_pair)
+            "father": {"not_his_kunya": sorted(narrators._NOT_HIS_KUNYA), "city_nisbas": sorted(narrators._CITY_NISBAS),
+                       "gap": narrators._FATHER_GAP, "pair": [narrators._PAIR_MIN, narrators._PAIR_FEW],
+                       "rasm": [narrators._RASM_FROM, narrators._RASM_TO]},
         },
     }
     return _json.dumps(out, ensure_ascii=False, indent=0) + "\n"

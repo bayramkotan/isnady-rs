@@ -3,7 +3,7 @@
 <h1 align="center">isnady-rs — isnady in Rust</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/isnady--rs-v0.7.6-1D4777?style=for-the-badge&logo=rust" alt="version">
+  <img src="https://img.shields.io/badge/isnady--rs-v0.7.7-1D4777?style=for-the-badge&logo=rust" alt="version">
   <a href="https://crates.io/crates/isnady"><img src="https://img.shields.io/crates/v/isnady?style=for-the-badge&logo=rust&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/bayramkotan/isnady-rs/releases/latest"><img src="https://img.shields.io/github/v/release/bayramkotan/isnady-rs?style=for-the-badge&label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/licence-MIT-5B6878?style=for-the-badge" alt="MIT">
@@ -13,7 +13,7 @@
 database, the same settings and the same version number, and it gives the same answers. That is why this README is
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
-**Version 0.7.6 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
+**Version 0.7.7 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
 of `iy-rs` with the same options and the same output, word for word; every page, menu, dialog, theme and language of the
 Python window is in the window `isnady-rs`. The two programs import the same books into the same rows, read the same
 chains, identify the same narrators, learn the same meaning index (array for array), export the same files and take the
@@ -44,12 +44,12 @@ download`): everything already read, in one download.
 
 <p align="center">
   <a href="https://pypi.org/project/isnady/">
-    <img src="https://img.shields.io/badge/PyPI-v0.7.6-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-v0.7.7-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/isnady?style=for-the-badge&color=A47E24&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-5B6878?style=for-the-badge" alt="Platform">
   <a href="https://www.npmjs.com/package/isnady">
-    <img src="https://img.shields.io/badge/npm-v0.7.6-14304F?style=for-the-badge&logo=npm" alt="npm">
+    <img src="https://img.shields.io/badge/npm-v0.7.7-14304F?style=for-the-badge&logo=npm" alt="npm">
   </a>
   <a href="https://github.com/bayramkotan/isnady-data">
     <img src="https://img.shields.io/badge/data-isnady--data-2E6B4F?style=for-the-badge&logo=github" alt="isnady-data">
@@ -84,7 +84,7 @@ download`): everything already read, in one download.
   <img src="https://raw.githubusercontent.com/bayramkotan/isnady/main/assets/screenshots/search-arabic.png" alt="Searching النيات finds بالنيات in Sahih al-Bukhari 1, with the chain above the text" width="850">
 </p>
 
-> **Pre-alpha (0.7.6).** Search, chains of transmission, narrators, books, scholars, statistics and
+> **Pre-alpha (0.7.7).** Search, chains of transmission, narrators, books, scholars, statistics and
 > the glossary work today, Sunni and Shia, on data you import in one click. Everything is built in
 > the open, one piece at a time.
 
@@ -540,18 +540,34 @@ companions of the Imams al-Najashi left out. On the whole of isnady-data, the na
 to 79.4%** of the Sunni links and from **53.8% to 66.8%** of the Shia links (al-Kafi 65% → 75%); the chains
 themselves are read as before. The Python isnady and isnady-rs identify the same narrator at every link.
 
+**Fathers and bare names (0.7.7).** "عن أبيه" is now read from the son's own entry far more often: the father is the
+entry that carries what the son's nasab says of him — his grandfather (with the letters' dots set aside: "الخصيب" is
+"الحصيب"), his kunya anywhere in his entry, the ancestors above him, his tribe, his patron, or the son named in it
+("والد عطاء", "أبو المعتمر"): Mu'tamir's father is Sulayman al-Taymi, Ibn Abi Najih's Abu Najih Yasar, 'Ata' b.
+al-Sa'ib's al-Sa'ib b. Malik, Ahmad b. Muhammad b. 'Isa's Muhammad b. 'Isa al-Ash'ari. A son left between namesakes —
+"سالم عن أبيه", "يعقوب، حدثنا أبي", "ابن نمير، حدثنا أبي" — is the one whose entry gives him a father, taken with that
+father when the chains have seen the pair. And the bare names left open most often are read by the narrators around
+them, as the books of *tamyiz al-muhmal* read them: "محمد بن جعفر" from Shu'ba is Ghundar, "يحيى بن سعيد" between
+Musaddad and Shu'ba al-Qattan and between Malik and 'Amra the Ansari qadi, "إسماعيل" from Ayyub Ibn 'Ulayya and from
+Qays Ibn Abi Khalid, "جرير" from Mansur Ibn 'Abd al-Hamid, "عطاء" from Ibn Jurayj Ibn Abi Rabah, "زهير" from Abu
+Ishaq Ibn Mu'awiya, "حجاج", "جابر"; "غندر", "أحمد بن يونس" and "عبد بن حميد" are found by those names. On the whole of
+isnady-data the narrators identified rose from **79.4% to 83.8%** of the Sunni links (al-Bukhari 84.8% → 89.7%,
+Muslim 86.2% → 91.0%, Ahmad's Musnad 70.8% → 76.1%) and from **66.8% to 67.7%** of the Shia links — the same in both
+programs, table by table.
+
 <details>
 <summary><b>📊 How well it reads today</b></summary>
 <br>
 
 | | Chains (roads) | Read whole | Reaching the Prophet / a Ma'sum | Names identified |
 |:--|--:|--:|--:|--:|
-| Sahih al-Bukhari | 8,085 | 99.7% | 78.3% | 81.6% |
-| Sahih Muslim | 12,382 | 100.0% | 70.7% | 82.8% |
-| Sunan Abi Dawud | 6,422 | 100.0% | 76.7% | 79.2% |
-| al-Kafi (read the Shia way) | 14,436 | 98.8% | 94.6% | 65.2% |
+| Sahih al-Bukhari | 8,085 | 99.7% | 78.3% | 89.7% |
+| Sahih Muslim | 12,382 | 100.0% | 70.7% | 91.0% |
+| Sunan Abi Dawud | 6,422 | 100.0% | 76.7% | 86.6% |
+| al-Kafi (read the Shia way) | 14,436 | 98.8% | 94.6% | 75.9% |
 
-(isnady 0.5.4, chains isnady-isnad-15, narrators isnady-narrators-17. A road of a tahwil (ح) is a chain of its own;
+(isnady 0.5.4, chains isnady-isnad-15; the names identified: isnady 0.7.7, narrators isnady-narrators-19, on the whole
+of isnady-data. A road of a tahwil (ح) is a chain of its own;
 "reaching" counts the chains whose last link is the Prophet ﷺ or a Ma'sum — a chain may also end with a Companion's
 own word. Only what the text says is drawn: where a book writes "وعنه" or "بهذا الإسناد", the chain of the hadith
 before it is drawn beside the road, marked as taken from there, and kept out of these figures; a text that merely
