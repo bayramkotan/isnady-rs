@@ -5,13 +5,13 @@ folder, the database, the settings, the recent searches and the version number. 
 of isnady-rs with the same number. This table says what the Rust one does so far. Whatever it does not do yet, the
 Python `iy` does on the same data.
 
-**Version 0.7.8** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
+**Version 0.7.9** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
 
 ## Command line
 
 | Command (Python `iy …`) | isnady-rs (`iy-rs …`) | Notes |
 |---|---|---|
-| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.8 (Rust)` |
+| `iy -V`, `iy version` | ✅ | prints `isnady 0.7.9 (Rust)` |
 | `iy datadir` (show) | ✅ | `ISNADY_DATA_DIR`, a portable `isnady-data` folder, `location.json`, the platform default. Same order as Python. |
 | `iy datadir PATH` (move) | ✅ | `--as-is`, `--default`; the data copied there (the old folder kept) and location.json written as Python writes it |
 | `iy config list, get, set, reset` | ✅ | every setting with its default; validated as `config.validate` validates it; settings.json written as Python writes it |

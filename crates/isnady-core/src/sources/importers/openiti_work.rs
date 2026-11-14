@@ -316,12 +316,12 @@ pub fn run(
     }
     report.editions.push(key);
     report.texts = leaves;
-    report.warnings.push(format!(
+    // a summary, said once: not a warning (iy printed it again as one)
+    say(&format!(
         "{} chapters, {} entries and sections",
         thousands(chapters),
         thousands(leaves)
     ));
-    say(report.warnings.last().map(String::as_str).unwrap_or(""));
     Ok(report)
 }
 

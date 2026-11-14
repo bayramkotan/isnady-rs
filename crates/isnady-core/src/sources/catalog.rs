@@ -590,18 +590,37 @@ fn record(e: &Entry, s: &Status) -> Value {
     json!({"sha256": e.sha256, "languages": codes(s), "offered": e.languages})
 }
 
-/// Note these books as forgotten (`catalog.remember(..., forget=True)`).
+fn key_list(state: &Map<String, Value>, name: &str) -> BTreeSet<String> {
+    state
+        .get(name)
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Note these books as removed by the reader (`catalog.remember(..., forget=True)`): not offered again as new.
 pub fn forget(entries: &[Entry]) {
     let mut state = load_state();
+    state.shift_remove("seen");
+    let mut removed = key_list(&state, "removed");
     if let Some(books) = state
         .entry("books")
         .or_insert_with(|| Value::Object(Map::new()))
         .as_object_mut()
     {
-        for e in entries {
+        for e in entries.iter().filter(|e| e.builtin && e.kind != "quran") {
             books.shift_remove(&key_of(e));
+            removed.insert(key_of(e));
         }
     }
+    state.insert(
+        "removed".into(),
+        json!(removed.into_iter().collect::<Vec<_>>()),
+    );
     save_state(&state);
 }
 
@@ -614,8 +633,8 @@ pub struct Update {
     pub new: Vec<String>,
 }
 
-/// What the repository has that is not here yet (`catalog.updates`). The first time, what is here is taken as up to
-/// date.
+/// What the repository has that is not here yet (`catalog.updates`): every book that is not here is new, except one
+/// the reader removed himself.
 pub fn updates(conn: &Connection, repo_id: Option<&str>) -> Result<Vec<Update>, String> {
     let entries: Vec<Entry> = builtin_entries(repo_id)
         .map_err(|e| e.0)?
@@ -623,16 +642,7 @@ pub fn updates(conn: &Connection, repo_id: Option<&str>) -> Result<Vec<Update>, 
         .filter(|e| e.kind != "quran")
         .collect();
     let mut state = load_state();
-    let first = !state.contains_key("seen");
-    let seen: BTreeSet<String> = state
-        .get("seen")
-        .and_then(Value::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|x| x.as_str().map(str::to_string))
-                .collect()
-        })
-        .unwrap_or_default();
+    let removed = key_list(&state, "removed");
     let mut books = state
         .get("books")
         .and_then(Value::as_object)
@@ -648,11 +658,11 @@ pub fn updates(conn: &Connection, repo_id: Option<&str>) -> Result<Vec<Update>, 
         rows.push((e, s));
     }
     let mut out = vec![];
-    let mut changed = first;
+    let mut changed = false;
     for (e, s) in rows {
         let key = key_of(e);
         if !s.imported {
-            if !first && !seen.contains(&key) {
+            if !removed.contains(&key) {
                 out.push(Update {
                     entry: e.clone(),
                     why: "new".into(),
@@ -715,10 +725,6 @@ pub fn updates(conn: &Connection, repo_id: Option<&str>) -> Result<Vec<Update>, 
         }
     }
     state.insert("books".into(), Value::Object(books));
-    if first {
-        let all: BTreeSet<String> = entries.iter().map(key_of).collect();
-        state.insert("seen".into(), json!(all.into_iter().collect::<Vec<_>>()));
-    }
     if changed {
         save_state(&state);
     }
@@ -904,13 +910,11 @@ fn set_tradition(conn: &Connection, entry: &Entry) -> rusqlite::Result<()> {
     Ok(())
 }
 
-/// Note these books as imported now, and the repository's list as seen (`catalog.remember`).
-pub fn remember(
-    conn: &Connection,
-    entries: &[Entry],
-    seen: Option<&[Entry]>,
-) -> Result<(), String> {
+/// Note these books as imported now (`catalog.remember`).
+pub fn remember(conn: &Connection, entries: &[Entry]) -> Result<(), String> {
     let mut state = load_state();
+    state.shift_remove("seen");
+    let mut removed = key_list(&state, "removed");
     let mut books = state
         .get("books")
         .and_then(Value::as_object)
@@ -920,22 +924,14 @@ pub fn remember(
         if e.builtin && e.kind != "quran" {
             let s = status(conn, e).map_err(|x| x.to_string())?;
             books.insert(key_of(e), record(e, &s));
+            removed.remove(&key_of(e));
         }
     }
     state.insert("books".into(), Value::Object(books));
-    if let Some(seen) = seen {
-        let mut all: BTreeSet<String> = state
-            .get("seen")
-            .and_then(Value::as_array)
-            .map(|a| {
-                a.iter()
-                    .filter_map(|x| x.as_str().map(str::to_string))
-                    .collect()
-            })
-            .unwrap_or_default();
-        all.extend(seen.iter().filter(|e| e.builtin).map(key_of));
-        state.insert("seen".into(), json!(all.into_iter().collect::<Vec<_>>()));
-    }
+    state.insert(
+        "removed".into(),
+        json!(removed.into_iter().collect::<Vec<_>>()),
+    );
     save_state(&state);
     Ok(())
 }
@@ -1014,7 +1010,7 @@ pub fn import_entry(
         other => other?,
     };
     set_tradition(conn, &entry)?;
-    remember(conn, std::slice::from_ref(&entry), None).map_err(ImportError::Resource)?;
+    remember(conn, std::slice::from_ref(&entry)).map_err(ImportError::Resource)?;
     Ok(result)
 }
 
@@ -1090,7 +1086,7 @@ pub fn import_all(
         .filter(|e| done.contains(e.title.as_str()))
         .cloned()
         .collect();
-    remember(conn, &kept, Some(&everything))?;
+    remember(conn, &kept)?;
     for e in everything.iter().filter(|e| e.kind == "quran") {
         match import_entry(conn, e, None, None, say) {
             Ok((report, _)) => imported.push((e.title.clone(), report)),
@@ -1130,7 +1126,7 @@ pub fn update(
         .filter(|e| done.contains(e.title.as_str()))
         .cloned()
         .collect();
-    remember(conn, &kept, Some(&entries))?;
+    remember(conn, &kept)?;
     Ok((imported, failed, narrators))
 }
 

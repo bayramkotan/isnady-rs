@@ -3,7 +3,7 @@
 <h1 align="center">isnady-rs — isnady in Rust</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/isnady--rs-v0.7.8-1D4777?style=for-the-badge&logo=rust" alt="version">
+  <img src="https://img.shields.io/badge/isnady--rs-v0.7.9-1D4777?style=for-the-badge&logo=rust" alt="version">
   <a href="https://crates.io/crates/isnady"><img src="https://img.shields.io/crates/v/isnady?style=for-the-badge&logo=rust&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/bayramkotan/isnady-rs/releases/latest"><img src="https://img.shields.io/github/v/release/bayramkotan/isnady-rs?style=for-the-badge&label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/licence-MIT-5B6878?style=for-the-badge" alt="MIT">
@@ -13,7 +13,7 @@
 database, the same settings and the same version number, and it gives the same answers. That is why this README is
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
-**Version 0.7.8 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
+**Version 0.7.9 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
 of `iy-rs` with the same options and the same output, word for word; every page, menu, dialog, theme and language of the
 Python window is in the window `isnady-rs`. The two programs import the same books into the same rows, read the same
 chains, identify the same narrators, learn the same meaning index (array for array), export the same files and take the
@@ -44,12 +44,12 @@ download`): everything already read, in one download.
 
 <p align="center">
   <a href="https://pypi.org/project/isnady/">
-    <img src="https://img.shields.io/badge/PyPI-v0.7.8-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-v0.7.9-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/isnady?style=for-the-badge&color=A47E24&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-5B6878?style=for-the-badge" alt="Platform">
   <a href="https://www.npmjs.com/package/isnady">
-    <img src="https://img.shields.io/badge/npm-v0.7.8-14304F?style=for-the-badge&logo=npm" alt="npm">
+    <img src="https://img.shields.io/badge/npm-v0.7.9-14304F?style=for-the-badge&logo=npm" alt="npm">
   </a>
   <a href="https://github.com/bayramkotan/isnady-data">
     <img src="https://img.shields.io/badge/data-isnady--data-2E6B4F?style=for-the-badge&logo=github" alt="isnady-data">
@@ -84,7 +84,7 @@ download`): everything already read, in one download.
   <img src="https://raw.githubusercontent.com/bayramkotan/isnady/main/assets/screenshots/search-arabic.png" alt="Searching النيات finds بالنيات in Sahih al-Bukhari 1, with the chain above the text" width="850">
 </p>
 
-> **Pre-alpha (0.7.8).** Search, chains of transmission, narrators, books, scholars, statistics and
+> **Pre-alpha (0.7.9).** Search, chains of transmission, narrators, books, scholars, statistics and
 > the glossary work today, Sunni and Shia, on data you import in one click. Everything is built in
 > the open, one piece at a time.
 

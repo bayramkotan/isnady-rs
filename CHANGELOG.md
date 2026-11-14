@@ -3,6 +3,22 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.7.9] — 2026-11-14
+
+- **Updates no longer lose a book that is not here (Bayram, 2026-11-14: al-Tusi's two rijal works were never offered).**
+  isnady and isnady-rs kept a list of every book the repository listed as "seen" — at the first start, at Import All and at Update,
+  imported or not — and a book seen but not here was never offered again, even when its import had failed. Now every
+  book the repository has and this computer does not is offered until it is imported; only a book the reader removed
+  himself is not offered again (until he imports it once more). The old list is dropped from `imported.json`.
+- **A rijal work's summary is said once.** Importing Ibn Hajar's Taqrib, al-Najashi, al-Tusi or an OpenITI work
+  printed its summary twice, the second time as "warning:"; it is not a warning, and is now said once.
+- **The ready database carries isnady-data's own books only (Bayram, 2026-11-14: "neden ....-LK Corpus var?").**
+  "Sahih al-Bukhari — LK corpus" and its five sisters are the LK Hadith Corpus (Leeds and King Saud universities), another
+  edition of the six books, kept in its own optional repository (Settings → Data sources). They had been imported on
+  the computer the ready database of 2026-11-14 was made on, and went into it beside isnady-data's own six books.
+  `tools/publish_database.py` now leaves out every source isnady-data's catalog does not list, as it left out your own
+  files; the two editions are never merged or changed. To remove it from your own data: `iy remove lk-hadith-corpus`.
+
 ## [0.7.8] — 2026-11-14
 
 - **The rijal works' words, and isnady's guesses (the feature of 0.7.8, made in both programs at once; Bayram,

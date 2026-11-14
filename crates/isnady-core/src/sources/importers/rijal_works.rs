@@ -560,6 +560,8 @@ pub fn taqrib(
         ..Default::default()
     };
     let tx = conn.unchecked_transaction()?;
+    // a summary, said once: not a warning (iy printed it again as one)
+    let summary;
     let source_id = source_row(&tx, key, &name, "taqrib", source)?;
     tx.execute("DELETE FROM persons WHERE source_id = ?", [source_id])?;
     let mut used = HashSet::new();
@@ -696,19 +698,19 @@ pub fn taqrib(
         )?;
         let n = entries.len();
         let ranked = entries.iter().filter(|e| e.rank.is_some()).count();
-        report.warnings.push(format!(
+        summary = format!(
             "{n} narrators; rank read for {ranked} ({:.1}%), tabaqa for {}, death year for {}; {linked} of {} \
              cross-references linked",
             100.0 * ranked as f64 / n as f64,
             entries.iter().filter(|e| e.tabaqa.is_some()).count(),
             entries.iter().filter(|e| e.death_year.is_some()).count(),
             xrefs.len()
-        ));
+        );
     }
     tx.commit()?;
     report.editions.push(WORK.into());
     report.texts = entries.len() as i64;
-    say(report.warnings.last().map(String::as_str).unwrap_or(""));
+    say(&summary);
     Ok(report)
 }
 
@@ -939,7 +941,8 @@ pub fn by_profile(
     let judged = n - counts.get(&None).copied().unwrap_or(0);
     report.editions.push(prof.title.into());
     report.texts = n as i64;
-    report.warnings.push(format!(
+    // a summary, said once: not a warning (iy printed it again as one)
+    let summary = format!(
         "{n} narrators; a judgment read for {judged} ({:.1}%): {}",
         100.0 * judged as f64 / n as f64,
         rijal::SHIA_RANKS
@@ -947,7 +950,7 @@ pub fn by_profile(
             .map(|(k, label)| format!("{label} {}", counts.get(&Some(*k)).copied().unwrap_or(0)))
             .collect::<Vec<_>>()
             .join(", ")
-    ));
-    say(report.warnings.last().map(String::as_str).unwrap_or(""));
+    );
+    say(&summary);
     Ok(report)
 }
