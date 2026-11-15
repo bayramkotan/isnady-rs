@@ -60,12 +60,7 @@ pub fn links_ready(conn: &Connection) -> bool {
         if death.as_deref() != Some(t.death_rule.as_str()) {
             return Ok(false);
         }
-        let (n, max): (i64, i64) = conn.query_row(
-            "SELECT COUNT(*), COALESCE(MAX(id), 0) FROM persons",
-            [],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )?;
-        let stamp = format!("{}|({n}, {max})|{}", t.matcher_id, t.parser_id);
+        let stamp = crate::reader::matcher::stamp(conn)?;
         let row: Option<String> = conn
             .query_row(
                 "SELECT value FROM core_meta WHERE key = 'narrator_matcher'",

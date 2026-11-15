@@ -5,6 +5,7 @@
 #[macro_use]
 pub mod pyre;
 pub mod matcher;
+pub mod rules;
 pub mod shia;
 pub mod store;
 pub mod sunni;

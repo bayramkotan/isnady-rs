@@ -1602,9 +1602,8 @@
 "صاحب الزمان"
 ],
 "matcher": {
-"id": "isnady-narrators-20",
+"id": "isnady-narrators-21",
 "death_rule": "5",
-"teacher_min_tabaqa": 9,
 "patterns": {
 "_HONORIFIC": "\\s*(?:رضي الله (?:تعالي )?عن(?:ه|ها|هما|هم)|رحمه الله|عليه السلام|صلي الله عليه وسلم|(?<!\\S)(?:ره|رض)(?!\\S)).*$",
 "_OF_PROPHET": "[،,]?\\s*(?:(?:زوج|زوجه|مولي|مولاه|صاحب|خادم|ابنه|بنت|ابن عم|ربيب|ربيبه|حب|كاتب|موذن)\\s+(?:النبي|رسول الله|نبي الله)|ام المومنين)(?!\\w).*$",
@@ -1639,23 +1638,297 @@
 "عمي",
 "مولاي"
 ],
-"edge": [
-2,
-3.0,
-0.6
+"rules": [
+{
+"key": "name",
+"group": "source",
+"switch": false,
+"params": []
+},
+{
+"key": "marks",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "order",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "companion",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "teacher",
+"group": "source",
+"switch": true,
+"params": [
+{
+"name": "min_tabaqa",
+"default": 9,
+"lo": 1,
+"hi": 12,
+"step": 1
+}
+]
+},
+{
+"key": "mawla",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "father",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "shia_order",
+"group": "source",
+"switch": true,
+"params": []
+},
+{
+"key": "impossible",
+"group": "source",
+"switch": true,
+"params": [
+{
+"name": "after",
+"default": 4,
+"lo": 1,
+"hi": 12,
+"step": 1
+},
+{
+"name": "before",
+"default": 6,
+"lo": 1,
+"hi": 12,
+"step": 1
+},
+{
+"name": "death_years",
+"default": 80,
+"lo": 10,
+"hi": 300,
+"step": 5
+}
+]
+},
+{
+"key": "muhmal",
+"group": "guess",
+"switch": true,
+"params": []
+},
+{
+"key": "known_as",
+"group": "guess",
+"switch": true,
+"params": []
+},
+{
+"key": "elsewhere",
+"group": "guess",
+"switch": true,
+"params": []
+},
+{
+"key": "neighbours",
+"group": "guess",
+"switch": true,
+"params": [
+{
+"name": "rounds",
+"default": 3,
+"lo": 1,
+"hi": 10,
+"step": 1
+},
+{
+"name": "min_chains",
+"default": 2,
+"lo": 1,
+"hi": 50,
+"step": 1
+},
+{
+"name": "lead",
+"default": 3.0,
+"lo": 1.0,
+"hi": 20.0,
+"step": 0.5
+}
+]
+},
+{
+"key": "one_side",
+"group": "guess",
+"switch": true,
+"params": [
+{
+"name": "min_chains",
+"default": 6,
+"lo": 1,
+"hi": 50,
+"step": 1
+},
+{
+"name": "lead",
+"default": 5.0,
+"lo": 1.0,
+"hi": 20.0,
+"step": 0.5
+}
+]
+},
+{
+"key": "father_pair",
+"group": "guess",
+"switch": true,
+"params": [
+{
+"name": "min_chains",
+"default": 1,
+"lo": 1,
+"hi": 50,
+"step": 1
+},
+{
+"name": "few",
+"default": 3,
+"lo": 1,
+"hi": 20,
+"step": 1
+}
+]
+},
+{
+"key": "father_nasab",
+"group": "guess",
+"switch": true,
+"params": [
+{
+"name": "gap",
+"default": 6,
+"lo": 0,
+"hi": 12,
+"step": 1
+}
+]
+},
+{
+"key": "famous",
+"group": "guess",
+"switch": true,
+"params": []
+},
+{
+"key": "confidence",
+"group": "common",
+"switch": false,
+"params": [
+{
+"name": "trust",
+"default": 0.7,
+"lo": 0.1,
+"hi": 1.0,
+"step": 0.05
+},
+{
+"name": "guess",
+"default": 0.7,
+"lo": 0.1,
+"hi": 0.75,
+"step": 0.05
+},
+{
+"name": "neighbours",
+"default": 0.6,
+"lo": 0.1,
+"hi": 0.75,
+"step": 0.05
+},
+{
+"name": "famous",
+"default": 0.5,
+"lo": 0.1,
+"hi": 0.75,
+"step": 0.05
+}
+]
+}
 ],
-"guess_confidence": 0.7,
-"trust": 0.7,
-"one_side": [
-6,
-5.0
-],
-"famous_confidence": 0.5,
-"gaps": [
-4,
-6,
-80
-],
+"rule_texts": {
+"titles": {
+"name": "The name as the rijal work writes it",
+"marks": "The book's mark on the narrator",
+"order": "The order of the tabaqat",
+"companion": "The last link is a Companion",
+"teacher": "The compiler's own teacher",
+"mawla": "A freedman by his patron",
+"father": "\"عن أبيه\" from the son's nasab",
+"shia_order": "The order of the Shia rijal works",
+"impossible": "What the tabaqat and the years of death rule out",
+"muhmal": "Bare names by the narrators around them",
+"known_as": "The names isnady knows them by",
+"elsewhere": "A name found inside the entries",
+"neighbours": "Teacher and student seen in other chains",
+"one_side": "One known neighbour",
+"father_pair": "A son and his father together",
+"father_nasab": "A father weighed from his son's nasab",
+"famous": "The famous one of a name",
+"confidence": "Confidences"
+},
+"explained": {
+"name": "The name in the chain is one of the narrator's names in the rijal work, or his ism and his father's name with the rest of the name in its order; the work's notes on the spelling (\"بفتح …\") are no part of the name. One narrator found: confidence 1.0; one left by the evidence below: 0.8. Always on.",
+"marks": "Ibn Hajar's Taqrib marks the books each narrator is in (خ م د ت س ق …): a narrator of this book must carry its mark.",
+"order": "Towards the Prophet ﷺ the tabaqa never grows: a link's narrator is of the tabaqa of the one after him or later, of the one before him or earlier.",
+"companion": "A chain that reaches the Prophet ﷺ ends with a Companion (tabaqa 1).",
+"teacher": "The first link is the compiler's own teacher: of the lowest tabaqa below. The Muwatta's chains begin with Malik himself.",
+"mawla": "\"نافع عن ابن عمر\": of the men of that name, the one whose entry calls him the freedman of the next narrator.",
+"father": "\"هشام عن أبيه\": once the son is known, his father is read from the son's own nasab in the rijal work, and kept when one narrator of that name fits the generations.",
+"shia_order": "A name is looked up in al-Najashi first, then in al-Tusi's Fihrist, then in his Rijal: a man found in an earlier book is that book's entry.",
+"impossible": "A narrator cannot be his own teacher, nor the student of a man so many tabaqat after him or before him, nor of a man who died so many years after him: the less certain of the two is left unidentified.",
+"muhmal": "isnady's list of bare names (\"سفيان\", \"حماد\") and the teachers and students that tell them apart.",
+"known_as": "isnady's list of the names the chains call some narrators by (\"غندر\" is Muhammad b. Ja'far).",
+"elsewhere": "A kunya, a nisba or an ism with a nisba that begins no entry, found inside the entries' names.",
+"neighbours": "A name left open between several narrators: the one the other chains show with this link's student and teacher, in at least so many chains and so many times more than the next.",
+"one_side": "A bare name whose neighbour on one side alone is known: the narrator that neighbour is seen with far more than with any other.",
+"father_pair": "\"سالم عن أبيه\" with the son open between namesakes: the pair of son and father the other chains show, both links.",
+"father_nasab": "The father found by the son's nasab weighed: the grandfather, the kunya, a tribe or a city, the patron; a father up to so many tabaqat before his son.",
+"famous": "A bare name still open after everything else is the famous narrator of that name (isnady's list).",
+"confidence": "Trust: the links whose teacher and student count as seen together for the other chains. Guess, neighbours, famous: the confidence written on the links these ways decide."
+},
+"parameters": {
+"min_tabaqa": "Lowest tabaqa",
+"after": "Tabaqat after the student",
+"before": "Tabaqat before the student",
+"death_years": "Years of death after the student",
+"rounds": "Rounds",
+"min_chains": "Chains at least",
+"lead": "Times more than the next",
+"few": "Namesakes at most",
+"gap": "Tabaqat before the son",
+"trust": "Trust",
+"guess": "Guess",
+"neighbours": "Neighbours",
+"famous": "Famous"
+},
+"groups": {
+"source": "The rijal work's own words",
+"guess": "isnady's guesses",
+"common": "Common"
+}
+},
 "mubhamat": [
 [
 8503,
@@ -3621,11 +3894,6 @@
 "الواسطي",
 "اليمامي",
 "اليماني"
-],
-"gap": 6,
-"pair": [
-1,
-3
 ],
 "rasm": [
 "بتثنيجخذزشضظغقة",

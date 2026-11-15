@@ -1159,6 +1159,43 @@ fn narrator_guesses_on() -> bool {
         .unwrap_or(false)
 }
 
+/// Tools → Narrator Identification (0.8.0): every way of identifying, its parameters, the values in force and how
+/// many links each decided (narrator_rules_dialog.NarratorRulesDialog).
+#[tauri::command]
+fn narrator_rules_state() -> Value {
+    use isnady_core::reader::rules;
+    let conn = isnady_core::sources::store::connect_rw(None).ok();
+    let (now, guess, counts) = match &conn {
+        Some(c) => (
+            rules::load(c),
+            isnady_core::reader::matcher::guesses_on(c),
+            rules::counts(c),
+        ),
+        None => (rules::defaults(), false, Default::default()),
+    };
+    serde_json::json!({
+        "defs": rules::defs(),
+        "texts": rules::texts(),
+        "rules": rules::to_json(&now),
+        "defaults": rules::to_json(&rules::defaults()),
+        "guess": guess,
+        "counts": counts,
+    })
+}
+
+/// The dialog saved: the guesses on or off and the ways kept; the narrators are identified again after (catch_up
+/// "narrators", as narrator_rules_dialog.open_dialog does with set_rules).
+#[tauri::command]
+fn save_narrator_rules(rules: Value, guess: bool) -> Result<(), String> {
+    let conn = isnady_core::sources::store::connect_rw(None)?;
+    isnady_core::reader::rules::save_with_guess(
+        &conn,
+        &isnady_core::reader::rules::from_json(&rules),
+        guess,
+    )
+    .map_err(|x| x.to_string())
+}
+
 #[tauri::command]
 fn catch_up(job: Option<String>) {
     let job = job.unwrap_or_else(|| "start".into());
@@ -3412,6 +3449,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             start,
             narrator_guesses_on,
+            narrator_rules_state,
+            save_narrator_rules,
             find,
             chains_overview,
             book_numbers,

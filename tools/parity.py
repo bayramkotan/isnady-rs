@@ -293,6 +293,16 @@ CASES = [
     ["guess"],
     ["guess", "off"],
     ["chain", "nawawi", "1"],
+    # every way of identifying, its parameters and what it decided (0.8.0): shown, changed, wrong, back to the defaults
+    ["narrator-rules"],
+    ["narrator-rules", "set", "teacher.min_tabaqa=8", "famous=off", "neighbours.lead=2.5", "impossible.death_years=60"],
+    ["chain", "nawawi", "1"],
+    ["narrator-rules", "set", "nosuch=off"],
+    ["narrator-rules", "set", "name=off"],
+    ["narrator-rules", "set", "teacher.min_tabaqa=x"],
+    ["narrator-rules", "reset", "teacher"],
+    ["narrator-rules", "reset"],
+    ["narrator-rules"],
 ]
 
 TIME = re.compile(r" in \d+ ms")

@@ -92,6 +92,15 @@ enum Command {
         #[arg(value_parser = ["on", "off"])]
         state: Option<String>,
     },
+    /// How isnady identifies the narrators: every way, its parameters and how many links it decided; change them
+    /// (the narrators are identified again)
+    NarratorRules {
+        /// set KEY=on|off KEY.PARAMETER=VALUE …; reset [KEY …] (nothing: show them)
+        #[arg(value_parser = ["set", "reset"])]
+        action: Option<String>,
+        /// set: famous=off neighbours.rounds=4 …; reset: the ways to reset
+        settings: Vec<String>,
+    },
     /// Read a book in its own order: the list, a book's chapters, or a chapter
     Book(BookArgs),
     /// Look up a narrator: verdict, rank, tabaqa, death, books
@@ -610,6 +619,7 @@ fn run(command: Option<Command>) -> ExitCode {
             limit,
         }) => isnads_cmd(rebuild, dump, limit),
         Some(Command::Guess { state }) => guess_cmd(state),
+        Some(Command::NarratorRules { action, settings }) => narrator_rules_cmd(action, settings),
         Some(Command::Book(a)) => book_cmd(a),
         Some(Command::Narrator(a)) => narrator_cmd(a),
         Some(Command::Life(a)) => life_cmd(a),
@@ -2824,6 +2834,145 @@ const TAHWIL_NOTE: &str = " (roads joined by tahwil, a second road after a link 
 /// `iy isnads`: the chains read from the Arabic texts (every one again with --rebuild), how far the chains of every
 /// book were read and why the rest were kept whole; then how many of their narrators are identified.
 /// `iy guess [on|off]` (cmd_guess): isnady's own inference about who a narrator is — off unless turned on.
+/// `_print_rules`: the ways of identifying, their parameters and what they decided.
+fn print_rules(conn: &rusqlite_conn::Connection) {
+    use isnady_core::reader::rules;
+    let r = rules::load(conn);
+    let base = rules::defaults();
+    let found = rules::counts(conn);
+    let guess = isnady_core::reader::matcher::guesses_on(conn);
+    let tx = rules::texts();
+    println!("How isnady identifies the narrators of the chains (Tools → Narrator Identification)");
+    println!(
+        "Narrator guesses: {} (iy guess on|off)",
+        if guess { "on" } else { "off" }
+    );
+    for group in ["source", "guess", "common"] {
+        println!();
+        println!(
+            "{}{}",
+            tx.groups[group],
+            if group == "guess" {
+                "  (used only with Narrator guesses on)"
+            } else {
+                ""
+            }
+        );
+        for d in rules::defs().iter().filter(|d| d.group == group) {
+            let key = d.key.as_str();
+            let mut state = if d.switch {
+                if rules::on(&r, key) { "on" } else { "off" }.to_string()
+            } else if key == "name" {
+                "on".into()
+            } else {
+                String::new()
+            };
+            if d.switch && r[key].get("on") != base[key].get("on") {
+                state.push('*');
+            }
+            let mut numbers = vec![];
+            for (road, label) in [("sunni", "Sunni"), ("shia", "Shia")] {
+                if let Some(n) = found
+                    .get(road)
+                    .and_then(|c| c.get(key))
+                    .filter(|n| **n != 0)
+                {
+                    numbers.push(format!("{label} {}", isnady_core::py::thousands(*n)));
+                }
+            }
+            let tally = if numbers.is_empty() {
+                String::new()
+            } else {
+                format!(
+                    "{}{}",
+                    if key == "impossible" { "removed " } else { "" },
+                    numbers.join(" · ")
+                )
+            };
+            let line = format!("  {key:<13} {state:<4} {:<50} {tally}", tx.titles[key]);
+            println!("{}", line.trim_end());
+            for p in &d.params {
+                let value = r[key][&p.name];
+                let default = base[key][&p.name];
+                let mark = if value != default {
+                    format!("default {}; ", default.shown())
+                } else {
+                    String::new()
+                };
+                println!(
+                    "  {:<13} {:<4} {} = {} ({mark}{}–{})",
+                    "",
+                    "",
+                    p.name,
+                    value.shown(),
+                    p.lo,
+                    p.hi
+                );
+            }
+        }
+    }
+    println!();
+    println!(
+        "Change: iy narrator-rules set KEY=on|off KEY.PARAMETER=VALUE …   The defaults again: iy narrator-rules \
+         reset [KEY …]   (* changed)"
+    );
+}
+
+fn narrator_rules_cmd(action: Option<String>, settings: Vec<String>) -> ExitCode {
+    use isnady_core::reader::rules;
+    let conn = match isnady_core::sources::store::connect_rw(None) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+    };
+    if let Some(action) = action.as_deref() {
+        if !narrators::loaded(&conn) {
+            println!("No rijal work imported: there are no narrators to identify.");
+            return ExitCode::from(1);
+        }
+        let mut r = rules::load(&conn);
+        if action == "set" {
+            if settings.is_empty() {
+                eprintln!("Nothing to set: iy narrator-rules set KEY=on|off KEY.PARAMETER=VALUE …");
+                return ExitCode::from(1);
+            }
+            for setting in &settings {
+                if let Some(wrong) = rules::apply(&mut r, setting) {
+                    eprintln!("{wrong}");
+                    return ExitCode::from(1);
+                }
+            }
+        } else {
+            let base = rules::defaults();
+            let keys: Vec<String> = if settings.is_empty() {
+                base.keys().cloned().collect()
+            } else {
+                settings.clone()
+            };
+            for key in keys {
+                match base.get(&key) {
+                    Some(v) => {
+                        r.insert(key.clone(), v.clone());
+                    }
+                    None => {
+                        eprintln!("no such way: {key} (see iy narrator-rules)");
+                        return ExitCode::from(1);
+                    }
+                }
+            }
+        }
+        let say = |m: &str| println!("{m}");
+        if let Err(e) = isnady_core::reader::matcher::set_rules(&conn, &r, &say) {
+            eprintln!("{e}");
+            return ExitCode::from(1);
+        }
+    }
+    print_rules(&conn);
+    ExitCode::SUCCESS
+}
+
 fn guess_cmd(state: Option<String>) -> ExitCode {
     let conn = match isnady_core::sources::store::connect_rw(None) {
         Ok(c) => c,

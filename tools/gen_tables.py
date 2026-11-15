@@ -548,7 +548,7 @@ def parser() -> str:
     import json as _json
     import re as _re
 
-    from isnady.core import isnad, narrators, rijal, traditions
+    from isnady.core import isnad, narrator_rules, narrators, rijal, traditions
 
     out = {
         "about": "Written by tools/gen_tables.py from the Python isnady; do not edit by hand.",
@@ -580,17 +580,17 @@ def parser() -> str:
         # the narrator matcher (core/narrators.py: link_narrators) and core/tahwil_meet.py
         "matcher": {
             "id": narrators.MATCHER_ID, "death_rule": rijal.DEATH_RULE,
-            "teacher_min_tabaqa": narrators._TEACHER_MIN_TABAQA,
             "patterns": {k: getattr(narrators, k).pattern for k in ("_HONORIFIC", "_OF_PROPHET", "_SAYS", "_CLARIFY",
                                                                      "_COMPANION", "_UNSURE")},
             "relative": narrators._RELATIVE, "relative_words": sorted(narrators._RELATIVE_WORDS),
             "kin_first_person": sorted(narrators._KIN_FIRST_PERSON),
-            "edge": [narrators._EDGE_MIN, narrators._EDGE_LEAD, narrators._EDGE_CONFIDENCE],
-            # 0.7.8: isnady's own inference, marked (Tools → Narrator guesses), and the links whose pairs count as seen
-            "guess_confidence": narrators._GUESS_CONFIDENCE, "trust": narrators._TRUST,
-            "one_side": [narrators._ONE_SIDE_MIN, narrators._ONE_SIDE_LEAD],
-            "famous_confidence": narrators._FAMOUS_CONFIDENCE,
-            "gaps": [narrators._GAP_TABAQA, narrators._GAP_OLDER, narrators._GAP_DEATH],
+            # 0.8.0: every way of identifying, with its parameters (core/narrator_rules.py; Tools → Narrator
+            # Identification): the defaults and ranges, and the texts the window and iy-rs narrator-rules show
+            "rules": [{"key": k, "group": g, "switch": sw,
+                       "params": [{"name": n, "default": d, "lo": lo, "hi": hi, "step": st}
+                                  for n, d, lo, hi, st in ps]} for k, g, sw, ps in narrator_rules.RULES],
+            "rule_texts": {"titles": narrator_rules.TITLES, "explained": narrator_rules.EXPLAINED,
+                           "parameters": narrator_rules.PARAMETERS, "groups": narrator_rules.GROUPS},
             "mubhamat": [list(x) for x in narrators._MUBHAMAT],
             "muhmal": {"sunni": [[k, list(a), list(b), list(c)] for k, a, b, c in narrators._MUHMAL],
                        "shia": [[k, list(a), list(b), list(c)] for k, a, b, c in narrators._MUHMAL_SHIA]},
@@ -608,7 +608,6 @@ def parser() -> str:
             "spelling_start": sorted(narrators._SPELLING_START), "spelling": sorted(narrators._SPELLING),
             # 0.7.7: the father read from the son's nasab (_father_by_nasab) and the son with his father (by_father_pair)
             "father": {"not_his_kunya": sorted(narrators._NOT_HIS_KUNYA), "city_nisbas": sorted(narrators._CITY_NISBAS),
-                       "gap": narrators._FATHER_GAP, "pair": [narrators._PAIR_MIN, narrators._PAIR_FEW],
                        "rasm": [narrators._RASM_FROM, narrators._RASM_TO]},
         },
     }

@@ -185,6 +185,80 @@ async function toggleGuesses() {
   await catchUp(on ? "guess-on" : "guess-off");
 }
 
+// Tools → Narrator Identification (0.8.0, narrator_rules_dialog.NarratorRulesDialog): every way isnady identifies a
+// narrator, what it reads, how many links it decided, its parameters; saved, the narrators are identified again
+function ruleNumber(v) {
+  return Number.isInteger(v) ? v.toLocaleString("en-US") : String(v);
+}
+
+async function narratorRules() {
+  let st;
+  try { st = await invoke("narrator_rules_state"); } catch (e) { infoDialog(t("Narrator Identification"), `<p>${esc(String(e))}</p>`); return; }
+  const groups = ["source", "guess", "common"];
+  const box = (d) => {
+    const v = st.rules[d.key];
+    const decided = [["sunni", t("Sunni")], ["shia", t("Shia")]]
+      .filter(([road]) => (st.counts[road] || {})[d.key])
+      .map(([road, label]) => `${esc(label)} ${ruleNumber(st.counts[road][d.key])}`);
+    const head = d.key === "impossible" ? t("Removed:") : t("Decided at the last identification:");
+    const title = d.switch
+      ? `<label class="nr-title"><input type="checkbox" data-on="${d.key}"${v.on ? " checked" : ""}> ${esc(t(st.texts.titles[d.key]))}</label>`
+      : `<div class="nr-title">${esc(t(st.texts.titles[d.key]))}</div>`;
+    const params = d.params.map((p) => `<label class="nr-param"><span>${esc(t(st.texts.parameters[p.name]))}</span>
+      <input type="number" data-key="${d.key}" data-name="${p.name}" min="${p.lo}" max="${p.hi}" step="${p.step}" value="${v[p.name]}"
+        title="${esc(t("Default: {value}", { value: ruleNumber(p.default) }))}"></label>`).join("");
+    return `<div class="nr-box" data-box="${d.key}">${title}<div class="nr-text">${esc(t(st.texts.explained[d.key]))}</div>
+      ${decided.length ? `<div class="nr-count">${esc(head)} ${decided.join(" · ")}</div>` : ""}${params}</div>`;
+  };
+  const page = (g) => (g === "guess" ? `<div class="nr-note">${esc(t("isnady's own inference, not the scholars' words: used only when the box above is on."))}</div>` : "")
+    + st.defs.filter((d) => d.group === g).map(box).join("");
+  const back = document.createElement("div");
+  back.className = "dialog-back";
+  back.innerHTML = `<div class="dialog nr" role="dialog"><div class="pd-title">${esc(t("Narrator Identification"))}</div>
+    <div class="nr-intro">${esc(t("How isnady links a name of a chain to a narrator. The rijal work's own words are used unless turned off here; isnady's guesses only with the box below, and every narrator they find is marked \"≟ isnady's guess\" in the chain. Saving identifies every chain's narrators again."))}</div>
+    <label class="nr-guess"><input type="checkbox" class="nr-guess-box"${st.guess ? " checked" : ""}> ${esc(t("Use isnady's guesses (its own inference, marked in the chain)"))}</label>
+    <div class="pf-tabs">${groups.map((g, i) => `<button data-tab="${i}"${i === 0 ? ' class="on"' : ""}>${esc(t(st.texts.groups[g]))}</button>`).join("")}</div>
+    ${groups.map((g, i) => `<div class="pf-page nr-page" data-page="${i}"${i ? ' hidden' : ""}>${page(g)}</div>`).join("")}
+    <div class="pd-buttons"><button class="nr-defaults">${esc(t("Defaults"))}</button><span style="flex:1"></span>
+      <button class="primary small nr-save">${esc(t("Save and Identify Again"))}</button><button class="pd-cancel nr-cancel">${esc(t("Cancel"))}</button></div></div>`;
+  document.body.appendChild(back);
+  const q = (sel) => back.querySelector(sel);
+  const guessPage = back.querySelector('[data-page="1"]');
+  const guessChanged = () => guessPage.classList.toggle("nr-off", !q(".nr-guess-box").checked);
+  q(".nr-guess-box").onchange = guessChanged;
+  guessChanged();
+  q(".pf-tabs").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    back.querySelectorAll(".pf-tabs button").forEach((x) => x.classList.toggle("on", x === b));
+    back.querySelectorAll(".nr-page").forEach((p) => { p.hidden = p.dataset.page !== b.dataset.tab; });
+  };
+  q(".nr-defaults").title = t("Every way on, every parameter as isnady ships it");
+  q(".nr-defaults").onclick = () => {
+    back.querySelectorAll("input[data-on]").forEach((x) => { x.checked = true; });
+    back.querySelectorAll("input[data-key]").forEach((x) => { x.value = st.defaults[x.dataset.key][x.dataset.name]; });
+  };
+  const ok = await new Promise((resolve) => {
+    q(".nr-save").onclick = () => resolve(true);
+    q(".nr-cancel").onclick = () => resolve(false);
+  });
+  if (ok) {
+    const rules = JSON.parse(JSON.stringify(st.rules));
+    back.querySelectorAll("input[data-on]").forEach((x) => { rules[x.dataset.on].on = x.checked; });
+    back.querySelectorAll("input[data-key]").forEach((x) => {
+      const n = Number(x.value);
+      if (Number.isFinite(n)) rules[x.dataset.key][x.dataset.name] = n;
+    });
+    const guess = q(".nr-guess-box").checked;
+    back.remove();
+    try { await invoke("save_narrator_rules", { rules, guess }); } catch (e) { infoDialog(t("Narrator Identification"), `<p>${esc(String(e))}</p>`); return; }
+    await catchUp("narrators");
+    readGuesses();
+  } else {
+    back.remove();
+  }
+}
+
 function act(label, run, shortcut, extra) {
   return Object.assign({ label, run, shortcut: shortcut || "" }, extra || {});
 }
@@ -243,6 +317,8 @@ function menus() {
       act("Identify Narrators Again", () => catchUp("narrators")),
       // 0.7.8: isnady's own inference about who a narrator is — off unless turned on here (MainWindow._toggle_guesses)
       act("Narrator Guesses (isnady's Own Inference)…", toggleGuesses, "", { box: true, isOn: () => NARRATOR_GUESSES }),
+      // 0.8.0: every way of identifying a narrator, its parameters and how many links it decided
+      act("Narrator Identification…", narratorRules),
       SEP,
       act("Create Desktop Shortcut…", createShortcut),
       SEP,

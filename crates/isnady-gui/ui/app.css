@@ -1160,3 +1160,18 @@ table.st-table.first-fit td:first-child { white-space: nowrap; }
 .catchup.xf-bar { z-index: 70; max-width: 70vw; }
 .hcard-meaning { margin-inline-start: 10px; }
 .xf-pick { display: flex; gap: 6px; } .xf-pick input { flex: 1; }
+
+/* Tools → Narrator Identification (0.8.0) */
+.dialog.nr { width: min(820px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px)); max-width: none; max-height: none; box-sizing: border-box; padding: 18px 20px 14px; display: flex; flex-direction: column; gap: 10px; }
+.nr-intro, .nr-note { color: var(--ink); white-space: normal; }
+.nr-note { color: var(--muted); }
+.nr-guess { display: flex; align-items: center; gap: 6px; }
+.nr-box { border: 1px solid var(--border); border-radius: var(--r7, 7px); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--surface); }
+.nr-title { font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+.nr-text { color: var(--ink); white-space: normal; }
+.nr-count { color: var(--muted); font-size: 12px; }
+.nr-param { display: flex; align-items: center; gap: 10px; }
+.nr-param span { min-width: 220px; color: var(--ink); }
+.nr-param input { width: 90px; padding: 4px 6px; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; }
+.nr-page.nr-off { opacity: .45; pointer-events: none; }
+.nr-page[hidden] { display: none; }

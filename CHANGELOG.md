@@ -3,6 +3,27 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.8.0] — 2026-11-15
+
+- **Tools → Narrator Identification: how isnady identifies the narrators, every way of it with its parameters
+  (Bayram, 2026-11-15: "râviyi nasıl tanımlıyoruz, ona ait settingsler … hangi teknikler ve parametreleri neler ve
+  bunları nasıl değiştirebiliyoruz").** Seventeen ways in two groups that never mix. The rijal work's own words: the
+  name as the work writes it, the book's mark, the order of the tabaqat, the Companion at the end, the compiler's own
+  teacher (lowest tabaqa 9), a freedman by his patron, "عن أبيه" from the son's nasab, the order of the Shia rijal
+  works, and what the tabaqat and the years of death rule out (4 tabaqat after, 6 before, 80 years). isnady's guesses,
+  used only with Narrator Guesses on: the bare names by the narrators around them, the names isnady knows them by, a
+  name found inside the entries, teacher and student seen in other chains (3 rounds, 2 chains, 3 times the next), one
+  known neighbour (6 chains, 5 times), a son and his father together (1 chain, 3 namesakes), a father weighed from his
+  son's nasab (6 tabaqat), the famous one of a name; and the confidences (trust 0.7, guess 0.7, neighbours 0.6,
+  famous 0.5). The dialog shows what each way reads and how many links it decided at the last identification (Sunni
+  and Shia apart); each way can be turned off, each parameter changed, everything put back to the defaults; Save
+  identifies every chain's narrators again. The same on the command line: `iy narrator-rules`,
+  `iy narrator-rules set famous=off neighbours.rounds=4 …`, `iy narrator-rules reset [KEY …]`.
+- The values are kept in the database (only what differs from the defaults), so isnady-rs and the Python isnady
+  read the same ones; with the defaults every narrator is identified as in 0.7.9 (757,548 links with the guesses
+  off, 758,849 with them on, on the full isnady-data — the same rows), and with the ways changed the two programs
+  still write the same rows (matcher isnady-narrators-21).
+
 ## [0.7.9] — 2026-11-14
 
 - **Updates no longer lose a book that is not here (Bayram, 2026-11-14: al-Tusi's two rijal works were never offered).**

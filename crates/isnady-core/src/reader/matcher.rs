@@ -6,11 +6,12 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::OnceLock;
 
 use super::pyre::{self, split, strip, Re};
+use super::rules::{self, Rules};
 use super::*;
 use crate::normalize::normalize;
 
@@ -18,17 +19,13 @@ use crate::normalize::normalize;
 pub struct Matcher {
     pub id: String,
     pub death_rule: String,
-    pub teacher_min_tabaqa: i64,
     pub patterns: HashMap<String, String>,
     pub relative: HashMap<String, String>,
     pub relative_words: Vec<String>,
     pub kin_first_person: Vec<String>,
-    pub edge: (i64, f64, f64),
-    pub one_side: (i64, f64),
-    pub famous_confidence: f64,
-    pub guess_confidence: f64,
-    pub trust: f64,
-    pub gaps: (i64, i64, i64),
+    /// 0.8.0: every way of identifying, with its parameters (core/narrator_rules.py)
+    pub rules: Vec<rules::RuleDef>,
+    pub rule_texts: rules::RuleTexts,
     pub mubhamat: Vec<(i64, i64)>,
     pub muhmal: HashMap<String, Vec<(String, Vec<String>, Vec<String>, Vec<String>)>>,
     pub known_as: HashMap<String, Vec<(String, Vec<String>)>>,
@@ -51,8 +48,6 @@ pub struct Matcher {
 pub struct Father {
     pub not_his_kunya: HashSet<String>,
     pub city_nisbas: HashSet<String>,
-    pub gap: i64,
-    pub pair: (i64, usize),
     pub rasm: (String, String),
 }
 
@@ -83,6 +78,11 @@ fn mp(name: &str) -> &'static Re {
 }
 
 type Set = BTreeSet<i64>;
+
+/// The ways of identifying that are isnady's own inference (group "guess").
+fn is_guess_rule(key: &str) -> bool {
+    m().rules.iter().any(|d| d.key == key && d.group == "guess")
+}
 /// (person, confidence, candidates)
 pub type Res = (Option<i64>, Option<f64>, i64);
 
@@ -161,10 +161,20 @@ pub struct Index {
     guessed_keys: RefCell<HashSet<Vec<String>>>,
     /// names isnady's list gives a narrator the rijal work does not
     known_as_added: HashMap<String, Set>,
+    /// 0.8.0: the ways of identifying in force, and how many links each decided (Tools → Narrator Identification)
+    pub rules: Rules,
+    pub counts: RefCell<BTreeMap<String, i64>>,
+    /// names left one narrator by the order of the Shia rijal works
+    tiered: RefCell<HashSet<Vec<String>>>,
 }
 
 impl Index {
-    pub fn new(conn: &Connection, tradition: &str, guess: bool) -> rusqlite::Result<Index> {
+    pub fn new(
+        conn: &Connection,
+        tradition: &str,
+        guess: bool,
+        rules: Rules,
+    ) -> rusqlite::Result<Index> {
         let mut ix = Index {
             tradition: tradition.into(),
             tabaqa: HashMap::new(),
@@ -185,6 +195,9 @@ impl Index {
             guess,
             guessed_keys: RefCell::new(HashSet::new()),
             known_as_added: HashMap::new(),
+            rules,
+            counts: RefCell::new(BTreeMap::new()),
+            tiered: RefCell::new(HashSet::new()),
         };
         let mut unnamed: HashSet<i64> = HashSet::new();
         let mut repeated: HashSet<i64> = HashSet::new();
@@ -242,7 +255,7 @@ impl Index {
                 keys.insert(k.clone(), pid);
             }
         }
-        let lists: &[(String, Vec<String>, Vec<String>, Vec<String>)] = if guess {
+        let lists: &[(String, Vec<String>, Vec<String>, Vec<String>)] = if ix.on("muhmal") {
             &m().muhmal[if tradition == "sunni" {
                 "sunni"
             } else {
@@ -310,7 +323,7 @@ impl Index {
         } else {
             "shia"
         };
-        if guess {
+        if ix.on("known_as") {
             for (written, owners) in &m().known_as[road] {
                 for key in owners {
                     if let Some(pid) = keys.get(key) {
@@ -323,6 +336,8 @@ impl Index {
                     }
                 }
             }
+        }
+        if ix.on("famous") {
             ix.famous = m().famous[road]
                 .iter()
                 .filter_map(|(w, k)| keys.get(k).map(|p| (w.clone(), *p)))
@@ -340,6 +355,23 @@ impl Index {
 
     pub fn t(&self, p: i64) -> Option<i64> {
         self.tabaqa.get(&p).copied().flatten()
+    }
+
+    /// Whether this way of identifying is used: turned on, and — a guess — only with Narrator Guesses.
+    pub fn on(&self, key: &str) -> bool {
+        rules::on(&self.rules, key) && (self.guess || !is_guess_rule(key))
+    }
+
+    pub fn pi(&self, key: &str, name: &str) -> i64 {
+        rules::int(&self.rules, key, name)
+    }
+
+    pub fn pf(&self, key: &str, name: &str) -> f64 {
+        rules::float(&self.rules, key, name)
+    }
+
+    fn count(&self, key: &str, n: i64) {
+        *self.counts.borrow_mut().entry(key.to_string()).or_insert(0) += n;
     }
 
     pub fn candidates(&self, toks: &[String]) -> Rc<Set> {
@@ -370,17 +402,24 @@ impl Index {
                 found.extend(self.rule_matches(&variant));
             }
         }
-        if found.is_empty() && !toks.iter().any(|t| t == "بن") && toks.len() <= 4 && self.guess {
+        if found.is_empty()
+            && !toks.iter().any(|t| t == "بن")
+            && toks.len() <= 4
+            && self.on("elsewhere")
+        {
             found = self.elsewhere(toks);
             if !found.is_empty() {
                 self.guessed_keys.borrow_mut().insert(toks.to_vec());
             }
         }
-        if found.len() > 1 {
+        if found.len() > 1 && self.on("shia_order") {
             // the earliest rijal work that has him (al-Najashi, then al-Tusi's Fihrist, then his Rijal)
             let tier = |p: &i64| self.tier.get(p).copied().unwrap_or(0);
             let first = found.iter().map(tier).min().unwrap_or(0);
             found.retain(|p| tier(p) == first);
+            if found.len() == 1 {
+                self.tiered.borrow_mut().insert(toks.to_vec());
+            }
         }
         let hit = Rc::new(found);
         self.found.borrow_mut().insert(toks.to_vec(), hit.clone());
@@ -603,12 +642,17 @@ pub fn match_chain(
     collection: &str,
     reaches_prophet: bool,
 ) -> (Vec<Res>, Vec<Set>, Vec<String>) {
-    let allowed: Option<HashSet<&String>> = m()
-        .collection_marks
-        .get(collection)
-        .map(|v| v.iter().collect());
+    let allowed: Option<HashSet<&String>> = if index.on("marks") {
+        m().collection_marks
+            .get(collection)
+            .map(|v| v.iter().collect())
+    } else {
+        None
+    };
     let mut cands: Vec<Set> = vec![];
     let mut written: Vec<Vec<String>> = vec![];
+    // the way that left each link one narrator (index.counts)
+    let mut by: Vec<Option<&'static str>> = vec![];
     let mut previous: Option<Vec<String>> = None;
     let mut after_father = false;
     let shia = index.tradition == "shia";
@@ -616,6 +660,7 @@ pub fn match_chain(
         if (shia && link_kind(raw) != "person") || (!shia && is_prophet(raw)) {
             cands.push(Set::new());
             written.push(vec![]);
+            by.push(None);
             previous = None;
             after_father = false;
             continue;
@@ -629,14 +674,27 @@ pub fn match_chain(
             }
         }
         let mut found: Set = (*index.candidates(&toks)).clone();
+        let mut how: Option<&'static str> = if found.len() == 1 {
+            Some(if index.tiered.borrow().contains(&toks) {
+                "shia_order"
+            } else {
+                "name"
+            })
+        } else {
+            None
+        };
         if let Some(allowed) = &allowed {
             if !found.is_empty() {
+                let before = found.len();
                 found.retain(|p| {
                     index
                         .marks
                         .get(p)
                         .is_some_and(|ms| ms.iter().any(|x| allowed.contains(x)))
                 });
+                if found.len() == 1 && before > 1 {
+                    how = Some("marks");
+                }
             }
         }
         previous = Some(if found.len() == 1 {
@@ -650,32 +708,52 @@ pub fn match_chain(
         });
         cands.push(found);
         written.push(toks);
+        by.push(how);
     }
     let mut first_counts: Vec<i64> = cands.iter().map(|c| c.len() as i64).collect();
     // decided by isnady's own inference (Index.guess)
     let mut guessed = vec![false; cands.len()];
     let n = cands.len();
-    let author = index.authors.get(collection);
+    // cands[i] made keep by a way: the way noted when it leaves one narrator of several
+    fn narrowed(
+        cands: &mut [Set],
+        by: &mut [Option<&'static str>],
+        i: usize,
+        keep: Set,
+        way: &'static str,
+    ) {
+        if keep.len() == 1 && cands[i].len() > 1 {
+            by[i] = Some(way);
+        }
+        cands[i] = keep;
+    }
+    let author = if index.on("teacher") {
+        index.authors.get(collection)
+    } else {
+        None
+    };
+    let lowest_teacher = index.pi("teacher", "min_tabaqa");
     if n > 0 && author.is_some_and(|a| cands[0].contains(a)) {
-        cands[0] = [*author.unwrap()].into_iter().collect();
-    } else if n > 0 && !cands[0].is_empty() && !(n == 1 && reaches_prophet) {
+        let keep: Set = [*author.unwrap()].into_iter().collect();
+        narrowed(&mut cands, &mut by, 0, keep, "teacher");
+    } else if n > 0 && !cands[0].is_empty() && !(n == 1 && reaches_prophet) && index.on("teacher") {
         let teachers: Set = cands[0]
             .iter()
             .copied()
-            .filter(|p| index.t(*p).is_none_or_ge(m().teacher_min_tabaqa))
+            .filter(|p| index.t(*p).is_none_or_ge(lowest_teacher))
             .collect();
         if !teachers.is_empty() {
-            cands[0] = teachers;
+            narrowed(&mut cands, &mut by, 0, teachers, "teacher");
         }
     }
-    if reaches_prophet && n > 0 && !cands[n - 1].is_empty() {
+    if reaches_prophet && n > 0 && !cands[n - 1].is_empty() && index.on("companion") {
         let comps: Set = cands[n - 1]
             .iter()
             .copied()
             .filter(|p| matches!(index.t(*p), Some(1) | None))
             .collect();
         if !comps.is_empty() {
-            cands[n - 1] = comps;
+            narrowed(&mut cands, &mut by, n - 1, comps, "companion");
         }
     }
     let lowest = |g: &Set| -> Option<i64> {
@@ -694,7 +772,7 @@ pub fn match_chain(
             v.into_iter().flatten().max()
         }
     };
-    let mut changed = true;
+    let mut changed = index.on("order");
     while changed {
         changed = false;
         for i in 0..n {
@@ -708,13 +786,18 @@ pub fn match_chain(
                 keep.retain(|p| index.t(*p).map_or(true, |t| high >= t));
             }
             if !keep.is_empty() && keep != cands[i] {
-                cands[i] = keep;
+                narrowed(&mut cands, &mut by, i, keep, "order");
                 changed = true;
             }
         }
     }
     // evidence 6: the client of the next narrator
-    for i in 0..n.saturating_sub(1) {
+    let mawla_up_to = if index.on("mawla") {
+        n.saturating_sub(1)
+    } else {
+        0
+    };
+    for i in 0..mawla_up_to {
         if cands[i].len() > 1 && !written[i + 1].is_empty() {
             let after = &written[i + 1];
             let mut forms: BTreeSet<String> = BTreeSet::new();
@@ -739,7 +822,7 @@ pub fn match_chain(
                 })
                 .collect();
             if hits.len() == 1 {
-                cands[i] = hits;
+                narrowed(&mut cands, &mut by, i, hits, "mawla");
                 first_counts[i] = first_counts[i].max(2);
             }
         }
@@ -775,7 +858,7 @@ pub fn match_chain(
                     .map(|x| x.0)
                     .collect();
                 if hits.len() == 1 {
-                    cands[i] = hits;
+                    narrowed(&mut cands, &mut by, i, hits, "muhmal");
                     first_counts[i] = first_counts[i].max(2);
                     guessed[i] = true; // isnady's list, not the rijal work's words
                 }
@@ -805,16 +888,22 @@ pub fn match_chain(
         .map(|(i, c)| {
             if c.len() == 1 {
                 let who = *c.iter().next().unwrap();
-                let guessed_here = guessed[i]
-                    || index.guessed_keys.borrow().contains(&written[i])
-                    || index
-                        .known_as_added
-                        .get(&written[i].join(" "))
-                        .is_some_and(|s| s.contains(&who));
+                let mut way = by[i].unwrap_or("name");
+                if index.guessed_keys.borrow().contains(&written[i]) {
+                    way = "elsewhere";
+                } else if index
+                    .known_as_added
+                    .get(&written[i].join(" "))
+                    .is_some_and(|s| s.contains(&who))
+                {
+                    way = "known_as";
+                }
+                let guessed_here = guessed[i] || way == "elsewhere" || way == "known_as";
+                index.count(way, 1);
                 (
                     Some(who),
                     Some(if guessed_here {
-                        m().guess_confidence
+                        index.pf("confidence", "guess")
                     } else if first_counts[i] == 1 {
                         1.0
                     } else {
@@ -866,11 +955,14 @@ fn edges_of(chains: &[Chain], trust: f64) -> HashMap<(i64, i64), i64> {
 }
 
 /// Evidence 5: the teacher and the student.
-pub fn by_neighbours(chains: &mut [Chain]) -> i64 {
-    let (edge_min, edge_lead, edge_conf) = m().edge;
+pub fn by_neighbours(chains: &mut [Chain], rules: &Rules) -> i64 {
+    let edge_min = rules::int(rules, "neighbours", "min_chains");
+    let edge_lead = rules::float(rules, "neighbours", "lead");
+    let edge_conf = rules::float(rules, "confidence", "neighbours");
+    let trust = rules::float(rules, "confidence", "trust");
     let mut found = 0;
-    for _ in 0..3 {
-        let edges = edges_of(chains, m().trust);
+    for _ in 0..rules::int(rules, "neighbours", "rounds") {
+        let edges = edges_of(chains, trust);
         if edges.is_empty() {
             break;
         }
@@ -922,16 +1014,18 @@ pub fn by_neighbours(chains: &mut [Chain]) -> i64 {
     found
 }
 
-pub fn by_one_side(chains: &mut [Chain]) -> i64 {
-    let (one_min, one_lead) = m().one_side;
-    let edge_conf = m().edge.2;
-    let fc = m().famous_confidence;
+pub fn by_one_side(chains: &mut [Chain], rules: &Rules) -> i64 {
+    let one_min = rules::int(rules, "one_side", "min_chains");
+    let one_lead = rules::float(rules, "one_side", "lead");
+    let edge_conf = rules::float(rules, "confidence", "neighbours");
+    let fc = rules::float(rules, "confidence", "famous");
+    let trust = rules::float(rules, "confidence", "trust");
     let mut edges = HashMap::new();
     for ch in chains.iter() {
         let r = &ch.results;
         for i in 0..r.len().saturating_sub(1) {
             if let (Some(a), Some(b)) = (r[i].0, r[i + 1].0) {
-                if r[i].1.unwrap_or(0.0) >= m().trust && r[i + 1].1.unwrap_or(0.0) >= m().trust {
+                if r[i].1.unwrap_or(0.0) >= trust && r[i + 1].1.unwrap_or(0.0) >= trust {
                     *edges.entry((a, b)).or_insert(0i64) += 1;
                 }
             }
@@ -1007,8 +1101,8 @@ pub fn by_one_side(chains: &mut [Chain]) -> i64 {
     found
 }
 
-pub fn by_famous(chains: &mut [Chain], famous: &HashMap<String, i64>) -> i64 {
-    let fc = m().famous_confidence;
+pub fn by_famous(chains: &mut [Chain], famous: &HashMap<String, i64>, rules: &Rules) -> i64 {
+    let fc = rules::float(rules, "confidence", "famous");
     let mut found = 0;
     for ch in chains.iter_mut() {
         for i in 0..ch.results.len() {
@@ -1321,7 +1415,7 @@ fn father_by_nasab(index: &Index, son: i64) -> Option<i64> {
             continue;
         }
         if let (Some(low), Some(t)) = (low, index.t(pid)) {
-            if !(low - fa.gap <= t && t <= low) {
+            if !(low - index.pi("father_nasab", "gap") <= t && t <= low) {
                 continue;
             }
         }
@@ -1377,7 +1471,11 @@ fn father_of(index: &Index, son: i64) -> Option<i64> {
         });
     }
     if found.len() != 1 {
-        found = father_by_nasab(index, son).into_iter().collect();
+        found = if index.on("father_nasab") {
+            father_by_nasab(index, son).into_iter().collect()
+        } else {
+            Set::new()
+        };
     }
     let f = found.iter().next().copied();
     index.fathers.borrow_mut().insert(son, f);
@@ -1386,14 +1484,17 @@ fn father_of(index: &Index, son: i64) -> Option<i64> {
 
 /// `by_father_pair` (0.7.7): a son open between several namesakes, and his father with him.
 pub fn by_father_pair(chains: &mut [Chain], index: &Index) -> i64 {
-    let (_, edge_lead, edge_conf) = m().edge;
-    let (pair_min, pair_few) = m().father.pair;
+    let edge_lead = index.pf("neighbours", "lead");
+    let edge_conf = index.pf("confidence", "neighbours");
+    let trust = index.pf("confidence", "trust");
+    let pair_min = index.pi("father_pair", "min_chains");
+    let pair_few = index.pi("father_pair", "few").max(0) as usize;
     let mut edges = HashMap::new();
     for ch in chains.iter() {
         let r = &ch.results;
         for i in 0..r.len().saturating_sub(1) {
             if let (Some(a), Some(b)) = (r[i].0, r[i + 1].0) {
-                if r[i].1.unwrap_or(0.0) >= m().trust && r[i + 1].1.unwrap_or(0.0) >= m().trust {
+                if r[i].1.unwrap_or(0.0) >= trust && r[i + 1].1.unwrap_or(0.0) >= trust {
                     *edges.entry((a, b)).or_insert(0i64) += 1;
                 }
             }
@@ -1508,7 +1609,9 @@ pub fn by_relatives(chains: &mut [Chain], index: &Index) -> i64 {
                 here.retain(|p| index.t(*p).is_none_or_ge(tt));
             }
             let mut weighed = false;
-            if here.len() != 1 && (ch.names[i] == "ابيه" || ch.names[i] == "ابوه") && index.guess
+            if here.len() != 1
+                && (ch.names[i] == "ابيه" || ch.names[i] == "ابوه")
+                && index.on("father_nasab")
             {
                 if let Some(father) = father_by_nasab(index, student) {
                     let ok = match (teacher.and_then(|t| index.t(t)), index.t(father)) {
@@ -1525,9 +1628,14 @@ pub fn by_relatives(chains: &mut [Chain], index: &Index) -> i64 {
                 let who = *here.iter().next().unwrap();
                 // his name, read from the son's — a guess when the son himself was one, or the father was weighed
                 let sure = !weighed && ch.results[i - 1].1.unwrap_or(0.0) >= 0.8;
-                let conf = if sure { 0.8 } else { m().guess_confidence };
+                let conf = if sure {
+                    0.8
+                } else {
+                    index.pf("confidence", "guess")
+                };
                 ch.results[i] = (Some(who), Some(conf), if count == 0 { 1 } else { count });
                 ch.cands[i] = here;
+                index.count(if weighed { "father_nasab" } else { "father" }, 1);
                 found += 1;
             }
         }
@@ -1536,7 +1644,9 @@ pub fn by_relatives(chains: &mut [Chain], index: &Index) -> i64 {
 }
 
 pub fn drop_impossible(results: &mut [Res], index: &Index) -> i64 {
-    let (gap_tabaqa, gap_older, gap_death) = m().gaps;
+    let gap_tabaqa = index.pi("impossible", "after");
+    let gap_older = index.pi("impossible", "before");
+    let gap_death = index.pi("impossible", "death_years");
     let mut dropped = 0;
     for _ in 0..results.len() {
         let mut bad = None;
@@ -1583,6 +1693,86 @@ pub struct Linked {
     pub links: usize,
     pub identified: usize,
     pub note: String,
+}
+
+/// `_stamp`: what the links were identified by — this matcher, these narrators, this parser, the guesses on or
+/// off, the rules changed from their defaults (Tools → Narrator Identification).
+pub fn stamp(conn: &Connection) -> rusqlite::Result<String> {
+    let changed = rules::stored(conn);
+    Ok(format!(
+        "{}|{}|{}{}{}",
+        m().id,
+        persons_now(conn)?,
+        tables().parser_id,
+        if guesses_on(conn) { "|guess" } else { "" },
+        if changed.is_empty() {
+            String::new()
+        } else {
+            format!("|rules:{changed}")
+        }
+    ))
+}
+
+/// `set_rules`: keep the ways of identifying and their parameters, and identify every chain's narrators again.
+pub fn set_rules(conn: &Connection, r: &Rules, say: &dyn Fn(&str)) -> Result<Linked, String> {
+    rules::save(conn, r).map_err(|x| x.to_string())?;
+    link_narrators(conn, say, true)
+}
+
+/// `_evidence`: the evidence drawn from all the chains of one road together, in this order; each way counted.
+fn evidence(pairs: &mut [Chain], index: &Index) {
+    let r = &index.rules;
+    let neighbours = |pairs: &mut [Chain]| {
+        if index.on("neighbours") {
+            index.count("neighbours", by_neighbours(pairs, r));
+        }
+    };
+    let relatives = |pairs: &mut [Chain]| -> i64 {
+        if index.on("father") {
+            by_relatives(pairs, index)
+        } else {
+            0
+        }
+    };
+    if !index.guess {
+        relatives(pairs);
+        return;
+    }
+    neighbours(pairs);
+    if !index.famous.is_empty() {
+        let n = by_famous(pairs, &index.famous, r);
+        index.count("famous", n);
+        if n > 0 {
+            neighbours(pairs);
+        }
+    }
+    if relatives(pairs) > 0 {
+        neighbours(pairs);
+    }
+    let n = if index.on("one_side") {
+        by_one_side(pairs, r)
+    } else {
+        0
+    };
+    index.count("one_side", n);
+    if n > 0 {
+        neighbours(pairs);
+        if relatives(pairs) > 0 {
+            neighbours(pairs);
+        }
+    }
+    let n = if index.on("father_pair") {
+        by_father_pair(pairs, index)
+    } else {
+        0
+    };
+    index.count("father_pair", n);
+    if n > 0 {
+        neighbours(pairs);
+        if relatives(pairs) > 0 {
+            neighbours(pairs);
+        }
+    }
 }
 
 /// `link_narrators`: identify the narrators of every chain read from the texts.
@@ -1636,13 +1826,8 @@ pub fn link_narrators(
     )
     .map_err(e)?;
     let guess = guesses_on(conn);
-    let stamp = format!(
-        "{}|{}|{}{}",
-        m().id,
-        persons_now(conn).map_err(e)?,
-        tables().parser_id,
-        if guess { "|guess" } else { "" }
-    );
+    let in_force = rules::load(conn);
+    let stamp = stamp(conn).map_err(e)?;
     let row: Option<String> = conn
         .query_row(
             "SELECT value FROM core_meta WHERE key = 'narrator_matcher'",
@@ -1733,7 +1918,10 @@ pub fn link_narrators(
     for (isnad_id, reaches, collection, tradition) in &chains {
         let road = if tradition == "shia" { "shia" } else { "sunni" }.to_string();
         if !indexes.contains_key(&road) {
-            indexes.insert(road.clone(), Index::new(&tx, &road, guess).map_err(e)?);
+            indexes.insert(
+                road.clone(),
+                Index::new(&tx, &road, guess, in_force.clone()).map_err(e)?,
+            );
         }
         let empty = vec![];
         let links = links_of.get(isnad_id).unwrap_or(&empty);
@@ -1754,31 +1942,7 @@ pub fn link_narrators(
         order.push((*isnad_id, road, done[slot].1.len() - 1));
     }
     for (road, pairs) in done.iter_mut() {
-        let index = &indexes[road.as_str()];
-        if !guess {
-            // the rijal works' words alone: a father read from a son identified by them, nothing guessed
-            by_relatives(pairs, index);
-            continue;
-        }
-        by_neighbours(pairs);
-        if !index.famous.is_empty() && by_famous(pairs, &index.famous) > 0 {
-            by_neighbours(pairs);
-        }
-        if by_relatives(pairs, index) > 0 {
-            by_neighbours(pairs);
-        }
-        if by_one_side(pairs) > 0 {
-            by_neighbours(pairs);
-            if by_relatives(pairs, index) > 0 {
-                by_neighbours(pairs);
-            }
-        }
-        if by_father_pair(pairs, index) > 0 {
-            by_neighbours(pairs);
-            if by_relatives(pairs, index) > 0 {
-                by_neighbours(pairs);
-            }
-        }
+        evidence(pairs, &indexes[road.as_str()]);
     }
     let (mut total, mut identified) = (0, 0);
     {
@@ -1788,7 +1952,10 @@ pub fn link_narrators(
         for (isnad_id, road, k) in &order {
             let slot = done.iter().position(|(r, _)| r == road).unwrap();
             let results = &mut done[slot].1[*k].results;
-            drop_impossible(results, &indexes[road.as_str()]);
+            let index = &indexes[road.as_str()];
+            if index.on("impossible") {
+                index.count("impossible", drop_impossible(results, index));
+            }
             let empty = vec![];
             let links = links_of.get(isnad_id).unwrap_or(&empty);
             for ((position, _), (pid, conf, count)) in links.iter().zip(results.iter()) {
@@ -1805,6 +1972,24 @@ pub fn link_narrators(
         [&stamp],
     )
     .map_err(e)?;
+    if !only_new {
+        // how many links each way decided (Tools → Narrator Identification): the whole database identified now
+        let found: BTreeMap<String, BTreeMap<String, i64>> = indexes
+            .iter()
+            .map(|(road, ix)| {
+                (
+                    road.clone(),
+                    ix.counts
+                        .borrow()
+                        .iter()
+                        .filter(|(_, n)| **n != 0)
+                        .map(|(k, n)| (k.clone(), *n))
+                        .collect(),
+                )
+            })
+            .collect();
+        rules::save_counts(&tx, &found).map_err(e)?;
+    }
     tx.commit().map_err(e)?;
     crate::log::info(
         "narrators",
