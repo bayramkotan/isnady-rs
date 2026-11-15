@@ -58,8 +58,13 @@ jobs:
       # the Python isnady of the same tag, released just before (parity.py's first case checks the two numbers agree)
       isnady: ${{ inputs.tag || github.ref_name }}
 
+  checks:
+    # the style, the lints and the tests on the three systems (checks.yml), beside the comparison
+    needs: check
+    uses: ./.github/workflows/checks.yml
+
   build:
-    needs: parity
+    needs: [parity, checks]
     name: build (${{ matrix.name }})
     strategy:
       fail-fast: true

@@ -1,13 +1,11 @@
 name: CI
 
-# Every push to main and every pull request: the style and lints, the tests on the three systems, the three crates
-# packaged as crates.io would take them, the window bundled on the three systems as a release bundles it, and the
-# comparison with the Python isnady's main (parity.yml). A newer push to the same branch cancels the run before it.
-# A release commit (its title vX.Y.Z: …) is left to the Release workflow its tag starts, which tests, compares and
-# builds the same commit: pushed to main it does nothing here.
+# A pull request, or by hand (Actions → CI → Run workflow): the style and lints and the tests on the three systems
+# (checks.yml), the three crates packaged as crates.io would take them, the window bundled on the three systems as a
+# release bundles it, and the comparison with the Python isnady's main (parity.yml). A push to main starts nothing:
+# a release is checked once, by the Release workflow its tag starts (release.yml), as in the Python isnady — until
+# 2026-11-15 a release commit pushed to main started a CI run whose jobs were all skipped beside it.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -23,63 +21,10 @@ env:
   LINUX_LIBS: libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
 
 jobs:
-  gate:
-    # a release commit's title starts with its version (vX.Y.Z:): the Release workflow checks it, not this one
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      run: ${{ steps.title.outputs.run }}
-    steps:
-      - id: title
-        env:
-          TITLE: ${{ github.event.head_commit.message }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = push ] && [[ "${TITLE%%$'\n'*}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+: ]]; then
-            echo "a release commit: the Release workflow of its tag checks it"
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  lint:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-      - name: The window's libraries
-        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
-      - uses: Swatinem/rust-cache@v2
-      - name: Style
-        run: cargo fmt --all --check
-      - name: Lints (warnings are errors)
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-
-  test:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
-    name: test (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-15]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-      - name: The window's libraries (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
-      - uses: Swatinem/rust-cache@v2
-      - name: Build
-        run: cargo build --release --locked
-      - name: Test
-        run: cargo test --release --locked
+  checks:
+    uses: ./.github/workflows/checks.yml
 
   package:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
     # what cargo publish would send, in order (the core, then iy-rs and the window)
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -94,8 +39,6 @@ jobs:
         run: cargo package --locked --workspace --no-verify && ls -l target/package/*.crate
 
   bundle:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
     # the window bundled on each system as the Release workflow bundles it, so a release never finds a broken
     # bundler first: the AppImage and the .deb, the installer, the .msi and the portable .exe, the .dmg and the .app
     name: bundle (${{ matrix.name }})
@@ -137,8 +80,6 @@ jobs:
         run: python tools/release_files.py "${{ matrix.name }}" dist && ls -l dist
 
   parity:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
     uses: ./.github/workflows/parity.yml
     with:
       isnady: main

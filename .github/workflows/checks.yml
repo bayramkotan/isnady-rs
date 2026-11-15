@@ -1,0 +1,48 @@
+name: Checks
+
+# The style, the lints and the tests on the three systems: run by the Release workflow of a tag (release.yml) beside
+# its comparison with the Python isnady, and by CI (ci.yml) for a pull request or by hand. One run per release: a push
+# to main starts nothing of its own (Bayram, 2026-11-15: "neden iki tane workflow var? … bir tanesi bitmiş ama
+# içindeki bazı kısımlar çalışmamış bile"), as in the Python isnady.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  LINUX_LIBS: libwebkit2gtk-4.1-dev librsvg2-dev libayatana-appindicator3-dev
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: The window's libraries
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
+      - uses: Swatinem/rust-cache@v2
+      - name: Style
+        run: cargo fmt --all --check
+      - name: Lints (warnings are errors)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: The window's libraries (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_LIBS
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --locked
+      - name: Test
+        run: cargo test --release --locked
