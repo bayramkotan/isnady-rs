@@ -1911,7 +1911,7 @@ fn bookmark_cmd(a: BookmarkArgs) -> ExitCode {
         }
         "remove" => {
             let ok = store.remove(a.kind.as_deref().unwrap_or(""));
-            save(&store);
+            let _ = save(&store);
             println!(
                 "{}",
                 if ok {
