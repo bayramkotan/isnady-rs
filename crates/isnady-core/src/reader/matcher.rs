@@ -200,6 +200,7 @@ impl Index {
             tiered: RefCell::new(HashSet::new()),
         };
         let mut unnamed: HashSet<i64> = HashSet::new();
+        let mut kashshi: HashSet<i64> = HashSet::new(); // al-Kashshi's men (0.8.1)
         let mut repeated: HashSet<i64> = HashSet::new();
         let mut seen_in: HashSet<(String, Vec<String>)> = HashSet::new();
         let mut stmt = conn.prepare(
@@ -231,6 +232,14 @@ impl Index {
                 .to_string();
             let tier = m().shia_tiers.get(&prefix).copied();
             ix.tier.insert(pid, tier.unwrap_or(0));
+            // 0.8.1: al-Kashshi's men — never by their father alone; a heading without his own name and his
+            // father's names no chain's man ("عمار", "ابن فضال")
+            if prefix == "kashshi" {
+                kashshi.insert(pid);
+                if !tokens(&name).iter().skip(1).any(|t| t == "بن") {
+                    unnamed.insert(pid);
+                }
+            }
             if tier.is_some() && !seen_in.insert((prefix, tokens(&name))) {
                 repeated.insert(pid);
             }
@@ -307,7 +316,7 @@ impl Index {
                     .or_default()
                     .push((pid, toks.clone(), !full_kind));
                 ix.exact.entry(toks.join(" ")).or_default().insert(pid);
-                if tradition == "shia" && full_kind {
+                if tradition == "shia" && full_kind && !kashshi.contains(&pid) {
                     if let Some(i) = toks.iter().skip(1).position(|t| t == "بن").map(|i| i + 1) {
                         ix.names.entry("بن".into()).or_default().push((
                             pid,

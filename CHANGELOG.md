@@ -3,6 +3,27 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.8.1] — 2026-11-23
+
+- **As the Python isnady 0.8.1 — al-Kashshi's book of men, the third pillar of Imami rijal (Bayram, 2026-11-23: "Keşşî ricâli").** al-Tusi's
+  selection from al-Kashshi, *Ikhtiyar Ma'rifat al-Rijal* (OpenITI, Shia002932), in isnady-data and in the catalog
+  beside al-Najashi and al-Tusi (format `kashshi`): 431 sections, each with the reports about the men its heading
+  names, numbered through the book (1 … 1151), readable in Books; 498 men, each with the reports as al-Kashshi's
+  words on his page. al-Kashshi gives reports, not a grade: no rank is read from them.
+- **The men are read from the heading as it is written, nothing added:** the heading without "في" / "ما روى في", up
+  to a word that begins to describe ("وهو", "صاحب", "أيضا" …) or a comma; several men joined by "و" one by one ("وهب"
+  is a name, and after "بن", "أبي" or "عبد" a word in و belongs to the name: "عامر بن واثلة"); each up to a word that
+  names a kinsman instead ("ابنه", "أخيه", "ابني" …). A heading about a group (the Zaydiyya, the Waqifa, "بنو ذودان",
+  "تسمية الفقهاء") names no one; an empty heading after the end of a part continues the man before it.
+- **The Shia chains read with it, last:** a name is looked up in al-Najashi, then al-Tusi's Fihrist, then his Rijal,
+  then al-Kashshi; and only a heading that gives a man with his father ("زرارة بن أعين", "أبى الجارود زياد بن
+  المنذر") names a chain's man — a bare heading ("عمار", "حذيفة", "ابن فضال") says whom that section is about, never
+  who a name of a chain is, and al-Kashshi's men are never looked up by their father alone. On the full isnady-data
+  630 more links are identified (Abu Hamza al-Thumali, Abu al-Jarud, Abu Khadija, Abu al-Sabbah al-Kinani, 'Abd
+  al-Rahman b. Abi 'Abd Allah …), none lost and none changed but one father read from his son's nasab (Umar b.
+  Yazid Bayya' al-Sabiri): 401,549 of 757,548 links with the guesses off.
+- The two programs read al-Kashshi the same and write the same rows on the full isnady-data, with the guesses off and on; eight new parity cases.
+
 ## [0.8.0] — 2026-11-15
 
 - **Tools → Narrator Identification: how isnady identifies the narrators, every way of it with its parameters

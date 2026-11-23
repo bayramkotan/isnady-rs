@@ -19,6 +19,10 @@ import subprocess
 import sys
 import tempfile
 
+# al-Kashshi as OpenITI keeps it (isnady-data copies the same text)
+KASHSHI_URL = ("https://raw.githubusercontent.com/OpenITI/0475AH/master/data/0460ShaykhTusi/"
+               "0460ShaykhTusi.IkhtiyarMacrifatRijal/0460ShaykhTusi.IkhtiyarMacrifatRijal.Shia002932VolsBK1-ara1.mARkdown")
+
 CASES = [
     ["version"],
     ["datadir"],
@@ -303,6 +307,15 @@ CASES = [
     ["narrator-rules", "reset", "teacher"],
     ["narrator-rules", "reset"],
     ["narrator-rules"],
+    # al-Kashshi's book of men (0.8.1): read the same, its men the same, the Shia chains read with it the same
+    ["import", "kashshi", "/nonexistent/kashshi.md"],
+    ["import", "kashshi", KASHSHI_URL],
+    ["book", "kashshi", "1", "--limit", "5"],
+    ["narrator", "زرارة بن أعين", "--tradition", "shia"],
+    ["narrator", "أبي الجارود", "--tradition", "shia"],
+    ["chain", "sifat-shia", "1"],
+    ["chain", "sifat-shia", "20"],
+    ["narrator-rules"],
 ]
 
 TIME = re.compile(r" in \d+ ms")
@@ -316,6 +329,9 @@ SAVED = re.compile(r"  \((?:from .*|computed and saved)\)$", re.M)
 # runs it on its own copy of the data folder, in which every book not here is set aside as removed by the reader
 # except one small one (al-Dehlawi's forty, 12 KB): both import the same book, and "removed" is used.
 ALONE = {("catalog", "update"): "isnady:al_arbain_shah_waliullah_al_dehlawi"}
+# (al-Kashshi imported again into the data the Python isnady has just changed would find its narrators matched
+# already: each program imports it into its own copy — the data itself has it from parity.yml)
+ALONE_AS_IS = {("import", "kashshi")}
 SET_ASIDE = """import sys
 from isnady.core import catalog
 from isnady.data import db
@@ -333,7 +349,8 @@ def alone(cmd: list[str], args: list[str], env: dict, keep: str) -> tuple[int, s
     with tempfile.TemporaryDirectory(prefix="parity-") as d:
         shutil.copytree(data, d, dirs_exist_ok=True)
         own = dict(env, ISNADY_DATA_DIR=d)
-        subprocess.run([sys.executable, "-c", SET_ASIDE, keep], env=own, check=True)
+        if keep:
+            subprocess.run([sys.executable, "-c", SET_ASIDE, keep], env=own, check=True)
         return run(cmd, args, own)
 
 
@@ -355,7 +372,7 @@ def main() -> int:
     same = 0
     for case in CASES:
         keep = ALONE.get(tuple(case))
-        if keep:
+        if keep or tuple(case[:2]) in ALONE_AS_IS and len(case) > 2 and not case[2].startswith("/nonexistent"):
             (pc, pout), (rc, rout) = alone(py, case, env, keep), alone(rs, case, env, keep)
         else:
             pc, pout = run(py, case, env)

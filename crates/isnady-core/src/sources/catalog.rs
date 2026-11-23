@@ -92,6 +92,7 @@ pub fn entry_from_catalog(raw: &Value, repo_id: &str, base: &str) -> Option<Entr
         "najashi" => Some(("openiti-najashi", "al-Najashi, Rijal")),
         "tusi_rijal" => Some(("openiti-tusi-rijal", "al-Tusi, Rijal")),
         "tusi_fihrist" => Some(("openiti-tusi-fihrist", "al-Tusi, al-Fihrist")),
+        "kashshi" => Some(("openiti-kashshi", "al-Kashshi, Ikhtiyar Ma'rifat al-Rijal")),
         _ => None,
     };
     let mut source_key = nonempty(raw, "source_key");

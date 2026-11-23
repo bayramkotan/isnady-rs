@@ -5,13 +5,13 @@ folder, the database, the settings, the recent searches and the version number. 
 of isnady-rs with the same number. This table says what the Rust one does so far. Whatever it does not do yet, the
 Python `iy` does on the same data.
 
-**Version 0.8.0** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
+**Version 0.8.1** · ✅ the same as the Python isnady (checked by `tools/parity.py`, word for word) · ⏳ not yet: use `iy`
 
 ## Command line
 
 | Command (Python `iy …`) | isnady-rs (`iy-rs …`) | Notes |
 |---|---|---|
-| `iy -V`, `iy version` | ✅ | prints `isnady 0.8.0 (Rust)` |
+| `iy -V`, `iy version` | ✅ | prints `isnady 0.8.1 (Rust)` |
 | `iy datadir` (show) | ✅ | `ISNADY_DATA_DIR`, a portable `isnady-data` folder, `location.json`, the platform default. Same order as Python. |
 | `iy datadir PATH` (move) | ✅ | `--as-is`, `--default`; the data copied there (the old folder kept) and location.json written as Python writes it |
 | `iy config list, get, set, reset` | ✅ | every setting with its default; validated as `config.validate` validates it; settings.json written as Python writes it |
@@ -44,6 +44,7 @@ Python `iy` does on the same data.
 | narrator identity (0.7.7): the father from the son's nasab, the son with his father, the bare names by their neighbours | ✅ | the same weighing of the father's entry, the same pairs of son and father, the same *tamyiz al-muhmal* (read from data/isnad_parser.json) — on the full isnady-data every table the same, 758,849 links with the same narrator, confidence and candidates |
 | `iy guess [on\|off]`, Tools → Narrator Guesses (isnady's Own Inference); the narrators by the rijal works' words alone by default (0.7.8) | ✅ | the same words, the same dialog; with the guesses off and on every table the same on the full isnady-data; each guessed narrator marked "≟ isnady's guess" in the chain, its reason in the tip |
 | `iy narrator-rules [set … \| reset …]`, Tools → Narrator Identification: every way of identifying, its parameters and what it decided (0.8.0) | ✅ | the same words, the same dialog; the values kept in the database and read by both; with the defaults and with the ways changed every table the same on the full isnady-data |
+| al-Kashshi's *Ikhtiyar* (`iy import kashshi`, the catalog), its men and the Shia chains read with it (0.8.1) | ✅ | the same sections, men, reports and links on the full isnady-data, guesses off and on |
 | `iy catalog list, updates, languages, remove, add, delete` | ✅ | each book by kind and road with what of it is imported; what is new or changed in the repository (the same imported.json); a language taken out of every book; user_sources.json written as Python writes it |
 | `iy catalog import [ID \| --all]`, `update`, `languages add`, `iy import FORMAT LOCATION`, `iy quran download`, `iy quran editions` | ✅ every format: `isnady`, `isnady-sahifa`, `taqrib`, `najashi`, `openiti-work` (with the entries the written lives quote, sources/siyar.db and tadhkira.db), `isnady-quran` (sources/quran.db), `fawazahmed0`, `table` (CSV or JSON, in parts) | with `--language`, `--repo`, the credentials (asked, never stored), the repository's moved book and the origin when its copy cannot be read, the books downloaded ahead, the note of an import cut short; then the search index, the chains and the narrators once (the years of death read again when the rule changed, `rijal.fix_death_years`). Imported by both into empty folders, every table is the same row for row, the databases beside it too, and imported.json (`tools/parity_db.py --import`): the whole of isnady-data in Arabic (49 sources, 371,319 of 524,826 links identified), books of fawazahmed0, hadith-json, Thaqalayn, LK and Open-Hadith-Data |
 | `iy bookmark list, folders, add, remove, export, import` | ✅ | `--folder`, `--title`, `--note`; the same bookmarks.json |

@@ -544,7 +544,7 @@ pub fn read(conn: &Connection, person_id: i64, langs: Langs) -> Option<Life> {
     let work = who.key.split(':').next().unwrap_or("");
     let mut sources = vec![
         source_name(
-            if shia && ["najashi", "tusi_fihrist", "tusi_rijal"].contains(&work) {
+            if shia && ["najashi", "tusi_fihrist", "tusi_rijal", "kashshi"].contains(&work) {
                 work
             } else if shia {
                 "najashi"

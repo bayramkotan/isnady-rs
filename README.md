@@ -3,7 +3,7 @@
 <h1 align="center">isnady-rs — isnady in Rust</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/isnady--rs-v0.8.0-1D4777?style=for-the-badge&logo=rust" alt="version">
+  <img src="https://img.shields.io/badge/isnady--rs-v0.8.1-1D4777?style=for-the-badge&logo=rust" alt="version">
   <a href="https://crates.io/crates/isnady"><img src="https://img.shields.io/crates/v/isnady?style=for-the-badge&logo=rust&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/bayramkotan/isnady-rs/releases/latest"><img src="https://img.shields.io/github/v/release/bayramkotan/isnady-rs?style=for-the-badge&label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/licence-MIT-5B6878?style=for-the-badge" alt="MIT">
@@ -13,7 +13,7 @@
 database, the same settings and the same version number, and it gives the same answers. That is why this README is
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
-**Version 0.8.0 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
+**Version 0.8.1 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
 of `iy-rs` with the same options and the same output, word for word; every page, menu, dialog, theme and language of the
 Python window is in the window `isnady-rs`. The two programs import the same books into the same rows, read the same
 chains, identify the same narrators, learn the same meaning index (array for array), export the same files and take the
@@ -44,12 +44,12 @@ download`): everything already read, in one download.
 
 <p align="center">
   <a href="https://pypi.org/project/isnady/">
-    <img src="https://img.shields.io/badge/PyPI-v0.8.0-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-v0.8.1-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/isnady?style=for-the-badge&color=A47E24&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-5B6878?style=for-the-badge" alt="Platform">
   <a href="https://www.npmjs.com/package/isnady">
-    <img src="https://img.shields.io/badge/npm-v0.8.0-14304F?style=for-the-badge&logo=npm" alt="npm">
+    <img src="https://img.shields.io/badge/npm-v0.8.1-14304F?style=for-the-badge&logo=npm" alt="npm">
   </a>
   <a href="https://github.com/bayramkotan/isnady-data">
     <img src="https://img.shields.io/badge/data-isnady--data-2E6B4F?style=for-the-badge&logo=github" alt="isnady-data">
@@ -84,7 +84,7 @@ download`): everything already read, in one download.
   <img src="https://raw.githubusercontent.com/bayramkotan/isnady/main/assets/screenshots/search-arabic.png" alt="Searching النيات finds بالنيات in Sahih al-Bukhari 1, with the chain above the text" width="850">
 </p>
 
-> **Pre-alpha (0.8.0).** Search, chains of transmission, narrators, books, scholars, statistics and
+> **Pre-alpha (0.8.1).** Search, chains of transmission, narrators, books, scholars, statistics and
 > the glossary work today, Sunni and Shia, on data you import in one click. Everything is built in
 > the open, one piece at a time.
 
@@ -262,8 +262,9 @@ administrator prompt on Windows). If an old copy starts even for `iy update`, ru
    the languages you want and press **Import** — or **Import all**. **Languages for every book** adds a language to
    all the books that have it (or takes it out of all of them) in one step. Later, **⟳ Get updates** brings in only
    what is new or changed in the repository.
-3. **Import the narrators too** — Ibn Hajar's *Taqrib* for the Sunni books, al-Najashi's *Rijal* and
-   al-Tusi's *Fihrist* and *Rijal* for the Shia books — and every name in every chain is matched to its narrator.
+3. **Import the narrators too** — Ibn Hajar's *Taqrib* for the Sunni books, al-Najashi's *Rijal*,
+   al-Tusi's *Fihrist* and *Rijal* and al-Kashshi's *Ikhtiyar* for the Shia books — and every name in every chain is
+   matched to its narrator.
 4. **Search**, open a chain, open a narrator, read a book.
 
 The same from the command line:
@@ -309,14 +310,14 @@ repository added to a book that you read in your other books. Nothing else is re
 | 📜 **Written sources** | 6 Sunni (the Sahifa of Hammam b. Munabbih 138, al-Sahifa al-Sadiqa 253, the sahifa of 'Ali, Abu Bakr's letter on zakat, the letter for 'Amr b. Hazm, writing in the chains) and 4 Shia (the Book of 'Ali, al-Jami'a, Mushaf Fatima as the Shia books relate it, the letters to the Imams) — each a list of where its hadith stand in the collections | Books, as a book of its own; Written sources |
 | 🕌 **Sira** | Ibn Hisham, *al-Sira al-Nabawiyya* (from Ibn Ishaq) — 264 chapters, 2,109 sections | Books, chapter by chapter |
 | 👥 **Tabaqat** | al-Dhahabi, *Siyar A'lam al-Nubala'* (5,851 lives) and *Tadhkirat al-Huffaz* (1,176 huffaz in 21 generations) | Books; the text beside a narrator's written life; Hadith Scholars → Huffaz |
-| ⚖ **Rijal** | Ibn Hajar, *Taqrib al-Tahdhib* (8,824) · al-Najashi, *Rijal* (1,269) · al-Tusi, *al-Fihrist* (910) and *Rijal* (6,429) | Narrators, and every chain's narrators identified |
+| ⚖ **Rijal** | Ibn Hajar, *Taqrib al-Tahdhib* (8,824) · al-Najashi, *Rijal* (1,269) · al-Tusi, *al-Fihrist* (910) and *Rijal* (6,429) · al-Kashshi, *Ikhtiyar Ma'rifat al-Rijal* (498 men) | Narrators, and every chain's narrators identified |
 
 The hadith collections, Sunni and Shia apart:
 
 | | Sunni | Shia |
 |---|---|---|
 | **Hadith collections** | **17 books, 76,132 hadith.** Sahih al-Bukhari, Sahih Muslim, Sunan Abi Dawud, Jami' al-Tirmidhi, Sunan al-Nasa'i, Sunan Ibn Majah, the Muwatta — Arabic and up to eight translations (English, Turkish, Urdu, Indonesian, Bengali, French, Russian, Tamil), graded by al-Albani, Shu'ayb al-Arna'ut, Zubair 'Ali Za'i and others · the Forty of al-Nawawi, Forty Hadith Qudsi, the Forty of Shah Waliullah · Musnad Ahmad ibn Hanbal (26,363) and Sunan al-Darimi, fully voweled · Riyad al-Salihin, al-Shama'il al-Muhammadiyya, Bulugh al-Maram, al-Adab al-Mufrad, Mishkat al-Masabih, Arabic and English | **16 books, 23,614 hadith.** al-Kulayni's **al-Kafi** (8 volumes, 14,241 hadith, al-Majlisi's grade on nearly every one, al-Behbudi's selection) · al-Saduq's 'Uyun Akhbar al-Rida, al-Amali, al-Khisal, al-Tawhid, Ma'ani al-Akhbar, Thawab al-A'mal, Sifat al-Shi'a, Fada'il al-Shi'a · al-Mufid's al-Amali · Ibn Qulawayh's Kamil al-Ziyarat · al-Nu'mani's and al-Tusi's Kitab al-Ghayba · al-Ahwazi's al-Mu'min and al-Zuhd · al-Muhsini's Mu'jam al-Ahadith al-Mu'tabara — Arabic and English |
-| **Narrators** | Ibn Hajar, *Taqrib al-Tahdhib* — 8,824 narrators: verdict, rank of twelve, tabaqa, death year, book marks | al-Najashi, *Rijal* — 1,269 authors and narrators; al-Tusi, *al-Fihrist* — 910 authors, and *Rijal* — 6,429 companions of the Prophet and the Imams: reliability and creed in the Imami terms |
+| **Narrators** | Ibn Hajar, *Taqrib al-Tahdhib* — 8,824 narrators: verdict, rank of twelve, tabaqa, death year, book marks | al-Najashi, *Rijal* — 1,269 authors and narrators; al-Tusi, *al-Fihrist* — 910 authors, and *Rijal* — 6,429 companions of the Prophet and the Imams: reliability and creed in the Imami terms; al-Kashshi, *Ikhtiyar Ma'rifat al-Rijal* — 498 men with the reports about them |
 
 ### How it is laid out
 
@@ -429,7 +430,7 @@ repository with an isnady catalog, a Hugging Face dataset, a URL or a folder (`i
 | [LK Hadith Corpus](https://github.com/ShathaTm/LK-Hadith-Corpus) | the six books, isnad and matn marked apart | not stated |
 | [meeAtif/hadith_datasets](https://huggingface.co/datasets/meeAtif/hadith_datasets) (Hugging Face) | the six books, Arabic + English | MIT (as declared) |
 | [Hadith-Data-Sets](https://github.com/abdelrahmaan/Hadith-Data-Sets) | the nine books, Arabic | not stated |
-| [OpenITI](https://github.com/OpenITI) | the Taqrib, al-Najashi's Rijal, al-Tusi's Fihrist and Rijal | not stated |
+| [OpenITI](https://github.com/OpenITI) | the Taqrib, al-Najashi's Rijal, al-Tusi's Fihrist and Rijal, al-Kashshi's Ikhtiyar | not stated |
 
 Every source records a licence **tier** — **A** may be redistributed, **B** under its conditions,
 **C** may not — and **Help → Licences** lists them all. Any CSV or JSON table of hadith can be read
@@ -520,8 +521,10 @@ above its text.
 ### 👤 Who each narrator is
 
 Every name in a chain is matched to a narrator of its own tradition's rijal work — the *Taqrib*
-for a Sunni book, al-Najashi for a Shia book (then al-Tusi's *Fihrist*, then his *Rijal*, for the men al-Najashi
-does not have: a man found in an earlier book is that book's entry). A name is linked only when the evidence leaves one
+for a Sunni book, al-Najashi for a Shia book (then al-Tusi's *Fihrist*, then his *Rijal*, then al-Kashshi's
+*Ikhtiyar*, for the men al-Najashi does not have: a man found in an earlier book is that book's entry). al-Kashshi
+(0.8.1) is a book of sections, each with the reports about the men its heading names: the men are read from the
+heading as written, and a heading that does not give a man with his father ("عمار", "ابن فضال") names no chain's man. A name is linked only when the evidence leaves one
 person: the words of the name, the book marks (a narrator in al-Bukhari must be one Ibn Hajar marks
 خ), the order of generations along the chain, the last link before the Prophet being a Companion,
 and — in al-Kafi — al-Kulayni's own teachers at the head of his chains. When several narrators
@@ -632,7 +635,7 @@ isnady derives is reached along the road of the book's own tradition.
 | How a chain opens | a transmission term on every link (حدثنا، أخبرنا، عن …) | al-Kulayni names his teacher without a term (علي بن إبراهيم عن أبيه …) |
 | Groups and joined roads | two narrators at one link (qiran) | "عدة من أصحابنا" — al-Kulayni's groups, shown with the teachers he said they stand for; "… جميعاً عن …", two roads joined; "رفعه"; "عن رجل"; "عنه" |
 | Where it ends | the Prophet ﷺ | one of the Fourteen Ma'sumun: the Prophet ﷺ or an Imam, most often by his kunya — أبو عبد الله is Ja'far al-Sadiq, أبو جعفر al-Baqir, أبو الحسن al-Kazim or al-Rida; "سألته" is *mudmar* |
-| Who identifies its narrators | Ibn Hajar's *Taqrib al-Tahdhib* | only the Shia rijal works: al-Najashi's *Rijal*, then al-Tusi's *Fihrist* and *Rijal* |
+| Who identifies its narrators | Ibn Hajar's *Taqrib al-Tahdhib* | only the Shia rijal works: al-Najashi's *Rijal*, then al-Tusi's *Fihrist* and *Rijal*, then al-Kashshi's *Ikhtiyar* |
 | How a narrator is judged | Ibn Hajar's twelve ranks | the Imami critics' own terms — **reliability** (*thiqa*; praised — *jalil*, *wajh*, *'ayn*; weak) and **creed** (Imami, or Waqifi, Fathi, Zaydi, *'ammi* …): an Imami *thiqa*, a praised narrator (*mamduh*), a *thiqa* of another school (*muwaththaq*), a weak one |
 | Whose grades | al-Albani, Shu'ayb al-Arna'ut, Zubair 'Ali Za'i … | al-Majlisi (*Mir'at al-'Uqul*), al-Behbudi (*Sahih al-Kafi*) … |
 
@@ -1594,8 +1597,8 @@ iy reset settings                    # back to zero: settings, books or all (--y
 
 ## 🗺️ Roadmap
 
-- **Shia narrators, further** — al-Tusi's *Rijal* and *Fihrist* and al-Kashshi's reports; names
-  resolved by teacher and student; a Sunni–Shia comparison.
+- **Shia narrators, further** — the same man across al-Najashi, al-Tusi and al-Kashshi side by side; a Sunni–Shia
+  comparison.
 - **More in isnady-data** — al-Tusi's *Tahdhib al-Ahkam* and *al-Istibsar*, al-Saduq's *Man la
   yahduruhu al-faqih*; al-Hakim's *Mustadrak*, al-Bayhaqi's *Sunan*, the *Mu'jam*s.
 - **Narrators** — the other half of the names identified through teachers and students (al-Mizzi's

@@ -954,3 +954,322 @@ pub fn by_profile(
     say(&summary);
     Ok(report)
 }
+
+// ------------------------------------------------------------------------------------------------- al-Kashshi
+// 0.8.1: al-Tusi's selection from al-Kashshi's book of men (`KashshiImporter` of openiti_rijal.py): sections
+// ("### |") about one man or several, each with the reports about them; the men read from the heading as written.
+
+const KASHSHI_TITLE: &str = "Ikhtiyar Ma'rifat al-Rijal — al-Kashshi";
+const KASHSHI_TITLE_AR: &str = "اختيار معرفة الرجال (رجال الكشي)";
+const KASHSHI_KEY: &str = "openiti-kashshi";
+const KASHSHI_NAME: &str = "al-Kashshi, Ikhtiyar Ma'rifat al-Rijal (OpenITI)";
+const KASHSHI_OPENINGS: [&str; 3] = ["ما روى في ", "ما روي في ", "في "];
+const KASHSHI_GROUPS: [&str; 14] = [
+    "ابنا",
+    "بنو",
+    "بنى",
+    "بني",
+    "اخوة",
+    "إخوة",
+    "أصحاب",
+    "اصحاب",
+    "تسمية",
+    "السبعين",
+    "الزهاد",
+    "ومن",
+    "الغلات",
+    "الغلاة",
+];
+const KASHSHI_TAIL: [&str; 27] = [
+    "وهو",
+    "وكان",
+    "وكانا",
+    "صاحب",
+    "المعروف",
+    "ويعرف",
+    "ولقبه",
+    "اسمه",
+    "وقيل",
+    "ويقال",
+    "أيضا",
+    "بعد",
+    "رحمه",
+    "واحتجاج",
+    "ودعوة",
+    "وذكر",
+    "وسبب",
+    "وكلامه",
+    "وغيره",
+    "وغيرهما",
+    "وغيرهم",
+    "منهم",
+    "من",
+    "رحمهما",
+    "رحمهم",
+    "عليه",
+    "عليهم",
+];
+const KASHSHI_KIN: [&str; 14] = [
+    "ابني",
+    "ابنا",
+    "ابنه",
+    "وابنه",
+    "أخيه",
+    "أخويه",
+    "اخوته",
+    "واخوته",
+    "إخوته",
+    "أخوه",
+    "موليان",
+    "القميين",
+    "الكوفيين",
+    "الأهوازيين",
+];
+const W_NAMES: [&str; 16] = [
+    "وهب",
+    "وهيب",
+    "وكيع",
+    "واصل",
+    "وردان",
+    "وضاح",
+    "وائل",
+    "وابصة",
+    "وحشي",
+    "ورقاء",
+    "وثيمة",
+    "وزير",
+    "وليد",
+    "وداعة",
+    "وبرة",
+    "وصيف",
+];
+const PARTICLES: [&str; 8] = ["بن", "بنت", "ابن", "أبو", "أبي", "أبى", "ابو", "ابي"];
+
+/// The men a section of al-Kashshi is about, as its heading writes them (`kashshi_names`).
+pub fn kashshi_names(heading: &str) -> Vec<String> {
+    let h = pre!(r"ms\d+|PageV\d+P\d+").sub(heading, " ");
+    let h = pre!(r"\([^)]*\)?").sub(&h, " ");
+    let h = pre!(r"\s+").sub(&h, " ");
+    let mut h: &str = pyre::strip(&h, " |.،,:");
+    for opening in KASHSHI_OPENINGS {
+        if let Some(rest) = h.strip_prefix(opening) {
+            h = rest;
+            break;
+        }
+    }
+    let head = split1(pre!(r"[،,]"), h).swap_remove(0);
+    let mut words: Vec<&str> = pyre::split(&head);
+    if words.is_empty()
+        || KASHSHI_GROUPS.contains(&words[0])
+        || (words.len() == 1
+            && words[0].starts_with("ال")
+            && (words[0].ends_with("ية") || words[0].ends_with('ة') || words[0].ends_with("ات")))
+    {
+        return vec![];
+    }
+    if let Some(i) = words.iter().position(|w| KASHSHI_TAIL.contains(w)) {
+        words.truncate(i);
+    }
+    let mut parts: Vec<Vec<String>> = vec![vec![]];
+    for w in words {
+        let last = parts.last().unwrap();
+        // (after "بن", "أبي", "عبد" a word in و is the name itself: "عامر بن واثلة")
+        if w.starts_with('و')
+            && pyre::len(w) > 1
+            && !W_NAMES.contains(&w)
+            && !KASHSHI_KIN.contains(&w)
+            && !last.is_empty()
+            && !(PARTICLES.contains(&last.last().unwrap().as_str())
+                || last.last().unwrap() == "عبد")
+        {
+            parts.push(vec![pyre::from(w, 1).to_string()]);
+        } else {
+            parts.last_mut().unwrap().push(w.to_string());
+        }
+    }
+    let mut out: Vec<String> = vec![];
+    for mut part in parts {
+        if let Some(i) = part.iter().position(|w| KASHSHI_KIN.contains(&w.as_str())) {
+            part.truncate(i);
+        }
+        while part.last().is_some_and(|w| PARTICLES.contains(&w.as_str())) {
+            part.pop();
+        }
+        let name = pyre::strip(&part.join(" "), " .").to_string();
+        if !name.is_empty() && !out.contains(&name) {
+            out.push(name);
+        }
+    }
+    out
+}
+
+/// A section of al-Kashshi (`read_kashshi`).
+pub struct Section {
+    pub number: i64,
+    pub heading: String,
+    pub names: Vec<String>,
+    pub text: String,
+}
+
+/// The sections in their order; an empty heading after the end of a part is the section before it going on; the
+/// end of a part (PARATEXT) is a section about no one (`read_kashshi`).
+pub fn read_kashshi(text: &str) -> Vec<Section> {
+    struct Raw {
+        heading: String,
+        paratext: bool,
+        lines: Vec<String>,
+    }
+    let mut out: Vec<Raw> = vec![];
+    let mut current: Option<usize> = None;
+    let mut started = false;
+    for line in text.split('\n') {
+        if !started {
+            started = line.starts_with("#META#Header#End#");
+            continue;
+        }
+        if let Some(m) = pre!(r"^### \|+\s*(.*)$").match_(line) {
+            let heading = pyre::strip_ws(m.g(1)).to_string();
+            if heading.is_empty() && !out.is_empty() && current.is_some_and(|c| out[c].paratext) {
+                if out.len() > 1 {
+                    current = Some(out.len() - 2); // the man before the part's end goes on
+                }
+                continue;
+            }
+            let paratext = heading.starts_with("PARATEXT");
+            out.push(Raw {
+                heading: if paratext {
+                    pyre::strip_ws(pyre::strip(&heading, "|")).to_string()
+                } else {
+                    heading
+                },
+                paratext,
+                lines: vec![],
+            });
+            current = Some(out.len() - 1);
+        } else if let Some(c) = current {
+            out[c].lines.push(line.to_string());
+        }
+    }
+    out.into_iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let number = i as i64 + 1;
+            Section {
+                number,
+                names: if r.paratext || number == 1 {
+                    vec![]
+                } else {
+                    kashshi_names(&r.heading)
+                },
+                text: clean_najashi(&r.lines.join(" ")),
+                heading: r.heading,
+            }
+        })
+        .collect()
+}
+
+/// al-Kashshi's book of men (`KashshiImporter.run`).
+pub fn kashshi(
+    conn: &Connection,
+    source: &SourceInfo,
+    say: &dyn Fn(&str),
+) -> Result<ImportReport, ImportError> {
+    say(&format!("Reading {}", source.location));
+    let text = read_text(source, None)?;
+    let sections = read_kashshi(&text);
+    if sections.len() < 300 {
+        return Err(ResourceError(format!(
+            "Only {} sections found; is this {KASHSHI_TITLE}?",
+            sections.len()
+        ))
+        .into());
+    }
+    say(&format!("{} sections", sections.len()));
+    let mut report = ImportReport {
+        source_key: KASHSHI_KEY.into(),
+        ..Default::default()
+    };
+    let tx = conn.unchecked_transaction()?;
+    let name = source
+        .name
+        .clone()
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| KASHSHI_NAME.into());
+    let source_id = source_row(&tx, KASHSHI_KEY, &name, "kashshi", source)?;
+    tx.execute("DELETE FROM persons WHERE source_id = ?", [source_id])?;
+    let mut men = 0;
+    let mut firsts: Vec<Option<i64>> = vec![];
+    for s in &sections {
+        let mut first = None;
+        for (i, man) in s.names.iter().enumerate() {
+            let pk = if i == 0 {
+                format!("kashshi:{}", s.number)
+            } else {
+                format!("kashshi:{}{}", s.number, char::from(b'a' + i as u8))
+            };
+            tx.execute(
+                "INSERT INTO persons (key, name_ar, tradition, source_id) VALUES (?, ?, 'shia', ?)",
+                params![pk, man, source_id],
+            )?;
+            let pid = tx.last_insert_rowid();
+            tx.execute(
+                "INSERT INTO person_names (person_id, name, kind, source_id) VALUES (?, ?, 'full', ?)",
+                params![pid, man, source_id],
+            )?;
+            tx.execute(
+                "INSERT OR IGNORE INTO person_roles (person_id, role) VALUES (?, 'narrator')",
+                [pid],
+            )?;
+            // the reports about him are al-Kashshi's words; no grade is read from them (rank: none)
+            tx.execute(
+                "INSERT INTO verdicts (person_id, critic_name, work, phrase, rank_scheme, rank, tradition, \
+                 madhhab, source_id) VALUES (?, ?, ?, ?, 'shia', NULL, 'shia', NULL, ?)",
+                params![pid, "al-Kashshi", KASHSHI_TITLE, clip(&s.text, 420), source_id],
+            )?;
+            first = first.or(Some(pid));
+            men += 1;
+        }
+        firsts.push(first);
+    }
+    let headings: Vec<String> = sections
+        .iter()
+        .map(|s| {
+            if s.heading.is_empty() {
+                "—".to_string()
+            } else {
+                s.heading.clone()
+            }
+        })
+        .collect();
+    let leaves: Vec<Leaf> = sections
+        .iter()
+        .zip(&firsts)
+        .zip(&headings)
+        .map(|((s, p), h)| Leaf {
+            number: s.number,
+            name: h,
+            text: &s.text,
+            person: *p,
+        })
+        .collect();
+    let mut outline = vec![Outline::Head(1, KASHSHI_TITLE_AR.to_string())];
+    outline.extend(sections.iter().map(|s| Outline::Entry(s.number)));
+    write_work(
+        &tx,
+        &outline,
+        &leaves,
+        source_id,
+        "kashshi",
+        KASHSHI_TITLE,
+        KASHSHI_TITLE_AR,
+        "kashshi",
+    )?;
+    tx.commit()?;
+    report.editions.push(KASHSHI_TITLE.into());
+    report.texts = sections.len() as i64;
+    say(&format!(
+        "{men} men in {} sections, with the reports about them (al-Kashshi gives reports, not a grade)",
+        sections.len()
+    ));
+    Ok(report)
+}

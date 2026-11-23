@@ -40,6 +40,8 @@ jobs:
           iy catalog import rijal_al_najashi_ahmad_ibn_ali_al_najashi
           iy catalog import al_fihrist_muhammad_ibn_al_hasan_al_tusi
           iy catalog import rijal_al_tusi_muhammad_ibn_al_hasan_al_tusi
+          # al-Kashshi (0.8.1), as OpenITI keeps it: isnady-data's copy is listed in the catalog after the release
+          iy import kashshi https://raw.githubusercontent.com/OpenITI/0475AH/master/data/0460ShaykhTusi/0460ShaykhTusi.IkhtiyarMacrifatRijal/0460ShaykhTusi.IkhtiyarMacrifatRijal.Shia002932VolsBK1-ara1.mARkdown
           iy search النيات > /dev/null
           iy chain nawawi 1 > /dev/null
           iy book > /dev/null
