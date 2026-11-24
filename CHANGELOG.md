@@ -3,6 +3,34 @@
 isnady-rs carries the same version number as the Python isnady (github.com/bayramkotan/isnady): each release of one
 is a release of the other. The text of each GitHub Release is taken from its section here.
 
+## [0.8.2] — 2026-11-24
+
+- **As the Python isnady 0.8.2 — the rest of the Four Books (Bayram, 2026-11-24: "Kütüb-i Erbaa kalanı").** al-Saduq's *Man La Yahduruhu
+  al-Faqih* (4 volumes) and al-Tusi's *Tahdhib al-Ahkam* (10 volumes) and *al-Istibsar* (4 volumes) in isnady-data
+  and its catalog, beside al-Kafi. thaqalayn.net does not have them, so they are read from the OpenITI corpus
+  (Shia001149, Shia001161, Shia001157), in Arabic: 5,872, 13,808 and 5,484 hadith, in 711, 341 and 908 chapters.
+  `tools/build_data_repo.py --openiti-hadith DIR` makes them.
+- **Nothing of the text is changed.** Only the corpus's page and manuscript marks and the edition's footnote numbers
+  ("(3)": the footnotes are not in the file) are taken out, and a paragraph the corpus begins after a page mark joins
+  the sentence it goes on. Each hadith keeps the edition's number: al-Faqih through the book (1 … 5920), al-Tahdhib
+  by volume ("3:1046"), al-Istibsar by volume in the order of the edition (its file keeps only the numbers within a
+  chapter); a number misread in the file ("88" for 188) is the next one. The words of al-Saduq, al-Mufid and al-Tusi
+  stay where they stand: after a hadith with it, before a chapter's first hadith as an item of their own, numbered
+  after the hadith before them ("12.1") — al-Saduq's Mashyakha is the last item of al-Faqih.
+- **Their chains (isnady-isnad-16).** al-Saduq names only the man he took a hadith from: "وروى حريز عن أبي عبد الله
+  (ع)" is now the chain Hariz → Imam al-Sadiq (it was one name, "وروى حريز"); "وسأل محمد بن مسلم أبا جعفر (ع)" is
+  Muhammad b. Muslim → Imam al-Baqir; "وفي رواية السكوني" names al-Sakuni; "وروي عن …" and "وروي أن …" name no
+  one. al-Tusi's "فأما ما رواه محمد بن يعقوب عن …", "والذي يدل على ذلك ما رواه …" and "ما أخبرني به الشيخ أيده
+  الله عن …" begin the chain at the man named. The same words in the other Shia books are read the same way
+  (al-Kafi's "ورواه محمد بن يحيى", al-Tusi's Ghayba "وروى سعد بن عبد الله").
+- **On the full isnady-data, guesses off:** al-Faqih 57.6% of its links identified (21.9% before these chains were
+  read), al-Tahdhib 50.9%, al-Istibsar 54.1% (al-Kafi 61.9%); with the guesses 68.6%, 72.9% and 75.9%. In all,
+  448,383 of 847,403 links. In the books already here 63 more links are identified and 5 lost (a father read through
+  the old, wrong first link). No way of identifying was added: who "الشيخ" is at the head of al-Tusi's chains
+  (al-Mufid), al-Kulayni's teachers after "محمد بن يعقوب", and the roads of the two Mashyakhas wait for that decision.
+- **The two programs write the same rows** on the full isnady-data with the three books, the guesses off and on;
+  thirteen new parity cases (al-Faqih and al-Istibsar are imported in the parity run).
+
 ## [0.8.1] — 2026-11-23
 
 - **As the Python isnady 0.8.1 — al-Kashshi's book of men, the third pillar of Imami rijal (Bayram, 2026-11-23: "Keşşî ricâli").** al-Tusi's

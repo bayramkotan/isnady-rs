@@ -1,4 +1,4 @@
-//! The chain reader (RS17): the Python isnady's `core/isnad.py` parser (isnady-isnad-15), word for word — the chains
+//! The chain reader (RS17): the Python isnady's `core/isnad.py` parser (isnady-isnad-16), word for word — the chains
 //! read from the Arabic texts with the same patterns (data/isnad_parser.json, written from the Python isnady), the
 //! same roads, the same links, so that a database read by either program is the same row for row.
 

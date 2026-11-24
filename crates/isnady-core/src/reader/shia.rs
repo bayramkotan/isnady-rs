@@ -110,6 +110,37 @@ pub fn parse_shia(text: &str) -> Parsed {
         .match_at(&norm, 0)
         .map(|m| m.end())
         .unwrap_or(0);
+    // 0.8.2: "وسأل محمد بن مسلم أبا جعفر (ع)": the man who asked is the one link, whom he asked ends the chain
+    if let Some(asked) = p("_SHIA_ASKED_RE").match_at(&norm, pos) {
+        let a_end = asked.end();
+        let stop = p("_SHIA_ASKED_END_RE").search_in(&norm, a_end, (a_end + 120).min(n));
+        let end = stop.as_ref().map(|m| m.start()).unwrap_or(a_end);
+        let raw = norm.sl(a_end, end).to_string();
+        let core = strip(&raw, " ،,:-()").to_string();
+        if !core.is_empty() && words(&core) <= 8 && !honor_re.is_search(&core) {
+            let kept = pyre::len(raw.trim_end_matches(|c| " ،,:-()".contains(c)));
+            let name = clean_name(&orig(a_end, a_end + kept));
+            result.links = vec![Link::new(1, "qala", &name, false)];
+            result.raw_isnad = name;
+            result.ends_with = masum_after(&norm, end, 110);
+            result.reaches_prophet = !result.ends_with.is_empty();
+            return result;
+        }
+    }
+    // "وروى حريز عن …", "فأما ما رواه محمد بن يعقوب عن …", "ما أخبرني به الشيخ …", "وفي رواية السكوني"
+    let mut opened = "";
+    if let Some(op) = p("_SHIA_OPENER_RE").match_at(&norm, pos) {
+        if p("_SHIA_NO_MAN_RE").match_at(&norm, op.end()).is_some() {
+            result.problem = "no narrator found before the text".into();
+            return result;
+        }
+        pos = op.end();
+        opened = if op.g(1).is_empty() {
+            "qala"
+        } else {
+            "akhbarani"
+        };
+    }
     if p("_ALL_START_RE").match_at(&norm, pos).is_some() {
         result.problem = BI_ISNADIHI.into();
         return result;
@@ -132,6 +163,9 @@ pub fn parse_shia(text: &str) -> Parsed {
         {
             lead = None;
         }
+    }
+    if !opened.is_empty() {
+        lead = None;
     }
     if let Some(l) = &lead {
         if pre!(r"باسناده\s+عن\s").is_match(norm.from(pos + l.end())) {
@@ -161,7 +195,17 @@ pub fn parse_shia(text: &str) -> Parsed {
         let term = term_re.match_at(&norm, pos);
         let (tid, mut name_start) = match &term {
             Some(t) => (term_id(t.g(1)).to_string(), t.end()),
-            None if first => ((if said_first { "qala" } else { "bare" }).to_string(), pos),
+            None if first => (
+                (if !opened.is_empty() {
+                    opened
+                } else if said_first {
+                    "qala"
+                } else {
+                    "bare"
+                })
+                .to_string(),
+                pos,
+            ),
             None => break,
         };
         first = false;
@@ -467,7 +511,10 @@ pub fn shia_without_chain(text: &str, read: &Parsed) -> Parsed {
     let lead = &tables().shia_lead;
     let head = pyre::upto(&norm_name(text), 220).to_string();
     let ht = Ps::new(&head);
-    let start = pre!(&format!(r"{lead}(?:و\s*)?(?:عن|قال|وقال)\s+")).match_(&head);
+    let start = pre!(&format!(
+        r"{lead}(?:و\s*)?(?:(?:قد\s+)?روي\s+)?(?:عن|قال|وقال|سيل|وسيل)\s+"
+    ))
+    .match_(&head);
     if let Some(s) = &start {
         if !read.ends_with.is_empty() {
             let six: Vec<&str> = split(ht.from(s.end())).into_iter().take(6).collect();
@@ -487,6 +534,9 @@ pub fn shia_without_chain(text: &str, read: &Parsed) -> Parsed {
     }
     if p("_SAME_CHAIN_OLD_RE").is_match(&head) || p("_FROM_HIM_RE").is_match(&head) {
         return read.clone();
+    }
+    if pre!(&format!(r"{lead}(?:و)?(?:قد\s+)?روي(?!\w)")).is_match(&head) {
+        return Parsed::with_problem(problem("no_chain"));
     }
     if pre!(&format!(r"{lead}و(?!منهم)")).is_match(&head)
         && !pre!(&format!(r"{lead}و(?:قد|كان|اما|هذا|ذلك)(?!\w)")).is_match(&head)

@@ -2,7 +2,7 @@
 //! `isnady/core/isnad.py` (reading aids, the chain in words), `tahwil_meet.meeting`, and the parts of
 //! `core/traditions.py` and `core/companions.py` a chain needs.
 //!
-//! Reading the chains from the texts (the parser, isnady-isnad-15) and identifying their narrators (the matcher,
+//! Reading the chains from the texts (the parser, isnady-isnad-16) and identifying their narrators (the matcher,
 //! isnady-narrators-17) stay with the Python isnady for now: `ready` says whether it has done so for the books
 //! imported, and isnady-rs then shows exactly what it stored.
 

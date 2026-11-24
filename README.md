@@ -3,7 +3,7 @@
 <h1 align="center">isnady-rs — isnady in Rust</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/isnady--rs-v0.8.1-1D4777?style=for-the-badge&logo=rust" alt="version">
+  <img src="https://img.shields.io/badge/isnady--rs-v0.8.2-1D4777?style=for-the-badge&logo=rust" alt="version">
   <a href="https://crates.io/crates/isnady"><img src="https://img.shields.io/crates/v/isnady?style=for-the-badge&logo=rust&label=crates.io" alt="crates.io"></a>
   <a href="https://github.com/bayramkotan/isnady-rs/releases/latest"><img src="https://img.shields.io/github/v/release/bayramkotan/isnady-rs?style=for-the-badge&label=release" alt="release"></a>
   <img src="https://img.shields.io/badge/licence-MIT-5B6878?style=for-the-badge" alt="MIT">
@@ -13,7 +13,7 @@
 database, the same settings and the same version number, and it gives the same answers. That is why this README is
 isnady's own, word for word, below the line. The Rust command is `iy-rs` where the Python one is `iy`.
 
-**Version 0.8.1 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
+**Version 0.8.2 — what isnady-rs does today: everything the Python isnady does.** Every command of `iy` is a command
 of `iy-rs` with the same options and the same output, word for word; every page, menu, dialog, theme and language of the
 Python window is in the window `isnady-rs`. The two programs import the same books into the same rows, read the same
 chains, identify the same narrators, learn the same meaning index (array for array), export the same files and take the
@@ -44,12 +44,12 @@ download`): everything already read, in one download.
 
 <p align="center">
   <a href="https://pypi.org/project/isnady/">
-    <img src="https://img.shields.io/badge/PyPI-v0.8.1-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-v0.8.2-1D4777?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI">
   </a>
   <img src="https://img.shields.io/pypi/pyversions/isnady?style=for-the-badge&color=A47E24&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-5B6878?style=for-the-badge" alt="Platform">
   <a href="https://www.npmjs.com/package/isnady">
-    <img src="https://img.shields.io/badge/npm-v0.8.1-14304F?style=for-the-badge&logo=npm" alt="npm">
+    <img src="https://img.shields.io/badge/npm-v0.8.2-14304F?style=for-the-badge&logo=npm" alt="npm">
   </a>
   <a href="https://github.com/bayramkotan/isnady-data">
     <img src="https://img.shields.io/badge/data-isnady--data-2E6B4F?style=for-the-badge&logo=github" alt="isnady-data">
@@ -84,7 +84,7 @@ download`): everything already read, in one download.
   <img src="https://raw.githubusercontent.com/bayramkotan/isnady/main/assets/screenshots/search-arabic.png" alt="Searching النيات finds بالنيات in Sahih al-Bukhari 1, with the chain above the text" width="850">
 </p>
 
-> **Pre-alpha (0.8.1).** Search, chains of transmission, narrators, books, scholars, statistics and
+> **Pre-alpha (0.8.2).** Search, chains of transmission, narrators, books, scholars, statistics and
 > the glossary work today, Sunni and Shia, on data you import in one click. Everything is built in
 > the open, one piece at a time.
 
@@ -97,7 +97,7 @@ isnady is two repositories that work as one:
 | | [**bayramkotan/isnady**](https://github.com/bayramkotan/isnady) — the application | [**bayramkotan/isnady-data**](https://github.com/bayramkotan/isnady-data) — the data |
 |---|---|---|
 | **What it is** | The program: a desktop window and a command line on one engine | Every book isnady reads — the Qur'an, the hadith, the sira, the lives of the scholars, the rijal — in one format |
-| **What is in it** | Search, the chain reader (Sunni and Shia), narrator identification, books, scholars, statistics, the glossary, meaning search | **The Qur'an** with 60 translations in 18 languages · **17 Sunni and 16 Shia hadith collections — 99,746 hadith** — in Arabic and up to eight translations, with their grades · **Ibn Hisham's *Sira*** · **al-Dhahabi's *Siyar* and *Tadhkira*** · **Ibn Hajar's *Taqrib*** (8,824 narrators), **al-Najashi's *Rijal*** (1,269) and **al-Tusi's *Fihrist* and *Rijal*** (910 and 6,429) |
+| **What is in it** | Search, the chain reader (Sunni and Shia), narrator identification, books, scholars, statistics, the glossary, meaning search | **The Qur'an** with 60 translations in 18 languages · **17 Sunni and 19 Shia hadith collections — 125,146 hadith** — in Arabic and up to eight translations, with their grades · **Ibn Hisham's *Sira*** · **al-Dhahabi's *Siyar* and *Tadhkira*** · **Ibn Hajar's *Taqrib*** (8,824 narrators), **al-Najashi's *Rijal*** (1,269) and **al-Tusi's *Fihrist* and *Rijal*** (910 and 6,429) |
 | **How you get it** | [PyPI](https://pypi.org/project/isnady/) (`pip install isnady`), the desktop applications of the [Releases](https://github.com/bayramkotan/isnady/releases/latest), or the one-line installers | Nothing to download by hand: isnady lists its books in **Data sources** and imports them in one click — or clone it and read it offline, or take a whole [ready database](https://github.com/bayramkotan/isnady-data/releases) |
 | **Licence** | MIT | each book its own, recorded with it (Help → Licences) |
 
@@ -306,7 +306,7 @@ repository added to a book that you read in your other books. Nothing else is re
 | What | Books | Read in isnady |
 |---|---|---|
 | 📖 **The Qur'an** | The Arabic (Tanzil's text, verbatim) and **60 translations in 18 languages** — Turkish 20 (Diyanet İşleri, Diyanet Vakfı, Elmalılı Hamdi Yazır, Ali Bulaç, Süleyman Ateş, Hasan Basri Çantay …), English 12 (Saheeh International, Abdel Haleem, Mustafa Khattab …), Urdu, Indonesian, Bengali, French, Russian, Tamil, German, Persian, Spanish, Bosnian, Albanian, Azerbaijani, Uzbek, Kazakh, Tatar, Malay | Books → The Qur'an: each verse with the translations chosen, and the hadith that name it |
-| 📚 **Hadith** | 17 Sunni and 16 Shia collections — 99,746 hadith (below) | Search, Books, Isnad Chains, Statistics |
+| 📚 **Hadith** | 17 Sunni and 19 Shia collections — 125,146 hadith (below) | Search, Books, Isnad Chains, Statistics |
 | 📜 **Written sources** | 6 Sunni (the Sahifa of Hammam b. Munabbih 138, al-Sahifa al-Sadiqa 253, the sahifa of 'Ali, Abu Bakr's letter on zakat, the letter for 'Amr b. Hazm, writing in the chains) and 4 Shia (the Book of 'Ali, al-Jami'a, Mushaf Fatima as the Shia books relate it, the letters to the Imams) — each a list of where its hadith stand in the collections | Books, as a book of its own; Written sources |
 | 🕌 **Sira** | Ibn Hisham, *al-Sira al-Nabawiyya* (from Ibn Ishaq) — 264 chapters, 2,109 sections | Books, chapter by chapter |
 | 👥 **Tabaqat** | al-Dhahabi, *Siyar A'lam al-Nubala'* (5,851 lives) and *Tadhkirat al-Huffaz* (1,176 huffaz in 21 generations) | Books; the text beside a narrator's written life; Hadith Scholars → Huffaz |
@@ -316,7 +316,7 @@ The hadith collections, Sunni and Shia apart:
 
 | | Sunni | Shia |
 |---|---|---|
-| **Hadith collections** | **17 books, 76,132 hadith.** Sahih al-Bukhari, Sahih Muslim, Sunan Abi Dawud, Jami' al-Tirmidhi, Sunan al-Nasa'i, Sunan Ibn Majah, the Muwatta — Arabic and up to eight translations (English, Turkish, Urdu, Indonesian, Bengali, French, Russian, Tamil), graded by al-Albani, Shu'ayb al-Arna'ut, Zubair 'Ali Za'i and others · the Forty of al-Nawawi, Forty Hadith Qudsi, the Forty of Shah Waliullah · Musnad Ahmad ibn Hanbal (26,363) and Sunan al-Darimi, fully voweled · Riyad al-Salihin, al-Shama'il al-Muhammadiyya, Bulugh al-Maram, al-Adab al-Mufrad, Mishkat al-Masabih, Arabic and English | **16 books, 23,614 hadith.** al-Kulayni's **al-Kafi** (8 volumes, 14,241 hadith, al-Majlisi's grade on nearly every one, al-Behbudi's selection) · al-Saduq's 'Uyun Akhbar al-Rida, al-Amali, al-Khisal, al-Tawhid, Ma'ani al-Akhbar, Thawab al-A'mal, Sifat al-Shi'a, Fada'il al-Shi'a · al-Mufid's al-Amali · Ibn Qulawayh's Kamil al-Ziyarat · al-Nu'mani's and al-Tusi's Kitab al-Ghayba · al-Ahwazi's al-Mu'min and al-Zuhd · al-Muhsini's Mu'jam al-Ahadith al-Mu'tabara — Arabic and English |
+| **Hadith collections** | **17 books, 76,132 hadith.** Sahih al-Bukhari, Sahih Muslim, Sunan Abi Dawud, Jami' al-Tirmidhi, Sunan al-Nasa'i, Sunan Ibn Majah, the Muwatta — Arabic and up to eight translations (English, Turkish, Urdu, Indonesian, Bengali, French, Russian, Tamil), graded by al-Albani, Shu'ayb al-Arna'ut, Zubair 'Ali Za'i and others · the Forty of al-Nawawi, Forty Hadith Qudsi, the Forty of Shah Waliullah · Musnad Ahmad ibn Hanbal (26,363) and Sunan al-Darimi, fully voweled · Riyad al-Salihin, al-Shama'il al-Muhammadiyya, Bulugh al-Maram, al-Adab al-Mufrad, Mishkat al-Masabih, Arabic and English | **19 books, 49,014 hadith.** **The Four Books:** al-Kulayni's **al-Kafi** (8 volumes, 14,241 hadith, al-Majlisi's grade on nearly every one, al-Behbudi's selection), al-Saduq's **Man La Yahduruhu al-Faqih** (4 volumes, 5,967) and al-Tusi's **Tahdhib al-Ahkam** (10 volumes, 13,927) and **al-Istibsar** (4 volumes, 5,506), these three in Arabic from the OpenITI corpus · al-Saduq's 'Uyun Akhbar al-Rida, al-Amali, al-Khisal, al-Tawhid, Ma'ani al-Akhbar, Thawab al-A'mal, Sifat al-Shi'a, Fada'il al-Shi'a · al-Mufid's al-Amali · Ibn Qulawayh's Kamil al-Ziyarat · al-Nu'mani's and al-Tusi's Kitab al-Ghayba · al-Ahwazi's al-Mu'min and al-Zuhd · al-Muhsini's Mu'jam al-Ahadith al-Mu'tabara — Arabic and English |
 | **Narrators** | Ibn Hajar, *Taqrib al-Tahdhib* — 8,824 narrators: verdict, rank of twelve, tabaqa, death year, book marks | al-Najashi, *Rijal* — 1,269 authors and narrators; al-Tusi, *al-Fihrist* — 910 authors, and *Rijal* — 6,429 companions of the Prophet and the Imams: reliability and creed in the Imami terms; al-Kashshi, *Ikhtiyar Ma'rifat al-Rijal* — 498 men with the reports about them |
 
 ### How it is laid out
@@ -1370,6 +1370,8 @@ Sahih al-Bukhari 1
 ```bash
 iy chain bukhari                     # the book's numbers, first to last, with an example
 iy chain kafi 5:1740                 # al-Kafi and 'Uyun number volume:hadith
+iy chain faqih 6                     # al-Faqih: the one man al-Saduq names, then the Imam
+iy chain istibsar 1:4                # al-Tusi's "فأما ما رواه …": the chain from the book he cites
 iy chain bukhari 1 --raw             # also the chain as written
 iy chain bukhari 1 --lang tr,en      # the chain said in Turkish and English
 iy chain bukhari --chapter 3         # the hadith of chapter 3 with the start of their text and how far each chain

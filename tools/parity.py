@@ -316,6 +316,21 @@ CASES = [
     ["chain", "sifat-shia", "1"],
     ["chain", "sifat-shia", "20"],
     ["narrator-rules"],
+    # the rest of the Four Books (0.8.2): al-Saduq's al-Faqih and al-Tusi's al-Istibsar (parity.yml imports them),
+    # their numbers, the compiler's words between the hadith and the chains of isnady-isnad-16
+    ["book", "faqih", "1", "--limit", "5"],
+    ["book", "istibsar", "1", "--limit", "3"],
+    ["chain", "faqih"],
+    ["chain", "faqih", "1"],
+    ["chain", "faqih", "4"],
+    ["chain", "faqih", "6"],
+    ["chain", "faqih", "146"],
+    ["chain", "faqih", "0.1"],
+    ["chain", "istibsar", "1:1"],
+    ["chain", "istibsar", "1:2"],
+    ["chain", "istibsar", "1:4"],
+    ["chain", "istibsar", "1:8"],
+    ["narrator", "حريز", "--tradition", "shia"],
 ]
 
 TIME = re.compile(r" in \d+ ms")
